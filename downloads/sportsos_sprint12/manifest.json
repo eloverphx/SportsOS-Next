@@ -1,0 +1,15 @@
+{
+  "name": "SportsOS Next",
+  "version": "0.3.1-sprint1.2",
+  "release": "Organizations and Teams",
+  "node_image": "node:22-bookworm",
+  "features": [
+    "organization CRUD",
+    "team CRUD",
+    "MinIO logo upload",
+    "Socket.IO live refresh",
+    "audit log",
+    "dashboard counts",
+    "search and filters"
+  ]
+}

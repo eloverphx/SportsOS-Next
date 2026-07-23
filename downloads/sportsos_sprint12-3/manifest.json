@@ -1,0 +1,15 @@
+{
+  "name": "SportsOS Next",
+  "version": "0.3.3-player-engine",
+  "release": "Sprint 1.3 Player Engine",
+  "node_image": "node:22-bookworm",
+  "features": [
+    "player CRUD",
+    "player search and filters",
+    "player photo upload",
+    "relationship validation",
+    "Socket.IO live refresh",
+    "audit log",
+    "dashboard player count"
+  ]
+}

@@ -1,0 +1,58 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+.next/
+**/.next/
+dist/
+**/dist/
+build/
+**/build/
+coverage/
+**/coverage/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Runtime and database data
+data/
+mysql/
+postgres/
+redis-data/
+minio-data/
+uploads/
+storage/
+backups/
+
+# SportsOS infrastructure data
+infra/mysql/
+infra/minio/
+infra/redis/
+infra/mqtt/data/
+infra/mqtt/log/
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Temporary files and archives
+*.zip
+*.tar
+*.tar.gz
+*.tmp
+*.swp
