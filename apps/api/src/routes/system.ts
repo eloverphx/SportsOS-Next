@@ -40,8 +40,6 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
     return { events: rows };
   });
 
-  app.get('/', async () => ({ name: 'SportsOS API', version: '0.3.3.1-player-hotfix', endpoints: ['/', '/health', '/version', '/organizations', '/teams', '/players', '/media/logo', '/dashboard/stats'] }));
-  app.get('/version', async () => ({ name: 'SportsOS API', version: '0.3.3.1-player-hotfix', node: process.version }));
   app.get('/health', async () => {
     const [mysqlStatus, redisStatus, mqttStatus, minioStatus] = await Promise.all([checkMysql(), checkRedis(), checkMqtt(), checkMinio()]);
     const services = { mysql: mysqlStatus, redis: redisStatus, mqtt: mqttStatus, minio: minioStatus };

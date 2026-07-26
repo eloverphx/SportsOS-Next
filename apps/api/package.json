@@ -18,6 +18,8 @@
     "@fastify/helmet": "^13.1.0",
     "@fastify/jwt": "^9.1.0",
     "@fastify/rate-limit": "^11.1.0",
+    "@fastify/swagger": "^9.8.1",
+    "@fastify/swagger-ui": "^6.1.0",
     "@sportsos/config": "*",
     "bcryptjs": "3.0.2",
     "fastify": "^5.10.0",
@@ -25,7 +27,7 @@
     "mqtt": "5.15.2",
     "mysql2": "3.23.1",
     "redis": "5.9.0",
-    "socket.io": "4.8.3",
+    "socket.io": "^4.8.3",
     "zod": "3.25.76"
   },
   "devDependencies": {

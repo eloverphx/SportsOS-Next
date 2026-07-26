@@ -65,7 +65,8 @@ services:
 
   api:
     build:
-      context: ./apps/api
+      context: .
+      dockerfile: apps/api/Dockerfile
     container_name: sportsos_api
     restart: unless-stopped
     environment:
