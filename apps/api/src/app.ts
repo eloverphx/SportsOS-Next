@@ -14,9 +14,16 @@ import { setupRoutes } from './routes/setup.js';
 import { systemRoutes } from './routes/system.js';
 import { teamRoutes } from './routes/teams.js';
 
-export async function buildApp(): Promise<FastifyInstance> {
+export interface BuildAppOptions {
+  readonly logger?: boolean;
+  readonly realtime?: boolean;
+}
+
+export async function buildApp(
+  options: BuildAppOptions = {}
+): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: true,
+    logger: options.logger ?? true,
     bodyLimit: 6 * 1024 * 1024,
     trustProxy: true,
     requestIdHeader: 'x-request-id'
@@ -28,7 +35,9 @@ export async function buildApp(): Promise<FastifyInstance> {
     secret: config.auth.jwtSecret
   });
 
-  initializeRealtime(app.server);
+  if (options.realtime ?? true) {
+    initializeRealtime(app.server);
+  }
 
   await app.register(platformRoutes);
   await app.register(setupRoutes);
