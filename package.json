@@ -15,7 +15,7 @@
     "dev": "npm run dev --workspace=@sportsos/api",
     "dev:api": "npm run dev --workspace=@sportsos/api",
     "dev:dashboard": "npm run dev --workspace=@sportsos/dashboard",
-    "build": "npm run build --workspace=@sportsos/core && npm run build --workspace=@sportsos/api && npm run build --workspace=@sportsos/dashboard",
+    "build": "npm run build --workspace=@sportsos/core && npm run build --workspace=@sportsos/config && npm run build --workspace=@sportsos/api && npm run build --workspace=@sportsos/dashboard",
     "build:core": "npm run build --workspace=@sportsos/core",
     "build:api": "npm run build --workspace=@sportsos/api",
     "build:dashboard": "npm run build --workspace=@sportsos/dashboard",

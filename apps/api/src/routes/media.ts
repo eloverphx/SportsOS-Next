@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import mysql, { type RowDataPacket } from 'mysql2/promise';
 import { z } from 'zod';
-import { env } from '../config/env.js';
+import { config } from '@sportsos/config';
 import { pool } from '../infrastructure/database.js';
 import { minio } from '../infrastructure/minio.js';
 import { realtime } from '../infrastructure/realtime.js';
@@ -23,7 +23,7 @@ export async function mediaRoutes(app: FastifyInstance): Promise<void> {
     if (!id.success) return reply.code(400).send({ error: 'Invalid media id' });
     const [rows] = await pool.execute<RowDataPacket[]>('SELECT object_key, mime_type FROM media_assets WHERE id=? LIMIT 1', [id.data]);
     if (!rows[0]) return reply.code(404).send({ error: 'Media not found' });
-    const stream = await minio.getObject(env.MINIO_BUCKET, String(rows[0].object_key));
+    const stream = await minio.getObject(config.storage.bucket, String(rows[0].object_key));
     reply.header('Content-Type', String(rows[0].mime_type));
     reply.header('Cache-Control', 'public, max-age=3600');
     return reply.send(stream);
@@ -39,8 +39,8 @@ export async function mediaRoutes(app: FastifyInstance): Promise<void> {
     }
     const ext = d.mimeType === 'image/png' ? 'png' : d.mimeType === 'image/jpeg' ? 'jpg' : d.mimeType === 'image/webp' ? 'webp' : 'svg';
     const key = `logos/${new Date().getUTCFullYear()}/${randomUUID()}.${ext}`;
-    await minio.putObject(env.MINIO_BUCKET, key, buffer, buffer.length, { 'Content-Type': d.mimeType });
-    const [result] = await pool.execute<mysql.ResultSetHeader>('INSERT INTO media_assets (organization_id, bucket, object_key, original_name, mime_type, size_bytes) VALUES (?, ?, ?, ?, ?, ?)', [d.organizationId || null, env.MINIO_BUCKET, key, d.fileName, d.mimeType, buffer.length]);
+    await minio.putObject(config.storage.bucket, key, buffer, buffer.length, { 'Content-Type': d.mimeType });
+    const [result] = await pool.execute<mysql.ResultSetHeader>('INSERT INTO media_assets (organization_id, bucket, object_key, original_name, mime_type, size_bytes) VALUES (?, ?, ?, ?, ?, ?)', [d.organizationId || null, config.storage.bucket, key, d.fileName, d.mimeType, buffer.length]);
     await audit(authUser(request).sub, 'logo.uploaded', { assetId: result.insertId, objectKey: key });
     realtime().emit('logo:uploaded', { id: result.insertId });
     return reply.code(201).send({ id: result.insertId, url: logoUrl(result.insertId) });

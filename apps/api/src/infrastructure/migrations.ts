@@ -1,5 +1,5 @@
 import type { RowDataPacket } from 'mysql2/promise';
-import { env } from '../config/env.js';
+import { config } from '@sportsos/config';
 import { pool } from './database.js';
 import { minio } from './minio.js';
 
@@ -137,7 +137,7 @@ export async function runMigrations(): Promise<void> {
 
   const [columns] = await pool.query<RowDataPacket[]>(
     `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'organizations'`,
-    [env.MYSQL_DATABASE]
+    [config.database.name]
   );
   const present = new Set(columns.map((row) => String(row.COLUMN_NAME)));
   const additions: Array<[string, string]> = [
@@ -153,5 +153,5 @@ export async function runMigrations(): Promise<void> {
     if (!present.has(name)) await pool.execute(`ALTER TABLE organizations ADD COLUMN ${name} ${sql}`);
   }
 
-  if (!(await minio.bucketExists(env.MINIO_BUCKET))) await minio.makeBucket(env.MINIO_BUCKET);
+  if (!(await minio.bucketExists(config.storage.bucket))) await minio.makeBucket(config.storage.bucket);
 }

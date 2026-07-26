@@ -15,8 +15,8 @@ import { rosterRoutes } from './modules/rosters/routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({ logger: true, bodyLimit: 6 * 1024 * 1024 });
-  await app.register(cors, { origin: config.dashboard.origin,, credentials: true });
-  await app.register(jwt, { secret: config.jwt.secret });
+  await app.register(cors, { origin: config.dashboard.origin, credentials: true });
+  await app.register(jwt, { secret: config.auth.jwtSecret });
 
   initializeRealtime(app.server);
 

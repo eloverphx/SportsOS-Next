@@ -1,11 +1,11 @@
 import mysql, { type Pool } from 'mysql2/promise';
-import { env } from '../config/env.js';
+import { config } from '@sportsos/config';
 
 export const pool: Pool = mysql.createPool({
-  host: env.MYSQL_HOST,
-  port: env.MYSQL_PORT,
-  database: env.MYSQL_DATABASE,
-  user: env.MYSQL_USER,
-  password: env.MYSQL_PASSWORD,
+  host: config.database.host,
+  port: config.database.port,
+  database: config.database.name,
+  user: config.database.user,
+  password: config.database.password,
   connectionLimit: 10
 });

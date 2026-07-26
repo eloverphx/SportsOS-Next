@@ -1,10 +1,10 @@
 import { Client as MinioClient } from 'minio';
-import { env } from '../config/env.js';
+import { config } from '@sportsos/config';
 
 export const minio = new MinioClient({
-  endPoint: env.MINIO_ENDPOINT,
-  port: env.MINIO_PORT,
-  useSSL: false,
-  accessKey: env.MINIO_ACCESS_KEY,
-  secretKey: env.MINIO_SECRET_KEY
+  endPoint: config.storage.endpoint,
+  port: config.storage.port,
+  useSSL: config.storage.useSsl,
+  accessKey: config.storage.accessKey,
+  secretKey: config.storage.secretKey
 });

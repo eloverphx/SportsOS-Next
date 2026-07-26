@@ -1,5 +1,5 @@
-import { env } from '../config/env.js';
+import { config } from '@sportsos/config';
 
 export function logoUrl(assetId: number | null): string | null {
-  return assetId ? `${env.PUBLIC_API_URL}/media/${assetId}` : null;
+  return assetId ? `${config.api.publicUrl}/media/${assetId}` : null;
 }
