@@ -3,9 +3,20 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 const links = [
-  ['Dashboard','/dashboard'], ['Organizations','/organizations'], ['Teams','/teams'], ['Seasons','/seasons'], ['Players','/players'], ['Rosters','/rosters'], ['Games','#'],
-  ['Streaming','#'], ['Scoreboards','#'], ['Media','#'], ['Users','#'], ['Administration','#'], ['System Health','/dashboard']
-];
+  ['Dashboard','/dashboard'],
+  ['Organizations','/organizations'],
+  ['Teams','/teams'],
+  ['Seasons','/seasons'],
+  ['Players','/players'],
+  ['Rosters','/rosters'],
+  ['Games','#'],
+  ['Streaming','#'],
+  ['Scoreboards','#'],
+  ['Media','#'],
+  ['Users','#'],
+  ['Administration','#'],
+  ['System Health','/dashboard']
+] as const;
 export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter(); const pathname = usePathname();
   function logout() { localStorage.removeItem('sportsos_token'); router.push('/login'); }

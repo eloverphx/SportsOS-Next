@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
-import { env } from './config/env.js';
+import { config } from "@sportsos/config";
 import { initializeRealtime } from './infrastructure/realtime.js';
 import { authRoutes } from './routes/auth.js';
 import { mediaRoutes } from './routes/media.js';
@@ -15,8 +15,8 @@ import { rosterRoutes } from './modules/rosters/routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({ logger: true, bodyLimit: 6 * 1024 * 1024 });
-  await app.register(cors, { origin: env.DASHBOARD_ORIGIN, credentials: true });
-  await app.register(jwt, { secret: env.JWT_SECRET });
+  await app.register(cors, { origin: config.dashboard.origin,, credentials: true });
+  await app.register(jwt, { secret: config.jwt.secret });
 
   initializeRealtime(app.server);
 

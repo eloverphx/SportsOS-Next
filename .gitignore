@@ -1,57 +1,43 @@
-# ============================
-# Node
-# ============================
+# Dependencies
+node_modules/
 **/node_modules/
+
+# Build output
+dist/
+**/dist/
+.next/
+**/.next/
+coverage/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+!.env.example
+!env.example
+
+# Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# ============================
-# Build Output
-# ============================
-**/dist/
-**/.next/
-**/coverage/
-**/*.tsbuildinfo
+# Operating systems
+.DS_Store
+Thumbs.db
 
-# ============================
-# Environment
-# ============================
-.env
-.env.local
-.env.*
-!.env.example
-
-# ============================
-# IDE
-# ============================
+# Editors
 .vscode/
+!.vscode/extensions.json
 .idea/
 *.swp
-.DS_Store
-Thumbs.db
+*.swo
 
-# ============================
-# Logs
-# ============================
-*.log
+# Testing
+playwright-report/
+test-results/
 
-# ============================
-# Downloads / Release Artifacts
-# ============================
-downloads/**/*.zip
-downloads/**/node_modules/
-downloads/**/dist/
-
-# ============================
-# Temporary Files
-# ============================
+# Local runtime data
+.tmp/
 tmp/
-temp/
-.cache/
-
-# ============================
-# OS Files
-# ============================
-.DS_Store
-Thumbs.db
