@@ -17,7 +17,12 @@ COPY packages/core ./packages/core
 
 WORKDIR /app/apps/dashboard
 
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN test -n "$NEXT_PUBLIC_API_URL"
+RUN echo "Building dashboard for API: $NEXT_PUBLIC_API_URL"
 
 RUN npm run typecheck
 RUN npm run build
