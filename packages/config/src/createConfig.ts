@@ -1,12 +1,9 @@
-import {
-  sportsOSEnvironmentSchema,
-  type SportsOSEnvironment
-} from './schema.js';
-import { formatConfigurationError } from './errors.js';
+import { sportsOSEnvironmentSchema, type SportsOSEnvironment } from "./schema.js";
+import { formatConfigurationError } from "./errors.js";
 
 export interface SportsOSConfig {
   readonly environment: {
-    readonly name: SportsOSEnvironment['NODE_ENV'];
+    readonly name: SportsOSEnvironment["NODE_ENV"];
     readonly isDevelopment: boolean;
     readonly isTest: boolean;
     readonly isProduction: boolean;
@@ -52,9 +49,7 @@ export interface SportsOSConfig {
   };
 }
 
-export function createConfig(
-  source: NodeJS.ProcessEnv = process.env
-): SportsOSConfig {
+export function createConfig(source: NodeJS.ProcessEnv = process.env): SportsOSConfig {
   const result = sportsOSEnvironmentSchema.safeParse(source);
 
   if (!result.success) {
@@ -66,19 +61,19 @@ export function createConfig(
   return Object.freeze({
     environment: Object.freeze({
       name: env.NODE_ENV,
-      isDevelopment: env.NODE_ENV === 'development',
-      isTest: env.NODE_ENV === 'test',
-      isProduction: env.NODE_ENV === 'production'
+      isDevelopment: env.NODE_ENV === "development",
+      isTest: env.NODE_ENV === "test",
+      isProduction: env.NODE_ENV === "production",
     }),
 
     api: Object.freeze({
       host: env.HOST,
       port: env.PORT,
-      publicUrl: env.PUBLIC_API_URL
+      publicUrl: env.PUBLIC_API_URL,
     }),
 
     dashboard: Object.freeze({
-      origin: env.DASHBOARD_ORIGIN
+      origin: env.DASHBOARD_ORIGIN,
     }),
 
     database: Object.freeze({
@@ -86,19 +81,19 @@ export function createConfig(
       port: env.MYSQL_PORT,
       name: env.MYSQL_DATABASE,
       user: env.MYSQL_USER,
-      password: env.MYSQL_PASSWORD
+      password: env.MYSQL_PASSWORD,
     }),
 
     auth: Object.freeze({
-      jwtSecret: env.JWT_SECRET
+      jwtSecret: env.JWT_SECRET,
     }),
 
     redis: Object.freeze({
-      url: env.REDIS_URL
+      url: env.REDIS_URL,
     }),
 
     mqtt: Object.freeze({
-      url: env.MQTT_URL
+      url: env.MQTT_URL,
     }),
 
     storage: Object.freeze({
@@ -107,7 +102,7 @@ export function createConfig(
       accessKey: env.MINIO_ACCESS_KEY,
       secretKey: env.MINIO_SECRET_KEY,
       bucket: env.MINIO_BUCKET,
-      useSsl: false
-    })
+      useSsl: false,
+    }),
   });
 }

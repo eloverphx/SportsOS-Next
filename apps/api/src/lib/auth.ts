@@ -1,4 +1,4 @@
-import type { FastifyRequest } from 'fastify';
+import type { FastifyRequest } from "fastify";
 
 export interface AuthUser {
   sub: string;

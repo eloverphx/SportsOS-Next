@@ -5,7 +5,7 @@ export class ForbiddenError extends AppError {
     super(message, {
       statusCode: 403,
       code: "FORBIDDEN",
-      expose: true
+      expose: true,
     });
   }
 }

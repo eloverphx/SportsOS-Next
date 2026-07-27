@@ -26,41 +26,41 @@ export class ConsoleLogger implements Logger {
 class ChildLogger implements Logger {
   constructor(
     private readonly parent: Logger,
-    private readonly defaults: LogMetadata
+    private readonly defaults: LogMetadata,
   ) {}
 
   debug(message: string, metadata?: LogMetadata): void {
     this.parent.debug(message, {
       ...this.defaults,
-      ...metadata
+      ...metadata,
     });
   }
 
   info(message: string, metadata?: LogMetadata): void {
     this.parent.info(message, {
       ...this.defaults,
-      ...metadata
+      ...metadata,
     });
   }
 
   warn(message: string, metadata?: LogMetadata): void {
     this.parent.warn(message, {
       ...this.defaults,
-      ...metadata
+      ...metadata,
     });
   }
 
   error(message: string, metadata?: LogMetadata): void {
     this.parent.error(message, {
       ...this.defaults,
-      ...metadata
+      ...metadata,
     });
   }
 
   child(metadata: LogMetadata): Logger {
     return new ChildLogger(this.parent, {
       ...this.defaults,
-      ...metadata
+      ...metadata,
     });
   }
 }

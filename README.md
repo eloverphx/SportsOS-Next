@@ -1,17 +1,20 @@
 # SportsOS Next
 
-SportsOS Next is a modular platform for sports administration, live scoring, broadcast overlays, streaming workflows, and connected scoreboard hardware.
+SportsOS Next is a modular platform for sports administration, live scoring,
+broadcast overlays, streaming workflows, and connected scoreboard hardware.
 
 ## Repository structure
 
-```text
+````text
 apps/
   api/         Fastify API and realtime services
   dashboard/   Next.js administration dashboard
+
 packages/
+  config/      Validated, typed runtime configuration
   core/        Shared contracts, errors, logging interfaces, and utilities
+
 scripts/       Repository maintenance scripts
-```
 
 ## Requirements
 
@@ -25,7 +28,7 @@ Install all workspace dependencies from the repository root:
 
 ```bash
 npm install
-```
+````
 
 ## Development
 

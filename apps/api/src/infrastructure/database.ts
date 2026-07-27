@@ -1,5 +1,5 @@
-import mysql, { type Pool } from 'mysql2/promise';
-import { config } from '@sportsos/config';
+import mysql, { type Pool } from "mysql2/promise";
+import { config } from "@sportsos/config";
 
 export const pool: Pool = mysql.createPool({
   host: config.database.host,
@@ -7,5 +7,5 @@ export const pool: Pool = mysql.createPool({
   database: config.database.name,
   user: config.database.user,
   password: config.database.password,
-  connectionLimit: 10
+  connectionLimit: 10,
 });

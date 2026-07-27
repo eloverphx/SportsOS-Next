@@ -1,82 +1,81 @@
-import type { FastifyInstance } from 'fastify';
-import { config } from '@sportsos/config';
+import type { FastifyInstance } from "fastify";
+import { config } from "@sportsos/config";
+import { API_DOCUMENTATION_PATH, API_NAME, API_VERSION } from "../platform/metadata.js";
 
 const startedAt = Date.now();
 
-export async function platformRoutes(
-  app: FastifyInstance
-): Promise<void> {
+export async function platformRoutes(app: FastifyInstance): Promise<void> {
   app.get(
-    '/',
+    "/",
     {
       schema: {
-        tags: ['Platform'],
-        summary: 'API information',
+        tags: ["Platform"],
+        summary: "API information",
         response: {
           200: {
-            type: 'object',
+            type: "object",
             properties: {
-              success: { type: 'boolean' },
-              requestId: { type: 'string' },
+              success: { type: "boolean" },
+              requestId: { type: "string" },
               data: {
-                type: 'object',
+                type: "object",
                 properties: {
-                  name: { type: 'string' },
-                  version: { type: 'string' },
-                  environment: { type: 'string' },
-                  documentation: { type: 'string' }
-                }
-              }
-            }
-          }
-        }
-      }
+                  name: { type: "string" },
+                  version: { type: "string" },
+                  environment: { type: "string" },
+                  documentation: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     async (request) => ({
       success: true,
       requestId: request.id,
       data: {
-        name: 'SportsOS API',
-        version: '0.3.5',
+        name: API_NAME,
+        version: API_VERSION,
         environment: config.environment.name,
-        documentation: '/docs'
-      }
-    })
+        documentation: API_DOCUMENTATION_PATH,
+      },
+    }),
   );
 
   app.get(
-    '/ready',
+    "/ready",
     {
       schema: {
-        tags: ['Platform'],
-        summary: 'Application readiness'
-      }
+        tags: ["Platform"],
+        summary: "Application readiness",
+      },
     },
     async (request) => ({
       success: true,
       requestId: request.id,
       data: {
-        status: 'ready'
-      }
-    })
+        status: "ready",
+      },
+    }),
   );
 
   app.get(
-    '/version',
+    "/version",
     {
       schema: {
-        tags: ['Platform'],
-        summary: 'Application version'
-      }
+        tags: ["Platform"],
+        summary: "Application version",
+      },
     },
     async (request) => ({
       success: true,
       requestId: request.id,
       data: {
-        name: 'SportsOS API',
-        version: '0.3.5',
-        nodeVersion: process.version
-      }
-    })
+        name: API_NAME,
+        version: API_VERSION,
+        nodeVersion: process.version,
+      },
+    }),
   );
 }

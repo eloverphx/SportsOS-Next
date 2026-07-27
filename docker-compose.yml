@@ -39,7 +39,11 @@ services:
       - ./docker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - sportsos_mqtt:/mosquitto/data
     healthcheck:
-      test: ["CMD-SHELL", "mosquitto_sub -h localhost -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null 2>&1"]
+      test:
+        [
+          "CMD-SHELL",
+          "mosquitto_sub -h localhost -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null 2>&1",
+        ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -94,14 +98,21 @@ services:
       mqtt: { condition: service_healthy }
       minio: { condition: service_healthy }
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:4001/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:4001/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
       interval: 15s
       timeout: 10s
       retries: 10
 
   dashboard:
     build:
-      context: ./apps/dashboard
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://${SPORTSOS_HOST}:4001
     container_name: sportsos_dashboard

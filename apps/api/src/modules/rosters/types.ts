@@ -1,7 +1,7 @@
-import type { PlayerPosition, PlayerStatus } from '../players/types.js';
+import type { PlayerPosition, PlayerStatus } from "../players/types.js";
 
-export const rosterRoles = ['PLAYER', 'CAPTAIN', 'ALTERNATE'] as const;
-export type RosterRole = typeof rosterRoles[number];
+export const rosterRoles = ["PLAYER", "CAPTAIN", "ALTERNATE"] as const;
+export type RosterRole = (typeof rosterRoles)[number];
 
 export interface RosterEntry {
   id: number;

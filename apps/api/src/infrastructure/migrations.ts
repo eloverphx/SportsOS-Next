@@ -1,7 +1,7 @@
-import type { RowDataPacket } from 'mysql2/promise';
-import { config } from '@sportsos/config';
-import { pool } from './database.js';
-import { minio } from './minio.js';
+import type { RowDataPacket } from "mysql2/promise";
+import { config } from "@sportsos/config";
+import { pool } from "./database.js";
+import { minio } from "./minio.js";
 
 export async function runMigrations(): Promise<void> {
   await pool.execute(`CREATE TABLE IF NOT EXISTS organizations (
@@ -137,21 +137,26 @@ export async function runMigrations(): Promise<void> {
 
   const [columns] = await pool.query<RowDataPacket[]>(
     `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'organizations'`,
-    [config.database.name]
+    [config.database.name],
   );
   const present = new Set(columns.map((row) => String(row.COLUMN_NAME)));
   const additions: Array<[string, string]> = [
-    ['short_name', 'VARCHAR(50) NULL AFTER name'],
-    ['primary_color', "VARCHAR(7) NOT NULL DEFAULT '#ef4444' AFTER timezone"],
-    ['secondary_color', "VARCHAR(7) NOT NULL DEFAULT '#0f172a' AFTER primary_color"],
-    ['website', 'VARCHAR(255) NULL AFTER secondary_color'],
-    ['logo_asset_id', 'BIGINT UNSIGNED NULL AFTER website'],
-    ['active', 'BOOLEAN NOT NULL DEFAULT TRUE AFTER logo_asset_id'],
-    ['updated_at', 'TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at']
+    ["short_name", "VARCHAR(50) NULL AFTER name"],
+    ["primary_color", "VARCHAR(7) NOT NULL DEFAULT '#ef4444' AFTER timezone"],
+    ["secondary_color", "VARCHAR(7) NOT NULL DEFAULT '#0f172a' AFTER primary_color"],
+    ["website", "VARCHAR(255) NULL AFTER secondary_color"],
+    ["logo_asset_id", "BIGINT UNSIGNED NULL AFTER website"],
+    ["active", "BOOLEAN NOT NULL DEFAULT TRUE AFTER logo_asset_id"],
+    [
+      "updated_at",
+      "TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at",
+    ],
   ];
   for (const [name, sql] of additions) {
-    if (!present.has(name)) await pool.execute(`ALTER TABLE organizations ADD COLUMN ${name} ${sql}`);
+    if (!present.has(name))
+      await pool.execute(`ALTER TABLE organizations ADD COLUMN ${name} ${sql}`);
   }
 
-  if (!(await minio.bucketExists(config.storage.bucket))) await minio.makeBucket(config.storage.bucket);
+  if (!(await minio.bucketExists(config.storage.bucket)))
+    await minio.makeBucket(config.storage.bucket);
 }

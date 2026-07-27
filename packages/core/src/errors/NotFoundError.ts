@@ -9,7 +9,7 @@ export class NotFoundError extends AppError {
     super(message, {
       statusCode: 404,
       code: "NOT_FOUND",
-      expose: true
+      expose: true,
     });
   }
 }

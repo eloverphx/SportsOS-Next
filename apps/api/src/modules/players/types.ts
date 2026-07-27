@@ -1,10 +1,10 @@
-export const playerPositions = ['Goalie', 'Defense', 'Left Wing', 'Center', 'Right Wing'] as const;
-export const playerStatuses = ['ACTIVE', 'INACTIVE', 'INJURED', 'SUSPENDED'] as const;
-export const playerShoots = ['L', 'R'] as const;
+export const playerPositions = ["Goalie", "Defense", "Left Wing", "Center", "Right Wing"] as const;
+export const playerStatuses = ["ACTIVE", "INACTIVE", "INJURED", "SUSPENDED"] as const;
+export const playerShoots = ["L", "R"] as const;
 
-export type PlayerPosition = typeof playerPositions[number];
-export type PlayerStatus = typeof playerStatuses[number];
-export type PlayerShoots = typeof playerShoots[number];
+export type PlayerPosition = (typeof playerPositions)[number];
+export type PlayerStatus = (typeof playerStatuses)[number];
+export type PlayerShoots = (typeof playerShoots)[number];
 
 export interface Player {
   id: number;

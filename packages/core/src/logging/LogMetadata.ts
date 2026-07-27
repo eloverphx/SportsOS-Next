@@ -1,9 +1,6 @@
 export type LogPrimitive = string | number | boolean | null;
 
-export type LogValue =
-  | LogPrimitive
-  | ReadonlyArray<LogPrimitive>
-  | Record<string, unknown>;
+export type LogValue = LogPrimitive | ReadonlyArray<LogPrimitive> | Record<string, unknown>;
 
 export interface LogMetadata {
   requestId?: string;

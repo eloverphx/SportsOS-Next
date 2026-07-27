@@ -1,6 +1,6 @@
-import { config } from '@sportsos/config';
-import { buildApp } from './app.js';
-import { runMigrations } from './infrastructure/migrations.js';
+import { config } from "@sportsos/config";
+import { buildApp } from "./app.js";
+import { runMigrations } from "./infrastructure/migrations.js";
 
 await runMigrations();
 
@@ -15,10 +15,10 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
 
   shuttingDown = true;
 
-  app.log.info({ signal }, 'Shutdown signal received');
+  app.log.info({ signal }, "Shutdown signal received");
 
   const forceExitTimer = setTimeout(() => {
-    app.log.error('Graceful shutdown timed out');
+    app.log.error("Graceful shutdown timed out");
     process.exit(1);
   }, 10_000);
 
@@ -26,37 +26,37 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
 
   try {
     await app.close();
-    app.log.info('API shutdown completed');
+    app.log.info("API shutdown completed");
     process.exitCode = 0;
   } catch (error) {
-    app.log.error({ err: error }, 'API shutdown failed');
+    app.log.error({ err: error }, "API shutdown failed");
     process.exitCode = 1;
   }
 }
 
-process.once('SIGINT', () => {
-  void shutdown('SIGINT');
+process.once("SIGINT", () => {
+  void shutdown("SIGINT");
 });
 
-process.once('SIGTERM', () => {
-  void shutdown('SIGTERM');
+process.once("SIGTERM", () => {
+  void shutdown("SIGTERM");
 });
 
 try {
   await app.listen({
     host: config.api.host,
-    port: config.api.port
+    port: config.api.port,
   });
 
   app.log.info(
     {
       host: config.api.host,
       port: config.api.port,
-      environment: config.environment.name
+      environment: config.environment.name,
     },
-    'SportsOS API listening'
+    "SportsOS API listening",
   );
 } catch (error) {
-  app.log.fatal({ err: error }, 'SportsOS API failed to start');
+  app.log.fatal({ err: error }, "SportsOS API failed to start");
   process.exitCode = 1;
 }

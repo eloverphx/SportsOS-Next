@@ -5,7 +5,7 @@ export class UnauthorizedError extends AppError {
     super(message, {
       statusCode: 401,
       code: "UNAUTHORIZED",
-      expose: true
+      expose: true,
     });
   }
 }

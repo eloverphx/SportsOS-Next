@@ -18,6 +18,4 @@ export interface ApiErrorResponse {
   error: ApiErrorBody;
 }
 
-export type ApiResponse<TData> =
-  | ApiSuccessResponse<TData>
-  | ApiErrorResponse;
+export type ApiResponse<TData> = ApiSuccessResponse<TData> | ApiErrorResponse;

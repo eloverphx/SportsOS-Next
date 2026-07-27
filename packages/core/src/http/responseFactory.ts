@@ -1,15 +1,12 @@
 import type { ApiErrorResponse, ApiSuccessResponse } from "../types/ApiResponse.js";
 import type { RequestContext } from "./RequestContext.js";
 
-export function successResponse<T>(
-  context: RequestContext,
-  data: T
-): ApiSuccessResponse<T> {
+export function successResponse<T>(context: RequestContext, data: T): ApiSuccessResponse<T> {
   return {
     success: true,
     requestId: context.requestId,
     timestamp: context.timestamp,
-    data
+    data,
   };
 }
 
@@ -17,7 +14,7 @@ export function errorResponse(
   context: RequestContext,
   code: string,
   message: string,
-  details?: unknown
+  details?: unknown,
 ): ApiErrorResponse {
   return {
     success: false,
@@ -26,7 +23,7 @@ export function errorResponse(
     error: {
       code,
       message,
-      details
-    }
+      details,
+    },
   };
 }

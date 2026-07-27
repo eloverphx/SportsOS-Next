@@ -6,6 +6,8 @@
 **/.next
 **/coverage
 **/*.tsbuildinfo
+/sprints
+/backups
 
 .env
 .env.*

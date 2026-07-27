@@ -1,4 +1,52 @@
-'use client';
-import { useState } from 'react'; import { useRouter } from 'next/navigation';
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4001';
-export default function Login(){const router=useRouter();const[identifier,setIdentifier]=useState('');const[password,setPassword]=useState('');const[error,setError]=useState('');const[busy,setBusy]=useState(false);async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');const r=await fetch(`${API}/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier,password})});const d=await r.json();setBusy(false);if(!r.ok){setError(d.error??'Login failed');return;}localStorage.setItem('sportsos_token',d.token);localStorage.setItem('sportsos_user',JSON.stringify(d.user));router.push('/dashboard');}return <main className="center"><form className="login" onSubmit={submit}><div className="brand large">SportsOS</div><h1>Sign in</h1><p>Access your sports operations center.</p><input placeholder="Username or email" value={identifier} onChange={e=>setIdentifier(e.target.value)}/><input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)}/>{error&&<p className="error">{error}</p>}<button disabled={busy}>{busy?'Signing in…':'Sign in'}</button></form></main>}
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4001";
+export default function Login() {
+  const router = useRouter();
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const r = await fetch(`${API}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier, password }),
+    });
+    const d = await r.json();
+    setBusy(false);
+    if (!r.ok) {
+      setError(d.error ?? "Login failed");
+      return;
+    }
+    localStorage.setItem("sportsos_token", d.token);
+    localStorage.setItem("sportsos_user", JSON.stringify(d.user));
+    router.push("/dashboard");
+  }
+  return (
+    <main className="center">
+      <form className="login" onSubmit={submit}>
+        <div className="brand large">SportsOS</div>
+        <h1>Sign in</h1>
+        <p>Access your sports operations center.</p>
+        <input
+          placeholder="Username or email"
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        {error && <p className="error">{error}</p>}
+        <button disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+      </form>
+    </main>
+  );
+}

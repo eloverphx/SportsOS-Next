@@ -1,9 +1,4 @@
-import type {
-  FastifyError,
-  FastifyInstance,
-  FastifyReply,
-  FastifyRequest
-} from 'fastify';
+import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 interface ErrorResponse {
   success: false;
@@ -16,43 +11,34 @@ interface ErrorResponse {
 }
 
 function statusCodeFor(error: FastifyError): number {
-  if (
-    typeof error.statusCode === 'number' &&
-    error.statusCode >= 400 &&
-    error.statusCode <= 599
-  ) {
+  if (typeof error.statusCode === "number" && error.statusCode >= 400 && error.statusCode <= 599) {
     return error.statusCode;
   }
 
   return 500;
 }
 
-export async function registerErrorHandling(
-  app: FastifyInstance
-): Promise<void> {
+export async function registerErrorHandling(app: FastifyInstance): Promise<void> {
   app.setNotFoundHandler(
-    async (
-      request: FastifyRequest,
-      reply: FastifyReply
-    ): Promise<ErrorResponse> => {
+    async (request: FastifyRequest, reply: FastifyReply): Promise<ErrorResponse> => {
       reply.code(404);
 
       return {
         success: false,
         requestId: request.id,
         error: {
-          code: 'ROUTE_NOT_FOUND',
-          message: `Route ${request.method} ${request.url} was not found`
-        }
+          code: "ROUTE_NOT_FOUND",
+          message: `Route ${request.method} ${request.url} was not found`,
+        },
       };
-    }
+    },
   );
 
   app.setErrorHandler(
     async (
       error: FastifyError,
       request: FastifyRequest,
-      reply: FastifyReply
+      reply: FastifyReply,
     ): Promise<ErrorResponse> => {
       const statusCode = statusCodeFor(error);
       const isServerError = statusCode >= 500;
@@ -61,17 +47,17 @@ export async function registerErrorHandling(
         request.log.error(
           {
             err: error,
-            requestId: request.id
+            requestId: request.id,
           },
-          'Request failed'
+          "Request failed",
         );
       } else {
         request.log.warn(
           {
             err: error,
-            requestId: request.id
+            requestId: request.id,
           },
-          'Request rejected'
+          "Request rejected",
         );
       }
 
@@ -81,12 +67,10 @@ export async function registerErrorHandling(
         success: false,
         requestId: request.id,
         error: {
-          code: error.code ?? 'INTERNAL_SERVER_ERROR',
-          message: isServerError
-            ? 'An unexpected server error occurred'
-            : error.message
-        }
+          code: error.code ?? "INTERNAL_SERVER_ERROR",
+          message: isServerError ? "An unexpected server error occurred" : error.message,
+        },
       };
-    }
+    },
   );
 }
