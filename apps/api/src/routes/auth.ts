@@ -5,6 +5,7 @@ import { z } from "zod";
 import { pool } from "../infrastructure/database.js";
 import { audit } from "../lib/audit.js";
 import { authUser, requireAuth } from "../lib/auth.js";
+import { normalizeRole } from "../modules/auth/index.js";
 
 const loginSchema = z.object({
   identifier: z.string().trim().min(1),
@@ -30,10 +31,16 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(401).send({ error: "Invalid username/email or password" });
     }
 
+    const role = normalizeRole(user.role);
+
     const token = app.jwt.sign(
-      { sub: String(user.id), organizationId: Number(user.organization_id), role: user.role },
-      { expiresIn: "8h" },
-    );
+    {
+      sub: String(user.id),
+      organizationId: Number(user.organization_id),
+      role,
+    },
+  { expiresIn: "8h" },
+);
     await audit(String(user.id), "auth.login", { username: user.username });
     return {
       token,
@@ -43,7 +50,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         lastName: user.last_name,
         email: user.email,
         username: user.username,
-        role: user.role,
+        role,
         organizationName: user.organization_name,
       },
     };

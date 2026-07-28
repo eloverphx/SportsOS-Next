@@ -1,15 +1,19 @@
 import type { FastifyRequest } from "fastify";
+import {
+  authenticatedIdentity,
+  type AuthenticatedIdentity,
+} from "../modules/auth/index.js";
 
-export interface AuthUser {
-  sub: string;
-  organizationId: number;
-  role: string;
-}
+export type AuthUser = AuthenticatedIdentity;
 
-export async function requireAuth(request: FastifyRequest): Promise<void> {
+export async function requireAuth(
+  request: FastifyRequest,
+): Promise<void> {
   await request.jwtVerify();
 }
 
-export function authUser(request: FastifyRequest): AuthUser {
-  return request.user as AuthUser;
+export function authUser(
+  request: FastifyRequest,
+): AuthenticatedIdentity {
+  return authenticatedIdentity(request);
 }

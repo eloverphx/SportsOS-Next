@@ -1,17 +1,9 @@
 import "@fastify/jwt";
+import type { IdentityTokenPayload } from "../modules/auth/index.js";
 
 declare module "@fastify/jwt" {
   interface FastifyJWT {
-    payload: {
-      sub: string;
-      organizationId: number;
-      role: string;
-    };
-
-    user: {
-      sub: string;
-      organizationId: number;
-      role: string;
-    };
+    payload: IdentityTokenPayload;
+    user: IdentityTokenPayload;
   }
 }
