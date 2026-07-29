@@ -7,15 +7,18 @@ import {
   requirePermission,
 } from "../modules/auth/index.js";
 import {
+  createOrganizationMember,
   findOrganizationMember,
   listOrganizationMembers,
   updateOrganizationMemberRole,
 } from "../modules/organization-members/repository.js";
 import {
+  createOrganizationMemberSchema,
   organizationIdParamsSchema,
   organizationMemberParamsSchema,
   updateOrganizationMemberRoleSchema,
 } from "../modules/organization-members/schemas.js";
+import bcrypt from "bcryptjs";
 
 export async function organizationMemberRoutes(app: FastifyInstance): Promise<void> {
   app.get("/organizations/:organizationId/members", async (request, reply) => {
@@ -37,6 +40,63 @@ export async function organizationMemberRoutes(app: FastifyInstance): Promise<vo
     return {
       members,
     };
+  });
+
+  app.post("/organizations/:organizationId/members", async (request, reply) => {
+    const params = organizationIdParamsSchema.safeParse(request.params);
+
+    const body = createOrganizationMemberSchema.safeParse(request.body);
+
+    if (!params.success || !body.success) {
+      return reply.code(400).send({
+        error: "Invalid organization member data",
+        details: body.success ? undefined : body.error.flatten(),
+      });
+    }
+
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.ORGANIZATION_MEMBERS_MANAGE,
+      organizationId: params.data.organizationId,
+    });
+
+    assertRoleAssignmentAllowed(identity, body.data.role);
+
+    const passwordHash = await bcrypt.hash(body.data.password, 12);
+
+    try {
+      const member = await createOrganizationMember({
+        organizationId: params.data.organizationId,
+        firstName: body.data.firstName,
+        lastName: body.data.lastName,
+        email: body.data.email,
+        username: body.data.username,
+        passwordHash,
+        role: body.data.role,
+      });
+
+      await audit(identity.sub, "organization.member.created", {
+        organizationId: params.data.organizationId,
+        userId: member.id,
+        role: member.role,
+      });
+
+      return reply.code(201).send({
+        success: true,
+        member,
+      });
+    } catch (error) {
+      const databaseError = error as {
+        code?: string;
+      };
+
+      if (databaseError.code === "ER_DUP_ENTRY") {
+        return reply.code(409).send({
+          error: "A user with that email or username already exists",
+        });
+      }
+
+      throw error;
+    }
   });
 
   app.patch("/organizations/:organizationId/members/:userId/role", async (request, reply) => {

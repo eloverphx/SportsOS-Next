@@ -6,13 +6,16 @@ import { realtime } from "../infrastructure/realtime.js";
 import { audit } from "../lib/audit.js";
 import { logoUrl } from "../lib/media.js";
 import { PERMISSIONS, ROLES, requirePermission } from "../modules/auth/index.js";
+import { isAmericasTimeZone } from "../lib/timezones.js";
 
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 const organizationSchema = z.object({
   name: z.string().trim().min(2).max(160),
   shortName: z.string().trim().max(50).nullable().optional(),
   defaultSport: z.string().trim().min(2).max(80).default("Hockey"),
-  timezone: z.string().trim().min(2).max(100),
+  timezone: z.string().refine(isAmericasTimeZone, {
+    message: "Timezone must be a supported Americas timezone",
+  }),
   primaryColor: color.default("#ef4444"),
   secondaryColor: color.default("#0f172a"),
   website: z.union([z.string().trim().url().max(255), z.literal(""), z.null()]).optional(),
@@ -40,6 +43,36 @@ function mapOrganization(row: RowDataPacket) {
 }
 
 export async function organizationRoutes(app: FastifyInstance): Promise<void> {
+  app.get("/organizations", async (request) => {
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.ORGANIZATION_READ,
+    });
+
+    const systemAdministrator = identity.role === ROLES.SYSTEM_ADMIN;
+
+    const [rows] = systemAdministrator
+      ? await pool.query<RowDataPacket[]>(
+          `SELECT o.*, COUNT(t.id) AS team_count
+           FROM organizations o
+           LEFT JOIN teams t ON t.organization_id = o.id
+           GROUP BY o.id
+           ORDER BY o.name`,
+        )
+      : await pool.execute<RowDataPacket[]>(
+          `SELECT o.*, COUNT(t.id) AS team_count
+           FROM organizations o
+           LEFT JOIN teams t ON t.organization_id = o.id
+           WHERE o.id = ?
+           GROUP BY o.id
+           ORDER BY o.name`,
+          [identity.organizationId],
+        );
+
+    return {
+      organizations: rows.map(mapOrganization),
+    };
+  });
+
   app.get("/organizations/:id", async (request, reply) => {
     const id = z.coerce
       .number()
@@ -60,10 +93,10 @@ export async function organizationRoutes(app: FastifyInstance): Promise<void> {
 
     const [rows] = await pool.execute<RowDataPacket[]>(
       `SELECT o.*, COUNT(t.id) AS team_count
-     FROM organizations o
-     LEFT JOIN teams t ON t.organization_id = o.id
-     WHERE o.id = ?
-     GROUP BY o.id`,
+       FROM organizations o
+       LEFT JOIN teams t ON t.organization_id = o.id
+       WHERE o.id = ?
+       GROUP BY o.id`,
       [id.data],
     );
 
@@ -77,37 +110,6 @@ export async function organizationRoutes(app: FastifyInstance): Promise<void> {
       organization: mapOrganization(rows[0]),
     };
   });
-
-  app.get("/organizations", async (request) => {
-    const identity = await requirePermission(request, {
-      permission: PERMISSIONS.ORGANIZATION_READ,
-    });
-
-    const systemAdministrator = identity.role === ROLES.SYSTEM_ADMIN;
-
-    const [rows] = systemAdministrator
-      ? await pool.query<RowDataPacket[]>(
-          `SELECT o.*, COUNT(t.id) AS team_count
-         FROM organizations o
-         LEFT JOIN teams t ON t.organization_id = o.id
-         GROUP BY o.id
-         ORDER BY o.name`,
-        )
-      : await pool.execute<RowDataPacket[]>(
-          `SELECT o.*, COUNT(t.id) AS team_count
-         FROM organizations o
-         LEFT JOIN teams t ON t.organization_id = o.id
-         WHERE o.id = ?
-         GROUP BY o.id
-         ORDER BY o.name`,
-          [identity.organizationId],
-        );
-
-    return {
-      organizations: rows.map(mapOrganization),
-    };
-  });
-
   app.post("/organizations", async (request, reply) => {
     const identity = await requirePermission(request, {
       permission: PERMISSIONS.ORGANIZATION_CREATE,

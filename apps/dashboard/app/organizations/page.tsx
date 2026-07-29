@@ -4,6 +4,7 @@ import { io } from "socket.io-client";
 import { AuthGate } from "../../components/AuthGate";
 import { AppShell } from "../../components/AppShell";
 import { API, api, uploadLogo } from "../../lib/api";
+import { AMERICAS_TIME_ZONES } from "../../lib/timezones";
 
 type Organization = {
   id: number;
@@ -163,10 +164,22 @@ export default function OrganizationsPage() {
             </label>
             <label>
               Timezone
-              <input
+              <select
+                required
                 value={form.timezone}
-                onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-              />
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    timezone: event.target.value,
+                  })
+                }
+              >
+                {AMERICAS_TIME_ZONES.map((timezone) => (
+                  <option key={timezone} value={timezone}>
+                    {timezone.replaceAll("_", " ")}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               Primary color

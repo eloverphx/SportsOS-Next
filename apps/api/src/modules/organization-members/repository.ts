@@ -2,6 +2,50 @@ import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { pool } from "../../infrastructure/database.js";
 import { normalizeRole, type Role } from "../auth/index.js";
 
+export interface CreateOrganizationMemberInput {
+  readonly organizationId: number;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly email: string;
+  readonly username: string;
+  readonly passwordHash: string;
+  readonly role: Role;
+}
+
+export async function createOrganizationMember(
+  input: CreateOrganizationMemberInput,
+): Promise<OrganizationMember> {
+  const [result] = await pool.execute<ResultSetHeader>(
+    `INSERT INTO users (
+       organization_id,
+       first_name,
+       last_name,
+       email,
+       username,
+       password_hash,
+       role
+     )
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      input.organizationId,
+      input.firstName,
+      input.lastName,
+      input.email,
+      input.username,
+      input.passwordHash,
+      input.role,
+    ],
+  );
+
+  const member = await findOrganizationMember(input.organizationId, Number(result.insertId));
+
+  if (!member) {
+    throw new Error("Created organization member could not be loaded");
+  }
+
+  return member;
+}
+
 interface OrganizationMemberRow extends RowDataPacket {
   id: number | string;
   organization_id: number | string;
