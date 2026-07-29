@@ -4,7 +4,7 @@ import { z } from "zod";
 import { pool } from "../infrastructure/database.js";
 import { realtime } from "../infrastructure/realtime.js";
 import { audit } from "../lib/audit.js";
-import { authUser, requireAuth } from "../lib/auth.js";
+import { PERMISSIONS, ROLES,requirePermission } from "../modules/auth/index.js";
 import { logoUrl } from "../lib/media.js";
 
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
@@ -40,29 +40,78 @@ function mapOrganization(row: RowDataPacket) {
 }
 
 export async function organizationRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/organizations", { preHandler: requireAuth }, async () => {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT o.*, COUNT(t.id) AS team_count FROM organizations o LEFT JOIN teams t ON t.organization_id = o.id GROUP BY o.id ORDER BY o.name`,
-    );
-    return { organizations: rows.map(mapOrganization) };
+  app.get("/organizations/:id", async (request, reply) => {
+  const id = z.coerce
+    .number()
+    .int()
+    .positive()
+    .safeParse((request.params as { id: string }).id);
+
+  if (!id.success) {
+    return reply.code(400).send({
+      error: "Invalid organization id",
+    });
+  }
+
+  await requirePermission(request, {
+    permission: PERMISSIONS.ORGANIZATION_READ,
+    organizationId: id.data,
   });
 
-  app.get("/organizations/:id", { preHandler: requireAuth }, async (request, reply) => {
-    const id = z.coerce
-      .number()
-      .int()
-      .positive()
-      .safeParse((request.params as { id: string }).id);
-    if (!id.success) return reply.code(400).send({ error: "Invalid organization id" });
-    const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT o.*, COUNT(t.id) AS team_count FROM organizations o LEFT JOIN teams t ON t.organization_id = o.id WHERE o.id = ? GROUP BY o.id`,
-      [id.data],
-    );
-    if (!rows[0]) return reply.code(404).send({ error: "Organization not found" });
-    return { organization: mapOrganization(rows[0]) };
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT o.*, COUNT(t.id) AS team_count
+     FROM organizations o
+     LEFT JOIN teams t ON t.organization_id = o.id
+     WHERE o.id = ?
+     GROUP BY o.id`,
+    [id.data],
+  );
+
+  if (!rows[0]) {
+    return reply.code(404).send({
+      error: "Organization not found",
+    });
+  }
+
+  return {
+    organization: mapOrganization(rows[0]),
+  };
+});
+
+  app.get("/organizations", async (request) => {
+  const identity = await requirePermission(request, {
+    permission: PERMISSIONS.ORGANIZATION_READ,
   });
 
-  app.post("/organizations", { preHandler: requireAuth }, async (request, reply) => {
+  const systemAdministrator = identity.role === ROLES.SYSTEM_ADMIN;
+
+  const [rows] = systemAdministrator
+    ? await pool.query<RowDataPacket[]>(
+        `SELECT o.*, COUNT(t.id) AS team_count
+         FROM organizations o
+         LEFT JOIN teams t ON t.organization_id = o.id
+         GROUP BY o.id
+         ORDER BY o.name`,
+      )
+    : await pool.execute<RowDataPacket[]>(
+        `SELECT o.*, COUNT(t.id) AS team_count
+         FROM organizations o
+         LEFT JOIN teams t ON t.organization_id = o.id
+         WHERE o.id = ?
+         GROUP BY o.id
+         ORDER BY o.name`,
+        [identity.organizationId],
+      );
+
+  return {
+    organizations: rows.map(mapOrganization),
+  };
+});
+
+  app.post("/organizations", async (request, reply) => {
+  const identity = await requirePermission(request, {
+    permission: PERMISSIONS.ORGANIZATION_CREATE,
+  });
     const parsed = organizationSchema.safeParse(request.body);
     if (!parsed.success)
       return reply
@@ -83,7 +132,7 @@ export async function organizationRoutes(app: FastifyInstance): Promise<void> {
         d.active,
       ],
     );
-    await audit(authUser(request).sub, "organization.created", {
+    await audit(identity.sub, "organization.created", {
       organizationId: result.insertId,
       name: d.name,
     });
@@ -91,57 +140,125 @@ export async function organizationRoutes(app: FastifyInstance): Promise<void> {
     return reply.code(201).send({ id: result.insertId });
   });
 
-  app.put("/organizations/:id", { preHandler: requireAuth }, async (request, reply) => {
-    const id = z.coerce
-      .number()
-      .int()
-      .positive()
-      .safeParse((request.params as { id: string }).id);
-    const parsed = organizationSchema.safeParse(request.body);
-    if (!id.success || !parsed.success)
-      return reply.code(400).send({ error: "Invalid organization data" });
-    const d = parsed.data;
-    const [result] = await pool.execute<mysql.ResultSetHeader>(
-      "UPDATE organizations SET name=?, short_name=?, default_sport=?, timezone=?, primary_color=?, secondary_color=?, website=?, logo_asset_id=?, active=? WHERE id=?",
-      [
-        d.name,
-        d.shortName || null,
-        d.defaultSport,
-        d.timezone,
-        d.primaryColor,
-        d.secondaryColor,
-        d.website || null,
-        d.logoAssetId || null,
-        d.active,
-        id.data,
-      ],
-    );
-    if (!result.affectedRows) return reply.code(404).send({ error: "Organization not found" });
-    await audit(authUser(request).sub, "organization.updated", { organizationId: id.data });
-    realtime().emit("organization:updated", { id: id.data });
-    return { success: true };
+  app.put("/organizations/:id", async (request, reply) => {
+  const id = z.coerce
+    .number()
+    .int()
+    .positive()
+    .safeParse((request.params as { id: string }).id);
+
+  const parsed = organizationSchema.safeParse(request.body);
+
+  if (!id.success || !parsed.success) {
+    return reply.code(400).send({
+      error: "Invalid organization data",
+    });
+  }
+
+  const identity = await requirePermission(request, {
+    permission: PERMISSIONS.ORGANIZATION_UPDATE,
+    organizationId: id.data,
   });
 
-  app.delete("/organizations/:id", { preHandler: requireAuth }, async (request, reply) => {
-    const id = z.coerce
-      .number()
-      .int()
-      .positive()
-      .safeParse((request.params as { id: string }).id);
-    if (!id.success) return reply.code(400).send({ error: "Invalid organization id" });
-    const [count] = await pool.execute<RowDataPacket[]>(
-      "SELECT COUNT(*) AS count FROM teams WHERE organization_id=?",
-      [id.data],
-    );
-    if (Number(count[0]?.count ?? 0) > 0)
-      return reply.code(409).send({ error: "Delete or move this organization’s teams first" });
-    const [result] = await pool.execute<mysql.ResultSetHeader>(
-      "DELETE FROM organizations WHERE id=?",
-      [id.data],
-    );
-    if (!result.affectedRows) return reply.code(404).send({ error: "Organization not found" });
-    await audit(authUser(request).sub, "organization.deleted", { organizationId: id.data });
-    realtime().emit("organization:deleted", { id: id.data });
-    return { success: true };
+  const d = parsed.data;
+
+  const [result] = await pool.execute<mysql.ResultSetHeader>(
+    `UPDATE organizations
+     SET name=?,
+         short_name=?,
+         default_sport=?,
+         timezone=?,
+         primary_color=?,
+         secondary_color=?,
+         website=?,
+         logo_asset_id=?,
+         active=?
+     WHERE id=?`,
+    [
+      d.name,
+      d.shortName || null,
+      d.defaultSport,
+      d.timezone,
+      d.primaryColor,
+      d.secondaryColor,
+      d.website || null,
+      d.logoAssetId || null,
+      d.active,
+      id.data,
+    ],
+  );
+
+  if (!result.affectedRows) {
+    return reply.code(404).send({
+      error: "Organization not found",
+    });
+  }
+
+  await audit(identity.sub, "organization.updated", {
+    organizationId: id.data,
   });
+
+  realtime().emit("organization:updated", {
+    id: id.data,
+  });
+
+  return {
+    success: true,
+  };
+});
+
+  app.delete("/organizations/:id", async (request, reply) => {
+  const id = z.coerce
+    .number()
+    .int()
+    .positive()
+    .safeParse((request.params as { id: string }).id);
+
+  if (!id.success) {
+    return reply.code(400).send({
+      error: "Invalid organization id",
+    });
+  }
+
+  const identity = await requirePermission(request, {
+    permission: PERMISSIONS.ORGANIZATION_DELETE,
+    organizationId: id.data,
+  });
+
+  const [count] = await pool.execute<RowDataPacket[]>(
+    "SELECT COUNT(*) AS count FROM teams WHERE organization_id=?",
+    [id.data],
+  );
+
+  if (Number(count[0]?.count ?? 0) > 0) {
+    return reply.code(409).send({
+      error: "Delete or move this organization’s teams first",
+    });
+  }
+
+  const [result] = await pool.execute<mysql.ResultSetHeader>(
+    "DELETE FROM organizations WHERE id=?",
+    [id.data],
+  );
+
+  if (!result.affectedRows) {
+    return reply.code(404).send({
+      error: "Organization not found",
+    });
+  }
+
+  await audit(identity.sub, "organization.deleted", {
+    organizationId: id.data,
+  });
+
+  realtime().emit("organization:deleted", {
+    id: id.data,
+  });
+
+  return {
+    success: true,
+  };
+});
+
+  
 }
