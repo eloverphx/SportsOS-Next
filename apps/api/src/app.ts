@@ -13,6 +13,7 @@ import { platformRoutes } from "./routes/platform.js";
 import { setupRoutes } from "./routes/setup.js";
 import { systemRoutes } from "./routes/system.js";
 import { teamRoutes } from "./routes/teams.js";
+import { organizationMemberRoutes } from "./routes/organization-members.js";
 
 export interface BuildAppOptions {
   readonly logger?: boolean;
@@ -41,6 +42,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(setupRoutes);
   await app.register(authRoutes);
   await app.register(organizationRoutes);
+  await app.register(organizationMemberRoutes);
   await app.register(teamRoutes);
   await app.register(playerRoutes);
   await app.register(seasonRoutes);

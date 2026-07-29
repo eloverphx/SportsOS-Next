@@ -1,6 +1,11 @@
 export {
-  AuthorizationError,
-} from "./authorization-error.js";
+  ORGANIZATION_MEMBER_ROLES,
+  assertRoleAssignmentAllowed,
+  isOrganizationMemberRole,
+  type OrganizationMemberRole,
+} from "./role-assignment.js";
+
+export { AuthorizationError } from "./authorization-error.js";
 
 export {
   assertPermission,
@@ -8,10 +13,7 @@ export {
   type PermissionRequirement,
 } from "./authorization.js";
 
-export {
-  authenticatedIdentity,
-  identityFromToken,
-} from "./identity.js";
+export { authenticatedIdentity, identityFromToken } from "./identity.js";
 
 export {
   PERMISSIONS,
@@ -21,14 +23,6 @@ export {
   type Permission,
 } from "./permissions.js";
 
-export {
-  ROLES,
-  isRole,
-  normalizeRole,
-  type Role,
-} from "./roles.js";
+export { ROLES, isRole, normalizeRole, type Role } from "./roles.js";
 
-export type {
-  AuthenticatedIdentity,
-  IdentityTokenPayload,
-} from "./types.js";
+export type { AuthenticatedIdentity, IdentityTokenPayload } from "./types.js";
