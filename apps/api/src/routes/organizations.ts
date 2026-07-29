@@ -259,6 +259,4 @@ export async function organizationRoutes(app: FastifyInstance): Promise<void> {
     success: true,
   };
 });
-
-  
 }
