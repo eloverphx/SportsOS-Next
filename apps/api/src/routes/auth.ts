@@ -34,13 +34,13 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const role = normalizeRole(user.role);
 
     const token = app.jwt.sign(
-    {
-      sub: String(user.id),
-      organizationId: Number(user.organization_id),
-      role,
-    },
-  { expiresIn: "8h" },
-);
+      {
+        sub: String(user.id),
+        organizationId: Number(user.organization_id),
+        role,
+      },
+      { expiresIn: "8h" },
+    );
     await audit(String(user.id), "auth.login", { username: user.username });
     return {
       token,
@@ -74,7 +74,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         lastName: user.last_name,
         email: user.email,
         username: user.username,
-        role: user.role,
+        role: normalizeRole(user.role),
         organizationName: user.organization_name,
       },
     };

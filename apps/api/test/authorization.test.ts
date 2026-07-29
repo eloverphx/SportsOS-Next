@@ -8,6 +8,64 @@ import {
 } from "../src/modules/auth/index.js";
 
 describe("authorization enforcement", () => {
+  it("allows organization administrators to update their organization", () => {
+    const identity = identityFromToken({
+      sub: "12",
+      organizationId: 4,
+      role: ROLES.ORGANIZATION_ADMIN,
+    });
+
+    expect(() =>
+      assertPermission(identity, {
+        permission: PERMISSIONS.ORGANIZATION_UPDATE,
+        organizationId: 4,
+      }),
+    ).not.toThrow();
+  });
+
+  it("prevents organization administrators from updating another organization", () => {
+    const identity = identityFromToken({
+      sub: "12",
+      organizationId: 4,
+      role: ROLES.ORGANIZATION_ADMIN,
+    });
+
+    expect(() =>
+      assertPermission(identity, {
+        permission: PERMISSIONS.ORGANIZATION_UPDATE,
+        organizationId: 5,
+      }),
+    ).toThrow("You do not have access to this organization");
+  });
+
+  it("prevents organization administrators from creating organizations", () => {
+    const identity = identityFromToken({
+      sub: "12",
+      organizationId: 4,
+      role: ROLES.ORGANIZATION_ADMIN,
+    });
+
+    expect(() =>
+      assertPermission(identity, {
+        permission: PERMISSIONS.ORGANIZATION_CREATE,
+      }),
+    ).toThrow(AuthorizationError);
+  });
+
+  it("allows system administrators to create organizations", () => {
+    const identity = identityFromToken({
+      sub: "1",
+      organizationId: 1,
+      role: ROLES.SYSTEM_ADMIN,
+    });
+
+    expect(() =>
+      assertPermission(identity, {
+        permission: PERMISSIONS.ORGANIZATION_CREATE,
+      }),
+    ).not.toThrow();
+  });
+
   it("allows an organization administrator to create a team", () => {
     const identity = identityFromToken({
       sub: "12",
