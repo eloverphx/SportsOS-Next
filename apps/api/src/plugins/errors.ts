@@ -10,8 +10,17 @@ interface ErrorResponse {
   };
 }
 
-function statusCodeFor(error: FastifyError): number {
-  if (typeof error.statusCode === "number" && error.statusCode >= 400 && error.statusCode <= 599) {
+interface HttpError extends Error {
+  readonly statusCode?: number;
+  readonly code?: string;
+}
+
+function statusCodeFor(error: HttpError): number {
+  if (
+    typeof error.statusCode === "number" &&
+    error.statusCode >= 400 &&
+    error.statusCode <= 599
+  ) {
     return error.statusCode;
   }
 
@@ -36,7 +45,7 @@ export async function registerErrorHandling(app: FastifyInstance): Promise<void>
 
   app.setErrorHandler(
     async (
-      error: FastifyError,
+      error: FastifyError | HttpError,
       request: FastifyRequest,
       reply: FastifyReply,
     ): Promise<ErrorResponse> => {

@@ -1,4 +1,14 @@
 export {
+  AuthorizationError,
+} from "./authorization-error.js";
+
+export {
+  assertPermission,
+  requirePermission,
+  type PermissionRequirement,
+} from "./authorization.js";
+
+export {
   authenticatedIdentity,
   identityFromToken,
 } from "./identity.js";

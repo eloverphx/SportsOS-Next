@@ -1,7 +1,19 @@
 import type { FastifyInstance } from "fastify";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { buildApp } from "../src/app.js";
-import { API_NAME, API_VERSION } from "../src/platform/metadata.js";
+import {
+  afterAll,
+  beforeAll,
+  describe,
+  expect,
+  it,
+} from "vitest";
+import {
+  AuthorizationError,
+} from "../src/modules/auth/index.js";
+import {
+  API_DOCUMENTATION_PATH,
+  API_NAME,
+  API_VERSION,
+} from "../src/platform/metadata.js";
 
 describe("platform HTTP API", () => {
   let app: FastifyInstance;
@@ -14,11 +26,17 @@ describe("platform HTTP API", () => {
       realtime: false,
     });
 
+    app.get("/test/forbidden", async () => {
+      throw new AuthorizationError();
+    });
+
     await app.ready();
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
   });
 
   it("returns API metadata from GET /", async () => {
@@ -36,7 +54,7 @@ describe("platform HTTP API", () => {
         name: API_NAME,
         version: API_VERSION,
         environment: "test",
-        documentation: "/docs",
+        documentation: API_DOCUMENTATION_PATH,
       },
     });
   });
@@ -65,17 +83,14 @@ describe("platform HTTP API", () => {
 
     expect(response.statusCode).toBe(200);
 
-    const body = response.json();
-
-    expect(body).toMatchObject({
+    expect(response.json()).toMatchObject({
       success: true,
       data: {
         name: API_NAME,
         version: API_VERSION,
+        nodeVersion: process.version,
       },
     });
-
-    expect(body.data.nodeVersion).toBe(process.version);
   });
 
   it("serves the Swagger UI", async () => {
@@ -122,7 +137,8 @@ describe("platform HTTP API", () => {
       success: false,
       error: {
         code: "ROUTE_NOT_FOUND",
-        message: "Route GET /route-that-does-not-exist was not found",
+        message:
+          "Route GET /route-that-does-not-exist was not found",
       },
     });
   });
@@ -136,5 +152,23 @@ describe("platform HTTP API", () => {
     expect(response.headers["x-content-type-options"]).toBe("nosniff");
     expect(response.headers["x-ratelimit-limit"]).toBe("300");
     expect(response.headers["x-ratelimit-remaining"]).toBeDefined();
+  });
+
+  it("returns a standardized forbidden response", async () => {
+    const response = await app.inject({
+      method: "GET",
+      url: "/test/forbidden",
+    });
+
+    expect(response.statusCode).toBe(403);
+
+    expect(response.json()).toMatchObject({
+      success: false,
+      error: {
+        code: "AUTHORIZATION_DENIED",
+        message:
+          "You do not have permission to perform this action",
+      },
+    });
   });
 });
