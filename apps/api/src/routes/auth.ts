@@ -5,7 +5,7 @@ import { z } from "zod";
 import { pool } from "../infrastructure/database.js";
 import { audit } from "../lib/audit.js";
 import { authUser, requireAuth } from "../lib/auth.js";
-import { normalizeRole } from "../modules/auth/index.js";
+import { normalizeRole, permissionsForRole } from "../modules/auth/index.js";
 
 const loginSchema = z.object({
   identifier: z.string().trim().min(1),
@@ -45,37 +45,58 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return {
       token,
       user: {
-        id: user.id,
+        id: Number(user.id),
+        organizationId: Number(user.organization_id),
+        organizationName: user.organization_name,
         firstName: user.first_name,
         lastName: user.last_name,
         email: user.email,
         username: user.username,
         role,
-        organizationName: user.organization_name,
+        permissions: permissionsForRole(role),
       },
     };
   });
 
   app.get("/auth/me", { preHandler: requireAuth }, async (request, reply) => {
+    const identity = authUser(request);
+
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT u.id, u.first_name, u.last_name, u.email, u.username, u.role,
-              o.name AS organization_name
-       FROM users u
-       JOIN organizations o ON o.id = u.organization_id
-       WHERE u.id = ? LIMIT 1`,
-      [authUser(request).sub],
+      `SELECT
+       u.id,
+       u.organization_id,
+       u.first_name,
+       u.last_name,
+       u.email,
+       u.username,
+       u.role,
+       o.name AS organization_name
+     FROM users u
+     JOIN organizations o ON o.id = u.organization_id
+     WHERE u.id = ?
+     LIMIT 1`,
+      [identity.userId],
     );
+
     const user = rows[0];
-    if (!user) return reply.code(404).send({ error: "User not found" });
+
+    if (!user) {
+      return reply.code(404).send({
+        error: "User not found",
+      });
+    }
+
     return {
       user: {
-        id: user.id,
+        id: Number(user.id),
+        organizationId: Number(user.organization_id),
+        organizationName: user.organization_name,
         firstName: user.first_name,
         lastName: user.last_name,
         email: user.email,
         username: user.username,
-        role: normalizeRole(user.role),
-        organizationName: user.organization_name,
+        role: identity.role,
+        permissions: identity.permissions,
       },
     };
   });

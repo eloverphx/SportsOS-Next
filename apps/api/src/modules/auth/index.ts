@@ -7,6 +7,8 @@ export {
 
 export { AuthorizationError } from "./authorization-error.js";
 
+export type { AuthenticatedUserResponse, CurrentUserResponse, LoginResponse } from "./responses.js";
+
 export {
   assertPermission,
   requirePermission,
