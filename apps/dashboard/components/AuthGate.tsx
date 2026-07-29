@@ -1,32 +1,58 @@
 "use client";
-import { useEffect, useState, type ReactNode } from "react";
+
 import { useRouter } from "next/navigation";
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4001";
-export function AuthGate({ children }: { children: ReactNode }) {
+import { useEffect, useState, type ReactNode } from "react";
+import { clearAuthentication, getStoredToken } from "../lib/auth";
+import { refreshCurrentUser } from "../lib/session";
+
+interface AuthGateProps {
+  readonly children: ReactNode;
+}
+
+export function AuthGate({ children }: AuthGateProps) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
+
   useEffect(() => {
-    const token = localStorage.getItem("sportsos_token");
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-    fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => {
-        if (!r.ok) throw new Error();
-        return r.json();
-      })
-      .then(() => setReady(true))
-      .catch(() => {
-        localStorage.removeItem("sportsos_token");
+    let active = true;
+
+    async function verifySession(): Promise<void> {
+      const token = getStoredToken();
+
+      if (!token) {
         router.replace("/login");
-      });
+        return;
+      }
+
+      try {
+        await refreshCurrentUser();
+
+        if (active) {
+          setReady(true);
+        }
+      } catch {
+        clearAuthentication();
+
+        if (active) {
+          router.replace("/login");
+        }
+      }
+    }
+
+    void verifySession();
+
+    return () => {
+      active = false;
+    };
   }, [router]);
-  if (!ready)
+
+  if (!ready) {
     return (
       <main className="center">
-        <div className="card">Checking session…</div>
+        <p>Loading SportsOS…</p>
       </main>
     );
+  }
+
   return <>{children}</>;
 }

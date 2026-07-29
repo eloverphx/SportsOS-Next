@@ -2,27 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { getApiUrl } from "../../lib/api-url";
+import { storeAuthentication, type LoginResponse } from "../../lib/auth";
 
-function getApiUrl(): string {
-  const configuredUrl = process.env.NEXT_PUBLIC_API_URL;
-
-  if (configuredUrl) {
-    return configuredUrl.replace(/\/$/, "");
-  }
-
-  if (typeof window !== "undefined") {
-    return `${window.location.protocol}//${window.location.hostname}:4001`;
-  }
-
-  return "http://localhost:4001";
+interface LoginErrorResponse {
+  readonly error?: string;
 }
-
-interface LoginResponse {
-  token?: string;
-  user?: unknown;
-  error?: string;
-}
-
 export default function LoginPage() {
   const router = useRouter();
 
@@ -48,18 +33,21 @@ export default function LoginPage() {
         }),
       });
 
-      const body = (await response.json()) as LoginResponse;
+      const body = (await response.json()) as LoginResponse | LoginErrorResponse;
 
       if (!response.ok) {
-        throw new Error(body.error ?? "Login failed");
+        const errorBody = body as LoginErrorResponse;
+
+        throw new Error(errorBody.error ?? "Login failed");
       }
 
-      if (!body.token || !body.user) {
+      const login = body as LoginResponse;
+
+      if (!login.token || !login.user) {
         throw new Error("The login response was incomplete");
       }
 
-      localStorage.setItem("sportsos_token", body.token);
-      localStorage.setItem("sportsos_user", JSON.stringify(body.user));
+      storeAuthentication(login.token, login.user);
 
       router.push("/dashboard");
       router.refresh();
