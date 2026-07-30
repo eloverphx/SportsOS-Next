@@ -4,7 +4,6 @@ import { io } from "socket.io-client";
 import { AuthGate } from "../../components/AuthGate";
 import { AppShell } from "../../components/AppShell";
 import { API, api } from "../../lib/api";
-type Health = { services: Record<string, string> };
 type Stats = {
   organizations: number;
   teams: number;
@@ -15,15 +14,11 @@ type Stats = {
 type User = { firstName: string; organizationName: string };
 type Event = { id: number; action: string; created_at: string };
 export default function Dashboard() {
-  const [health, setHealth] = useState<Health | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const load = useCallback(() => {
     api<{ user: User }>("/auth/me").then((d) => setUser(d.user));
-    fetch(`${API}/health`)
-      .then((r) => r.json())
-      .then(setHealth);
     api<Stats>("/dashboard/stats").then(setStats);
     api<{ events: Event[] }>("/audit/recent").then((d) => setEvents(d.events));
   }, []);
@@ -52,16 +47,6 @@ export default function Dashboard() {
       <AppShell>
         <h1>Welcome{user?.firstName ? `, ${user.firstName}` : ""}</h1>
         <p className="muted">{user?.organizationName ?? "SportsOS"} operations overview</p>
-        <div className="cards">
-          {["mysql", "redis", "mqtt", "minio"].map((s) => (
-            <div className="metric" key={s}>
-              <span>{s.toUpperCase()}</span>
-              <strong className={health?.services?.[s] === "online" ? "online" : "offline"}>
-                {health?.services?.[s] ?? "checking"}
-              </strong>
-            </div>
-          ))}
-        </div>
         <div className="cards">
           <div className="metric">
             <span>Organizations</span>
