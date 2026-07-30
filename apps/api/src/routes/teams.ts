@@ -4,10 +4,11 @@ import { z } from "zod";
 import { pool } from "../infrastructure/database.js";
 import { realtime } from "../infrastructure/realtime.js";
 import { audit } from "../lib/audit.js";
-import { authUser, requireAuth } from "../lib/auth.js";
 import { logoUrl } from "../lib/media.js";
+import { PERMISSIONS, ROLES, requirePermission } from "../modules/auth/index.js";
 
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+
 const teamSchema = z.object({
   organizationId: z.number().int().positive(),
   name: z.string().trim().min(2).max(160),
@@ -43,114 +44,314 @@ function mapTeam(row: RowDataPacket) {
   };
 }
 
+async function findTeamOrganizationId(teamId: number): Promise<number | null> {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    "SELECT organization_id FROM teams WHERE id=? LIMIT 1",
+    [teamId],
+  );
+
+  return rows[0] ? Number(rows[0].organization_id) : null;
+}
+
 export async function teamRoutes(app: FastifyInstance): Promise<void> {
-  app.get("/teams", { preHandler: requireAuth }, async (request) => {
-    const query = request.query as { organizationId?: string; search?: string };
+  app.get("/teams", async (request, reply) => {
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.TEAM_READ,
+    });
+
+    const query = request.query as {
+      organizationId?: string;
+      search?: string;
+    };
+
     const conditions: string[] = [];
     const params: Array<string | number> = [];
-    if (query.organizationId) {
+
+    if (identity.role === ROLES.SYSTEM_ADMIN) {
+      if (query.organizationId) {
+        const organizationId = z.coerce.number().int().positive().safeParse(query.organizationId);
+
+        if (!organizationId.success) {
+          return reply.code(400).send({
+            error: "Invalid organization id",
+          });
+        }
+
+        conditions.push("t.organization_id=?");
+        params.push(organizationId.data);
+      }
+    } else {
       conditions.push("t.organization_id=?");
-      params.push(Number(query.organizationId));
+      params.push(identity.organizationId);
     }
-    if (query.search) {
+
+    if (query.search?.trim()) {
       conditions.push("(t.name LIKE ? OR t.nickname LIKE ? OR t.division LIKE ?)");
-      const s = `%${query.search}%`;
-      params.push(s, s, s);
+
+      const search = `%${query.search.trim()}%`;
+      params.push(search, search, search);
     }
+
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+
     const [rows] = await pool.execute<RowDataPacket[]>(
-      `SELECT t.*, o.name AS organization_name FROM teams t JOIN organizations o ON o.id=t.organization_id ${where} ORDER BY t.name`,
+      `SELECT t.*, o.name AS organization_name
+       FROM teams t
+       JOIN organizations o ON o.id=t.organization_id
+       ${where}
+       ORDER BY t.name`,
       params,
     );
-    return { teams: rows.map(mapTeam) };
+
+    return {
+      teams: rows.map(mapTeam),
+    };
   });
 
-  app.get("/teams/:id", { preHandler: requireAuth }, async (request, reply) => {
+  app.get("/teams/:id", async (request, reply) => {
     const id = z.coerce
       .number()
       .int()
       .positive()
       .safeParse((request.params as { id: string }).id);
-    if (!id.success) return reply.code(400).send({ error: "Invalid team id" });
+
+    if (!id.success) {
+      return reply.code(400).send({
+        error: "Invalid team id",
+      });
+    }
+
     const [rows] = await pool.execute<RowDataPacket[]>(
-      "SELECT t.*, o.name AS organization_name FROM teams t JOIN organizations o ON o.id=t.organization_id WHERE t.id=?",
+      `SELECT t.*, o.name AS organization_name
+       FROM teams t
+       JOIN organizations o ON o.id=t.organization_id
+       WHERE t.id=?
+       LIMIT 1`,
       [id.data],
     );
-    if (!rows[0]) return reply.code(404).send({ error: "Team not found" });
-    return { team: mapTeam(rows[0]) };
+
+    const team = rows[0];
+
+    if (!team) {
+      return reply.code(404).send({
+        error: "Team not found",
+      });
+    }
+
+    await requirePermission(request, {
+      permission: PERMISSIONS.TEAM_READ,
+      organizationId: Number(team.organization_id),
+    });
+
+    return {
+      team: mapTeam(team),
+    };
   });
 
-  app.post("/teams", { preHandler: requireAuth }, async (request, reply) => {
+  app.post("/teams", async (request, reply) => {
     const parsed = teamSchema.safeParse(request.body);
-    if (!parsed.success)
-      return reply.code(400).send({ error: "Invalid team data", details: parsed.error.flatten() });
-    const d = parsed.data;
+
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "Invalid team data",
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const data = parsed.data;
+
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.TEAM_CREATE,
+      organizationId: data.organizationId,
+    });
+
     const [result] = await pool.execute<mysql.ResultSetHeader>(
-      "INSERT INTO teams (organization_id, name, nickname, sport, division, season, home_arena, primary_color, secondary_color, logo_asset_id, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      `INSERT INTO teams (
+           organization_id,
+           name,
+           nickname,
+           sport,
+           division,
+           season,
+           home_arena,
+           primary_color,
+           secondary_color,
+           logo_asset_id,
+           active
+         )
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        d.organizationId,
-        d.name,
-        d.nickname || null,
-        d.sport,
-        d.division || null,
-        d.season || null,
-        d.homeArena || null,
-        d.primaryColor,
-        d.secondaryColor,
-        d.logoAssetId || null,
-        d.active,
+        data.organizationId,
+        data.name,
+        data.nickname || null,
+        data.sport,
+        data.division || null,
+        data.season || null,
+        data.homeArena || null,
+        data.primaryColor,
+        data.secondaryColor,
+        data.logoAssetId || null,
+        data.active,
       ],
     );
-    await audit(authUser(request).sub, "team.created", { teamId: result.insertId, name: d.name });
-    realtime().emit("team:created", { id: result.insertId });
-    return reply.code(201).send({ id: result.insertId });
+
+    await audit(identity.sub, "team.created", {
+      teamId: result.insertId,
+      organizationId: data.organizationId,
+      name: data.name,
+    });
+
+    realtime().emit("team:created", {
+      id: result.insertId,
+      organizationId: data.organizationId,
+    });
+
+    return reply.code(201).send({
+      id: result.insertId,
+    });
   });
 
-  app.put("/teams/:id", { preHandler: requireAuth }, async (request, reply) => {
+  app.put("/teams/:id", async (request, reply) => {
     const id = z.coerce
       .number()
       .int()
       .positive()
       .safeParse((request.params as { id: string }).id);
+
     const parsed = teamSchema.safeParse(request.body);
-    if (!id.success || !parsed.success) return reply.code(400).send({ error: "Invalid team data" });
-    const d = parsed.data;
+
+    if (!id.success || !parsed.success) {
+      return reply.code(400).send({
+        error: "Invalid team data",
+      });
+    }
+
+    const existingOrganizationId = await findTeamOrganizationId(id.data);
+
+    if (existingOrganizationId === null) {
+      return reply.code(404).send({
+        error: "Team not found",
+      });
+    }
+
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.TEAM_UPDATE,
+      organizationId: existingOrganizationId,
+    });
+
+    const data = parsed.data;
+
+    if (identity.role !== ROLES.SYSTEM_ADMIN && data.organizationId !== existingOrganizationId) {
+      return reply.code(403).send({
+        error: "You do not have permission to move this team to another organization",
+      });
+    }
+
+    await requirePermission(request, {
+      permission: PERMISSIONS.TEAM_UPDATE,
+      organizationId: data.organizationId,
+    });
+
     const [result] = await pool.execute<mysql.ResultSetHeader>(
-      "UPDATE teams SET organization_id=?, name=?, nickname=?, sport=?, division=?, season=?, home_arena=?, primary_color=?, secondary_color=?, logo_asset_id=?, active=? WHERE id=?",
+      `UPDATE teams
+         SET organization_id=?,
+             name=?,
+             nickname=?,
+             sport=?,
+             division=?,
+             season=?,
+             home_arena=?,
+             primary_color=?,
+             secondary_color=?,
+             logo_asset_id=?,
+             active=?
+         WHERE id=?`,
       [
-        d.organizationId,
-        d.name,
-        d.nickname || null,
-        d.sport,
-        d.division || null,
-        d.season || null,
-        d.homeArena || null,
-        d.primaryColor,
-        d.secondaryColor,
-        d.logoAssetId || null,
-        d.active,
+        data.organizationId,
+        data.name,
+        data.nickname || null,
+        data.sport,
+        data.division || null,
+        data.season || null,
+        data.homeArena || null,
+        data.primaryColor,
+        data.secondaryColor,
+        data.logoAssetId || null,
+        data.active,
         id.data,
       ],
     );
-    if (!result.affectedRows) return reply.code(404).send({ error: "Team not found" });
-    await audit(authUser(request).sub, "team.updated", { teamId: id.data });
-    realtime().emit("team:updated", { id: id.data });
-    return { success: true };
+
+    if (!result.affectedRows) {
+      return reply.code(404).send({
+        error: "Team not found",
+      });
+    }
+
+    await audit(identity.sub, "team.updated", {
+      teamId: id.data,
+      previousOrganizationId: existingOrganizationId,
+      organizationId: data.organizationId,
+    });
+
+    realtime().emit("team:updated", {
+      id: id.data,
+      organizationId: data.organizationId,
+    });
+
+    return {
+      success: true,
+    };
   });
 
-  app.delete("/teams/:id", { preHandler: requireAuth }, async (request, reply) => {
+  app.delete("/teams/:id", async (request, reply) => {
     const id = z.coerce
       .number()
       .int()
       .positive()
       .safeParse((request.params as { id: string }).id);
-    if (!id.success) return reply.code(400).send({ error: "Invalid team id" });
+
+    if (!id.success) {
+      return reply.code(400).send({
+        error: "Invalid team id",
+      });
+    }
+
+    const organizationId = await findTeamOrganizationId(id.data);
+
+    if (organizationId === null) {
+      return reply.code(404).send({
+        error: "Team not found",
+      });
+    }
+
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.TEAM_DELETE,
+      organizationId,
+    });
+
     const [result] = await pool.execute<mysql.ResultSetHeader>("DELETE FROM teams WHERE id=?", [
       id.data,
     ]);
-    if (!result.affectedRows) return reply.code(404).send({ error: "Team not found" });
-    await audit(authUser(request).sub, "team.deleted", { teamId: id.data });
-    realtime().emit("team:deleted", { id: id.data });
-    return { success: true };
+
+    if (!result.affectedRows) {
+      return reply.code(404).send({
+        error: "Team not found",
+      });
+    }
+
+    await audit(identity.sub, "team.deleted", {
+      teamId: id.data,
+      organizationId,
+    });
+
+    realtime().emit("team:deleted", {
+      id: id.data,
+      organizationId,
+    });
+
+    return {
+      success: true,
+    };
   });
 }
