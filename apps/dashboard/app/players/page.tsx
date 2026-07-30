@@ -4,6 +4,12 @@ import { io } from "socket.io-client";
 import { AuthGate } from "../../components/AuthGate";
 import { AppShell } from "../../components/AppShell";
 import { API, api, uploadLogo } from "../../lib/api";
+import {
+  PERMISSIONS,
+  getStoredUser,
+  userHasPermission,
+  type AuthenticatedUser,
+} from "../../lib/auth";
 
 type Organization = { id: number; name: string };
 type Team = { id: number; organizationId: number; name: string };
@@ -64,6 +70,7 @@ const blank: Form = {
 };
 
 export default function PlayersPage() {
+  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -76,6 +83,10 @@ export default function PlayersPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+
+  const canManage = userHasPermission(currentUser, PERMISSIONS.PLAYER_MANAGE);
+
+  const isSystemAdmin = currentUser?.role === "system_admin";
   const load = useCallback(async () => {
     try {
       const [o, t, p] = await Promise.all([
@@ -94,7 +105,11 @@ export default function PlayersPage() {
     }
   }, []);
   useEffect(() => {
-    load();
+    setCurrentUser(getStoredUser());
+  }, []);
+
+  useEffect(() => {
+    void load();
     const socket = io(API);
     ["player:created", "player:updated", "player:deleted", "logo:uploaded", "team:updated"].forEach(
       (event) => socket.on(event, load),
@@ -132,7 +147,9 @@ export default function PlayersPage() {
     setError("");
     setForm({ ...blank, organizationId: organizations[0]?.id ?? 0 });
   }
-  function edit(player: Player) {
+  function edit(player: Player): void {
+    if (!canManage) return;
+
     setEditing(player.id);
     setForm({
       organizationId: player.organizationId,
@@ -153,8 +170,14 @@ export default function PlayersPage() {
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  async function save(event: React.FormEvent) {
+  async function save(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+
+    if (!canManage) {
+      setError("You do not have permission to manage players.");
+      return;
+    }
+
     setBusy(true);
     setError("");
     try {
@@ -185,8 +208,13 @@ export default function PlayersPage() {
       setBusy(false);
     }
   }
-  async function remove(id: number) {
-    if (!confirm("Delete this player?")) return;
+  async function remove(id: number): Promise<void> {
+    if (!canManage) {
+      setError("You do not have permission to manage players.");
+      return;
+    }
+
+    if (!window.confirm("Delete this player?")) return;
     try {
       await api(`/players/${id}`, { method: "DELETE" });
       await load();
@@ -203,20 +231,22 @@ export default function PlayersPage() {
             <p className="muted">Create player profiles and prepare them for team rosters.</p>
           </div>
           <div className="filters">
-            <select
-              value={organizationFilter}
-              onChange={(e) => {
-                setOrganizationFilter(e.target.value);
-                setTeamFilter("");
-              }}
-            >
-              <option value="">All organizations</option>
-              {organizations.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
+            {isSystemAdmin && organizations.length > 1 && (
+              <select
+                value={organizationFilter}
+                onChange={(event) => {
+                  setOrganizationFilter(event.target.value);
+                  setTeamFilter("");
+                }}
+              >
+                <option value="">All organizations</option>
+                {organizations.map((organization) => (
+                  <option key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </option>
+                ))}
+              </select>
+            )}
             <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)}>
               <option value="">All teams</option>
               {filterTeams.map((t) => (
@@ -240,178 +270,192 @@ export default function PlayersPage() {
             />
           </div>
         </div>
-        <section className="panel">
-          <h2>{editing ? "Edit player" : "Add player"}</h2>
-          {!organizations.length ? (
-            <p>Create an organization first.</p>
-          ) : (
-            <form className="formGrid" onSubmit={save}>
-              <label>
-                Organization
-                <select
-                  required
-                  value={form.organizationId}
-                  onChange={(e) =>
-                    setForm({ ...form, organizationId: Number(e.target.value), teamId: null })
-                  }
-                >
-                  {organizations.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Team
-                <select
-                  value={form.teamId ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, teamId: e.target.value ? Number(e.target.value) : null })
-                  }
-                >
-                  <option value="">Unassigned</option>
-                  {availableTeams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                First name
-                <input
-                  required
-                  value={form.firstName}
-                  onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                />
-              </label>
-              <label>
-                Last name
-                <input
-                  required
-                  value={form.lastName}
-                  onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                />
-              </label>
-              <label>
-                Preferred name
-                <input
-                  value={form.preferredName}
-                  onChange={(e) => setForm({ ...form, preferredName: e.target.value })}
-                />
-              </label>
-              <label>
-                Jersey number
-                <input
-                  type="number"
-                  min="0"
-                  max="99"
-                  value={form.jerseyNumber}
-                  onChange={(e) => setForm({ ...form, jerseyNumber: e.target.value })}
-                />
-              </label>
-              <label>
-                Position
-                <select
-                  value={form.position}
-                  onChange={(e) =>
-                    setForm({ ...form, position: e.target.value as Player["position"] })
-                  }
-                >
-                  {["Goalie", "Defense", "Left Wing", "Center", "Right Wing"].map((x) => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Shoots
-                <select
-                  value={form.shoots}
-                  onChange={(e) => setForm({ ...form, shoots: e.target.value as Form["shoots"] })}
-                >
-                  <option value="">Not set</option>
-                  <option value="L">Left</option>
-                  <option value="R">Right</option>
-                </select>
-              </label>
-              <label>
-                Birth date
-                <input
-                  type="date"
-                  value={form.birthDate}
-                  onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
-                />
-              </label>
-              <label>
-                Height (cm)
-                <input
-                  type="number"
-                  min="50"
-                  max="260"
-                  value={form.heightCm}
-                  onChange={(e) => setForm({ ...form, heightCm: e.target.value })}
-                />
-              </label>
-              <label>
-                Weight (kg)
-                <input
-                  type="number"
-                  min="15"
-                  max="250"
-                  value={form.weightKg}
-                  onChange={(e) => setForm({ ...form, weightKg: e.target.value })}
-                />
-              </label>
-              <label>
-                Email
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                />
-              </label>
-              <label>
-                Phone
-                <input
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                />
-              </label>
-              <label>
-                Player photo
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                />
-              </label>
-              <label>
-                Status
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value as Player["status"] })}
-                >
-                  <option>ACTIVE</option>
-                  <option>INACTIVE</option>
-                  <option>INJURED</option>
-                  <option>SUSPENDED</option>
-                </select>
-              </label>
-              <div className="formActions">
-                <button disabled={busy}>
-                  {busy ? "Saving…" : editing ? "Save changes" : "Create player"}
-                </button>
-                {editing && (
-                  <button type="button" className="secondary" onClick={reset}>
-                    Cancel
+        {!canManage && (
+          <section className="panel">
+            <h2>Player directory</h2>
+            <p className="muted">Your account has read-only access to player information.</p>
+          </section>
+        )}
+
+        {canManage && (
+          <section className="panel">
+            <h2>{editing ? "Edit player" : "Add player"}</h2>
+            {!organizations.length ? (
+              <p>Create an organization first.</p>
+            ) : (
+              <form className="formGrid" onSubmit={save}>
+                <label>
+                  Organization
+                  <select
+                    required
+                    disabled={!isSystemAdmin}
+                    value={form.organizationId}
+                    onChange={(e) =>
+                      setForm({ ...form, organizationId: Number(e.target.value), teamId: null })
+                    }
+                  >
+                    {organizations.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Team
+                  <select
+                    value={form.teamId ?? ""}
+                    onChange={(e) =>
+                      setForm({ ...form, teamId: e.target.value ? Number(e.target.value) : null })
+                    }
+                  >
+                    <option value="">Unassigned</option>
+                    {availableTeams.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  First name
+                  <input
+                    required
+                    value={form.firstName}
+                    onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Last name
+                  <input
+                    required
+                    value={form.lastName}
+                    onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Preferred name
+                  <input
+                    value={form.preferredName}
+                    onChange={(e) => setForm({ ...form, preferredName: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Jersey number
+                  <input
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={form.jerseyNumber}
+                    onChange={(e) => setForm({ ...form, jerseyNumber: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Position
+                  <select
+                    value={form.position}
+                    onChange={(e) =>
+                      setForm({ ...form, position: e.target.value as Player["position"] })
+                    }
+                  >
+                    {["Goalie", "Defense", "Left Wing", "Center", "Right Wing"].map((x) => (
+                      <option key={x}>{x}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Shoots
+                  <select
+                    value={form.shoots}
+                    onChange={(e) => setForm({ ...form, shoots: e.target.value as Form["shoots"] })}
+                  >
+                    <option value="">Not set</option>
+                    <option value="L">Left</option>
+                    <option value="R">Right</option>
+                  </select>
+                </label>
+                <label>
+                  Birth date
+                  <input
+                    type="date"
+                    value={form.birthDate}
+                    onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Height (cm)
+                  <input
+                    type="number"
+                    min="50"
+                    max="260"
+                    value={form.heightCm}
+                    onChange={(e) => setForm({ ...form, heightCm: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Weight (kg)
+                  <input
+                    type="number"
+                    min="15"
+                    max="250"
+                    value={form.weightKg}
+                    onChange={(e) => setForm({ ...form, weightKg: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Email
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Phone
+                  <input
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Player photo
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  />
+                </label>
+                <label>
+                  Status
+                  <select
+                    value={form.status}
+                    onChange={(e) =>
+                      setForm({ ...form, status: e.target.value as Player["status"] })
+                    }
+                  >
+                    <option>ACTIVE</option>
+                    <option>INACTIVE</option>
+                    <option>INJURED</option>
+                    <option>SUSPENDED</option>
+                  </select>
+                </label>
+                <div className="formActions">
+                  <button disabled={busy}>
+                    {busy ? "Saving…" : editing ? "Save changes" : "Create player"}
                   </button>
-                )}
-              </div>
-            </form>
-          )}
-          {error && <p className="error">{error}</p>}
-        </section>
+                  {editing && (
+                    <button type="button" className="secondary" onClick={reset}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
+          </section>
+        )}
+
+        {error && <p className="error">{error}</p>}
+
         <div className="entityGrid">
           {filtered.map((player) => (
             <article className="entityCard" key={player.id}>
@@ -446,14 +490,16 @@ export default function PlayersPage() {
                   {player.status === "ACTIVE" ? "Active" : "Unavailable"}
                 </span>
               </div>
-              <div className="cardActions">
-                <button className="secondary" onClick={() => edit(player)}>
-                  Edit
-                </button>
-                <button className="danger" onClick={() => remove(player.id)}>
-                  Delete
-                </button>
-              </div>
+              {canManage && (
+                <div className="cardActions">
+                  <button className="secondary" onClick={() => edit(player)}>
+                    Edit
+                  </button>
+                  <button className="danger" onClick={() => void remove(player.id)}>
+                    Delete
+                  </button>
+                </div>
+              )}
             </article>
           ))}
         </div>
