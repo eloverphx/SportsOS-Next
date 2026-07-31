@@ -36,6 +36,42 @@ export const gameListQuerySchema = z.object({
   search: z.string().trim().max(120).optional(),
 });
 
+export const scoreActionSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("adjustScore"),
+    side: z.enum(["home", "away"]),
+    amount: z.coerce.number().int().min(-20).max(20),
+  }),
+  z.object({
+    action: z.literal("setScore"),
+    homeScore: z.coerce.number().int().min(0).max(999),
+    awayScore: z.coerce.number().int().min(0).max(999),
+  }),
+  z.object({
+    action: z.literal("startClock"),
+  }),
+  z.object({
+    action: z.literal("pauseClock"),
+  }),
+  z.object({
+    action: z.literal("resetClock"),
+    periodLengthMs: z.coerce.number().int().min(60_000).max(7_200_000).optional(),
+  }),
+  z.object({
+    action: z.literal("adjustClock"),
+    amountMs: z.coerce.number().int().min(-3_600_000).max(3_600_000),
+  }),
+  z.object({
+    action: z.literal("setPeriod"),
+    period: z.coerce.number().int().min(1).max(20),
+  }),
+  z.object({
+    action: z.literal("setStatus"),
+    status: z.enum(gameStatuses),
+  }),
+]);
+
 export const gameIdSchema = z.coerce.number().int().positive();
 
 export type GameInput = z.infer<typeof gameInputSchema>;
+export type ScoreAction = z.infer<typeof scoreActionSchema>;

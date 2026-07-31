@@ -18,6 +18,11 @@ export interface Game {
   status: GameStatus;
   homeScore: number;
   awayScore: number;
+  period: number;
+  periodLengthMs: number;
+  clockRemainingMs: number;
+  clockRunning: boolean;
+  clockStartedAt: string | null;
   notes: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;

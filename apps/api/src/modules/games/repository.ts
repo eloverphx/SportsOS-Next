@@ -1,6 +1,6 @@
-import mysql, { type RowDataPacket } from "mysql2/promise";
+import mysql, { type PoolConnection, type RowDataPacket } from "mysql2/promise";
 import { pool } from "../../infrastructure/database.js";
-import type { GameInput } from "./schemas.js";
+import type { GameInput, ScoreAction } from "./schemas.js";
 import type { Game, GameStatus } from "./types.js";
 
 const SELECT_GAME = `SELECT
@@ -15,7 +15,43 @@ JOIN seasons s ON s.id = g.season_id
 JOIN teams home ON home.id = g.home_team_id
 JOIN teams away ON away.id = g.away_team_id`;
 
+function dateToIso(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(String(value));
+
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function effectiveClockRemainingMs(
+  storedRemainingMs: number,
+  running: boolean,
+  startedAt: unknown,
+): number {
+  if (!running) {
+    return storedRemainingMs;
+  }
+
+  const started = startedAt instanceof Date ? startedAt : new Date(String(startedAt));
+
+  if (Number.isNaN(started.getTime())) {
+    return storedRemainingMs;
+  }
+
+  return Math.max(0, storedRemainingMs - (Date.now() - started.getTime()));
+}
+
 function mapGame(row: RowDataPacket): Game {
+  const storedRemainingMs = Number(row.clock_remaining_ms ?? 0);
+  const clockRunning = Boolean(row.clock_running);
+  const clockRemainingMs = effectiveClockRemainingMs(
+    storedRemainingMs,
+    clockRunning,
+    row.clock_started_at,
+  );
+
   return {
     id: Number(row.id),
     organizationId: Number(row.organization_id),
@@ -35,6 +71,11 @@ function mapGame(row: RowDataPacket): Game {
     status: String(row.status) as GameStatus,
     homeScore: Number(row.home_score),
     awayScore: Number(row.away_score),
+    period: Number(row.period ?? 1),
+    periodLengthMs: Number(row.period_length_ms ?? 1_200_000),
+    clockRemainingMs,
+    clockRunning: clockRunning && clockRemainingMs > 0,
+    clockStartedAt: clockRunning && clockRemainingMs > 0 ? dateToIso(row.clock_started_at) : null,
     notes: row.notes == null ? null : String(row.notes),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -233,4 +274,168 @@ export async function deleteGame(id: number): Promise<boolean> {
   ]);
 
   return result.affectedRows > 0;
+}
+
+interface LockedScoringRow extends RowDataPacket {
+  id: number;
+  home_score: number;
+  away_score: number;
+  status: GameStatus;
+  period: number;
+  period_length_ms: number;
+  clock_remaining_ms: number;
+  clock_running: number;
+  clock_started_at: Date | null;
+}
+
+function materializedRemainingMs(row: LockedScoringRow): number {
+  return effectiveClockRemainingMs(
+    Number(row.clock_remaining_ms),
+    Boolean(row.clock_running),
+    row.clock_started_at,
+  );
+}
+
+async function lockGame(connection: PoolConnection, id: number): Promise<LockedScoringRow | null> {
+  const [rows] = await connection.execute<LockedScoringRow[]>(
+    `SELECT
+         id,
+         home_score,
+         away_score,
+         status,
+         period,
+         period_length_ms,
+         clock_remaining_ms,
+         clock_running,
+         clock_started_at
+       FROM games
+       WHERE id = ?
+       FOR UPDATE`,
+    [id],
+  );
+
+  return rows[0] ?? null;
+}
+
+export async function applyGameScoringAction(
+  id: number,
+  action: ScoreAction,
+): Promise<Game | null> {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const row = await lockGame(connection, id);
+
+    if (!row) {
+      await connection.rollback();
+      return null;
+    }
+
+    let homeScore = Number(row.home_score);
+    let awayScore = Number(row.away_score);
+    let status = row.status;
+    let period = Number(row.period);
+    let periodLengthMs = Number(row.period_length_ms);
+    let clockRemainingMs = materializedRemainingMs(row);
+    let clockRunning = Boolean(row.clock_running) && clockRemainingMs > 0;
+    let clockStartedAt: Date | null = clockRunning ? new Date() : null;
+
+    switch (action.action) {
+      case "adjustScore":
+        if (action.side === "home") {
+          homeScore = Math.max(0, Math.min(999, homeScore + action.amount));
+        } else {
+          awayScore = Math.max(0, Math.min(999, awayScore + action.amount));
+        }
+        break;
+
+      case "setScore":
+        homeScore = action.homeScore;
+        awayScore = action.awayScore;
+        break;
+
+      case "startClock":
+        if (clockRemainingMs > 0) {
+          clockRunning = true;
+          clockStartedAt = new Date();
+          if (status === "SCHEDULED") {
+            status = "LIVE";
+          }
+        }
+        break;
+
+      case "pauseClock":
+        clockRunning = false;
+        clockStartedAt = null;
+        break;
+
+      case "resetClock":
+        periodLengthMs = action.periodLengthMs ?? periodLengthMs;
+        clockRemainingMs = periodLengthMs;
+        clockRunning = false;
+        clockStartedAt = null;
+        break;
+
+      case "adjustClock":
+        clockRemainingMs = Math.max(0, Math.min(7_200_000, clockRemainingMs + action.amountMs));
+        clockRunning = clockRunning && clockRemainingMs > 0;
+        clockStartedAt = clockRunning ? new Date() : null;
+        break;
+
+      case "setPeriod":
+        period = action.period;
+        clockRunning = false;
+        clockStartedAt = null;
+        break;
+
+      case "setStatus":
+        status = action.status;
+
+        if (status !== "LIVE") {
+          clockRunning = false;
+          clockStartedAt = null;
+        }
+        break;
+    }
+
+    if (clockRemainingMs === 0) {
+      clockRunning = false;
+      clockStartedAt = null;
+    }
+
+    await connection.execute(
+      `UPDATE games SET
+         home_score = ?,
+         away_score = ?,
+         status = ?,
+         period = ?,
+         period_length_ms = ?,
+         clock_remaining_ms = ?,
+         clock_running = ?,
+         clock_started_at = ?
+       WHERE id = ?`,
+      [
+        homeScore,
+        awayScore,
+        status,
+        period,
+        periodLengthMs,
+        clockRemainingMs,
+        clockRunning,
+        clockStartedAt,
+        id,
+      ],
+    );
+
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+
+  return findGameById(id);
 }

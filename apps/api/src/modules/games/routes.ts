@@ -3,6 +3,7 @@ import { realtime } from "../../infrastructure/realtime.js";
 import { audit } from "../../lib/audit.js";
 import { PERMISSIONS, ROLES, requirePermission } from "../auth/index.js";
 import {
+  applyGameScoringAction,
   createGame,
   deleteGame,
   findGameById,
@@ -10,7 +11,12 @@ import {
   updateGame,
   validateGameRelationships,
 } from "./repository.js";
-import { gameIdSchema, gameInputSchema, gameListQuerySchema } from "./schemas.js";
+import {
+  gameIdSchema,
+  gameInputSchema,
+  gameListQuerySchema,
+  scoreActionSchema,
+} from "./schemas.js";
 
 function relationshipErrorMessage(
   error: "organization" | "season" | "homeTeam" | "awayTeam",
@@ -186,6 +192,64 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     });
 
     return { game };
+  });
+
+  app.post("/games/:id/scoring", async (request, reply) => {
+    const id = gameIdSchema.safeParse((request.params as { id: string }).id);
+    const parsed = scoreActionSchema.safeParse(request.body);
+
+    if (!id.success || !parsed.success) {
+      return reply.code(400).send({
+        error: "Invalid scoring action",
+        details: parsed.success ? undefined : parsed.error.flatten(),
+      });
+    }
+
+    const existing = await findGameById(id.data);
+
+    if (!existing) {
+      return reply.code(404).send({
+        error: "Game not found",
+      });
+    }
+
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.GAME_SCORE,
+      organizationId: existing.organizationId,
+    });
+
+    const game = await applyGameScoringAction(id.data, parsed.data);
+
+    if (!game) {
+      return reply.code(404).send({
+        error: "Game not found",
+      });
+    }
+
+    await audit(identity.sub, "game.scored", {
+      gameId: game.id,
+      organizationId: game.organizationId,
+      action: parsed.data.action,
+      homeScore: game.homeScore,
+      awayScore: game.awayScore,
+      period: game.period,
+      clockRemainingMs: game.clockRemainingMs,
+      clockRunning: game.clockRunning,
+      status: game.status,
+    });
+
+    const payload = {
+      game,
+      action: parsed.data.action,
+    };
+
+    realtime().emit("game:scored", payload);
+    realtime().emit("game:updated", {
+      id: game.id,
+      organizationId: game.organizationId,
+    });
+
+    return payload;
   });
 
   app.delete("/games/:id", async (request, reply) => {

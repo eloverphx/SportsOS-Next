@@ -134,6 +134,11 @@ export async function runMigrations(): Promise<void> {
     status ENUM('SCHEDULED','LIVE','FINAL','POSTPONED','CANCELED') NOT NULL DEFAULT 'SCHEDULED',
     home_score SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     away_score SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    period SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    period_length_ms INT UNSIGNED NOT NULL DEFAULT 1200000,
+    clock_remaining_ms INT UNSIGNED NOT NULL DEFAULT 1200000,
+    clock_running BOOLEAN NOT NULL DEFAULT FALSE,
+    clock_started_at DATETIME(3) NULL,
     notes TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -182,7 +187,28 @@ export async function runMigrations(): Promise<void> {
     if (!present.has(name))
       await pool.execute(`ALTER TABLE organizations ADD COLUMN ${name} ${sql}`);
   }
+  const [gameColumns] = await pool.query<RowDataPacket[]>(
+    `SELECT COLUMN_NAME
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'games'`,
+    [config.database.name],
+  );
 
+  const presentGameColumns = new Set(gameColumns.map((row) => String(row.COLUMN_NAME)));
+
+  const gameAdditions: Array<[string, string]> = [
+    ["period", "SMALLINT UNSIGNED NOT NULL DEFAULT 1 AFTER away_score"],
+    ["period_length_ms", "INT UNSIGNED NOT NULL DEFAULT 1200000 AFTER period"],
+    ["clock_remaining_ms", "INT UNSIGNED NOT NULL DEFAULT 1200000 AFTER period_length_ms"],
+    ["clock_running", "BOOLEAN NOT NULL DEFAULT FALSE AFTER clock_remaining_ms"],
+    ["clock_started_at", "DATETIME(3) NULL AFTER clock_running"],
+  ];
+
+  for (const [name, sql] of gameAdditions) {
+    if (!presentGameColumns.has(name)) {
+      await pool.execute(`ALTER TABLE games ADD COLUMN ${name} ${sql}`);
+    }
+  }
   if (!(await minio.bucketExists(config.storage.bucket)))
     await minio.makeBucket(config.storage.bucket);
 }
