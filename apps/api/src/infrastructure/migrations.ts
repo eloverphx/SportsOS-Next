@@ -122,6 +122,32 @@ export async function runMigrations(): Promise<void> {
     CONSTRAINT fk_rosters_player FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE RESTRICT
   ) ENGINE=InnoDB`);
 
+  await pool.execute(`CREATE TABLE IF NOT EXISTS games (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    organization_id BIGINT UNSIGNED NOT NULL,
+    season_id BIGINT UNSIGNED NOT NULL,
+    home_team_id BIGINT UNSIGNED NOT NULL,
+    away_team_id BIGINT UNSIGNED NOT NULL,
+    scheduled_start DATETIME NOT NULL,
+    timezone VARCHAR(100) NOT NULL DEFAULT 'America/Chicago',
+    venue VARCHAR(160) NULL,
+    status ENUM('SCHEDULED','LIVE','FINAL','POSTPONED','CANCELED') NOT NULL DEFAULT 'SCHEDULED',
+    home_score SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    away_score SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    notes TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_games_org_start (organization_id, scheduled_start),
+    INDEX idx_games_season (season_id),
+    INDEX idx_games_home_team (home_team_id),
+    INDEX idx_games_away_team (away_team_id),
+    INDEX idx_games_status (status),
+    CONSTRAINT fk_games_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_games_season FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_games_home_team FOREIGN KEY (home_team_id) REFERENCES teams(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_games_away_team FOREIGN KEY (away_team_id) REFERENCES teams(id) ON DELETE RESTRICT
+  ) ENGINE=InnoDB`);
+
   await pool.execute(`CREATE TABLE IF NOT EXISTS settings (
     setting_key VARCHAR(120) NOT NULL PRIMARY KEY,
     setting_value TEXT NOT NULL,
