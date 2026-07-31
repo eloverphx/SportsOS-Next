@@ -1,9 +1,16 @@
 "use client";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 import { AuthGate } from "../../components/AuthGate";
 import { AppShell } from "../../components/AppShell";
 import { API, api } from "../../lib/api";
+import {
+  PERMISSIONS,
+  getStoredUser,
+  userHasPermission,
+  type AuthenticatedUser,
+} from "../../lib/auth";
 
 type Organization = { id: number; name: string };
 type Season = {
@@ -22,9 +29,17 @@ type Form = {
   endDate: string;
   active: boolean;
 };
-const blank: Form = { organizationId: 0, name: "", startDate: "", endDate: "", active: true };
+
+const blank: Form = {
+  organizationId: 0,
+  name: "",
+  startDate: "",
+  endDate: "",
+  active: true,
+};
 
 export default function SeasonsPage() {
+  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [form, setForm] = useState<Form>(blank);
@@ -34,18 +49,25 @@ export default function SeasonsPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const canManage = userHasPermission(currentUser, PERMISSIONS.SEASON_MANAGE);
+  const isSystemAdmin = currentUser?.role === "system_admin";
+
   const load = useCallback(async () => {
     try {
       const [organizationData, seasonData] = await Promise.all([
         api<{ organizations: Organization[] }>("/organizations"),
         api<{ seasons: Season[] }>("/seasons"),
       ]);
+
       setOrganizations(organizationData.organizations);
       setSeasons(seasonData.seasons);
       setForm((current) =>
         current.organizationId
           ? current
-          : { ...current, organizationId: organizationData.organizations[0]?.id ?? 0 },
+          : {
+              ...current,
+              organizationId: organizationData.organizations[0]?.id ?? 0,
+            },
       );
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Could not load seasons");
@@ -53,11 +75,17 @@ export default function SeasonsPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    setCurrentUser(getStoredUser());
+  }, []);
+
+  useEffect(() => {
+    void load();
     const socket = io(API);
+
     ["season:created", "season:updated", "season:deleted"].forEach((event) =>
       socket.on(event, load),
     );
+
     return () => {
       socket.disconnect();
     };
@@ -73,13 +101,18 @@ export default function SeasonsPage() {
     [seasons, organizationFilter, search],
   );
 
-  function reset() {
+  function reset(): void {
     setEditing(null);
     setError("");
-    setForm({ ...blank, organizationId: organizations[0]?.id ?? 0 });
+    setForm({
+      ...blank,
+      organizationId: organizations[0]?.id ?? 0,
+    });
   }
 
-  function edit(season: Season) {
+  function edit(season: Season): void {
+    if (!canManage) return;
+
     setEditing(season.id);
     setForm({
       organizationId: season.organizationId,
@@ -91,10 +124,17 @@ export default function SeasonsPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function save(event: React.FormEvent) {
+  async function save(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+
+    if (!canManage) {
+      setError("You do not have permission to manage seasons.");
+      return;
+    }
+
     setBusy(true);
     setError("");
+
     try {
       await api(editing ? `/seasons/${editing}` : "/seasons", {
         method: editing ? "PUT" : "POST",
@@ -113,8 +153,14 @@ export default function SeasonsPage() {
     }
   }
 
-  async function remove(id: number) {
-    if (!confirm("Delete this season?")) return;
+  async function remove(id: number): Promise<void> {
+    if (!canManage) {
+      setError("You do not have permission to manage seasons.");
+      return;
+    }
+
+    if (!window.confirm("Delete this season?")) return;
+
     try {
       await api(`/seasons/${id}`, { method: "DELETE" });
       await load();
@@ -133,18 +179,22 @@ export default function SeasonsPage() {
               Create season records that rosters, schedules, and statistics can reference.
             </p>
           </div>
+
           <div className="filters">
-            <select
-              value={organizationFilter}
-              onChange={(event) => setOrganizationFilter(event.target.value)}
-            >
-              <option value="">All organizations</option>
-              {organizations.map((organization) => (
-                <option key={organization.id} value={organization.id}>
-                  {organization.name}
-                </option>
-              ))}
-            </select>
+            {isSystemAdmin && organizations.length > 1 && (
+              <select
+                value={organizationFilter}
+                onChange={(event) => setOrganizationFilter(event.target.value)}
+              >
+                <option value="">All organizations</option>
+                {organizations.map((organization) => (
+                  <option key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </option>
+                ))}
+              </select>
+            )}
+
             <input
               className="search"
               placeholder="Search seasons"
@@ -153,75 +203,98 @@ export default function SeasonsPage() {
             />
           </div>
         </div>
-        <section className="panel">
-          <h2>{editing ? "Edit season" : "Add season"}</h2>
-          {organizations.length ? (
-            <form className="formGrid" onSubmit={save}>
-              <label>
-                Organization
-                <select
-                  required
-                  value={form.organizationId}
-                  onChange={(event) =>
-                    setForm({ ...form, organizationId: Number(event.target.value) })
-                  }
-                >
-                  {organizations.map((organization) => (
-                    <option key={organization.id} value={organization.id}>
-                      {organization.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Season name
-                <input
-                  required
-                  placeholder="2026–27"
-                  value={form.name}
-                  onChange={(event) => setForm({ ...form, name: event.target.value })}
-                />
-              </label>
-              <label>
-                Start date
-                <input
-                  type="date"
-                  value={form.startDate}
-                  onChange={(event) => setForm({ ...form, startDate: event.target.value })}
-                />
-              </label>
-              <label>
-                End date
-                <input
-                  type="date"
-                  value={form.endDate}
-                  onChange={(event) => setForm({ ...form, endDate: event.target.value })}
-                />
-              </label>
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={form.active}
-                  onChange={(event) => setForm({ ...form, active: event.target.checked })}
-                />{" "}
-                Active
-              </label>
-              <div className="formActions">
-                <button disabled={busy}>
-                  {busy ? "Saving…" : editing ? "Save changes" : "Create season"}
-                </button>
-                {editing && (
-                  <button type="button" className="secondary" onClick={reset}>
-                    Cancel
+
+        {!canManage && (
+          <section className="panel">
+            <h2>Season directory</h2>
+            <p className="muted">Your account has read-only access to season information.</p>
+          </section>
+        )}
+
+        {canManage && (
+          <section className="panel">
+            <h2>{editing ? "Edit season" : "Add season"}</h2>
+
+            {organizations.length ? (
+              <form className="formGrid" onSubmit={save}>
+                <label>
+                  Organization
+                  <select
+                    required
+                    disabled={!isSystemAdmin}
+                    value={form.organizationId}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        organizationId: Number(event.target.value),
+                      })
+                    }
+                  >
+                    {organizations.map((organization) => (
+                      <option key={organization.id} value={organization.id}>
+                        {organization.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  Season name
+                  <input
+                    required
+                    placeholder="2026–27"
+                    value={form.name}
+                    onChange={(event) => setForm({ ...form, name: event.target.value })}
+                  />
+                </label>
+
+                <label>
+                  Start date
+                  <input
+                    type="date"
+                    value={form.startDate}
+                    onChange={(event) => setForm({ ...form, startDate: event.target.value })}
+                  />
+                </label>
+
+                <label>
+                  End date
+                  <input
+                    type="date"
+                    value={form.endDate}
+                    onChange={(event) => setForm({ ...form, endDate: event.target.value })}
+                  />
+                </label>
+
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={form.active}
+                    onChange={(event) => setForm({ ...form, active: event.target.checked })}
+                  />{" "}
+                  Active
+                </label>
+
+                <div className="formActions">
+                  <button disabled={busy}>
+                    {busy ? "Saving…" : editing ? "Save changes" : "Create season"}
                   </button>
-                )}
-              </div>
-            </form>
-          ) : (
-            <p>Create an organization first.</p>
-          )}
-          {error && <p className="error">{error}</p>}
-        </section>
+
+                  {editing && (
+                    <button type="button" className="secondary" onClick={reset}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            ) : (
+              <p>Create an organization first.</p>
+            )}
+          </section>
+        )}
+
+        {error && <p className="error">{error}</p>}
+
         <div className="entityGrid">
           {filtered.map((season) => (
             <article className="entityCard" key={season.id}>
@@ -232,25 +305,36 @@ export default function SeasonsPage() {
                   <p>{season.organizationName}</p>
                 </div>
               </div>
+
               <p>
                 {season.startDate || "No start date"} · {season.endDate || "No end date"}
               </p>
+
               <div className="entityStats">
                 <span className={season.active ? "badge" : "badge off"}>
                   {season.active ? "Active" : "Inactive"}
                 </span>
               </div>
-              <div className="cardActions">
-                <button className="secondary" onClick={() => edit(season)}>
-                  Edit
-                </button>
-                <button className="danger" onClick={() => remove(season.id)}>
-                  Delete
-                </button>
-              </div>
+
+              {canManage && (
+                <div className="cardActions">
+                  <button className="secondary" onClick={() => edit(season)}>
+                    Edit
+                  </button>
+                  <button className="danger" onClick={() => void remove(season.id)}>
+                    Delete
+                  </button>
+                </div>
+              )}
             </article>
           ))}
         </div>
+
+        {!filtered.length && (
+          <section className="panel">
+            <p>No seasons match the current filters.</p>
+          </section>
+        )}
       </AppShell>
     </AuthGate>
   );
