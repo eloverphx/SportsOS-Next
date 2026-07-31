@@ -62,6 +62,10 @@ export const scoreActionSchema = z.discriminatedUnion("action", [
     amountMs: z.coerce.number().int().min(-3_600_000).max(3_600_000),
   }),
   z.object({
+    action: z.literal("setClock"),
+    clockRemainingMs: z.coerce.number().int().min(0).max(7_200_000),
+  }),
+  z.object({
     action: z.literal("setPeriod"),
     period: z.coerce.number().int().min(1).max(20),
   }),

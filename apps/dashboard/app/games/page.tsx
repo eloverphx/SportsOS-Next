@@ -1,5 +1,6 @@
 "use client";
 
+import { GameScoringConsole, type ScoringAction } from "../../components/games/GameScoringConsole";
 import { io } from "socket.io-client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AuthGate } from "../../components/AuthGate";
@@ -48,6 +49,11 @@ type Game = {
   status: GameStatus;
   homeScore: number;
   awayScore: number;
+  period: number;
+  periodLengthMs: number;
+  clockRemainingMs: number;
+  clockRunning: boolean;
+  clockStartedAt: string | null;
   notes: string | null;
 };
 
@@ -105,8 +111,11 @@ export default function GamesPage() {
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [scoringGameId, setScoringGameId] = useState<number | null>(null);
+  const [scoringBusy, setScoringBusy] = useState(false);
 
   const canManage = userHasPermission(currentUser, PERMISSIONS.GAME_MANAGE);
+  const canScore = userHasPermission(currentUser, PERMISSIONS.GAME_SCORE);
 
   const isSystemAdmin = currentUser?.role === "system_admin";
 
@@ -133,6 +142,7 @@ export default function GamesPage() {
       }),
     [games, organizationFilter, statusFilter, search],
   );
+  const scoringGame = games.find((game) => game.id === scoringGameId) ?? null;
 
   const load = useCallback(async () => {
     try {
@@ -170,9 +180,31 @@ export default function GamesPage() {
 
     const socket = io(API);
 
-    ["game:created", "game:updated", "game:deleted"].forEach((eventName) =>
+    ["game:created", "game:updated", "game:deleted", "game:scored"].forEach((eventName) =>
       socket.on(eventName, load),
     );
+
+    async function score(gameId: number, action: ScoringAction): Promise<void> {
+      if (!canScore || scoringBusy) return;
+
+      setScoringBusy(true);
+      setError("");
+
+      try {
+        const response = await api<{ game: Game }>(`/games/${gameId}/scoring`, {
+          method: "POST",
+          body: JSON.stringify(action),
+        });
+
+        setGames((current) =>
+          current.map((game) => (game.id === response.game.id ? response.game : game)),
+        );
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Could not update game");
+      } finally {
+        setScoringBusy(false);
+      }
+    }
 
     return () => {
       socket.disconnect();
@@ -302,6 +334,30 @@ export default function GamesPage() {
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not delete game");
+    }
+  }
+
+  async function score(gameId: number, action: ScoringAction): Promise<void> {
+    if (!canScore || scoringBusy) {
+      return;
+    }
+
+    setScoringBusy(true);
+    setError("");
+
+    try {
+      const response = await api<{ game: Game }>(`/games/${gameId}/scoring`, {
+        method: "POST",
+        body: JSON.stringify(action),
+      });
+
+      setGames((current) =>
+        current.map((game) => (game.id === response.game.id ? response.game : game)),
+      );
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not update game");
+    } finally {
+      setScoringBusy(false);
     }
   }
 
@@ -633,6 +689,9 @@ export default function GamesPage() {
                   <button className="danger" onClick={() => void remove(game.id)}>
                     Delete
                   </button>
+                  {canScore && (
+                    <button onClick={() => setScoringGameId(game.id)}>Score game</button>
+                  )}
                 </div>
               )}
             </article>
@@ -643,6 +702,28 @@ export default function GamesPage() {
           <section className="panel">
             <p>No games match the current filters.</p>
           </section>
+        )}
+        <div className="entityGrid">
+          {filteredGames.map((game) => (
+            <article className="entityCard" key={game.id}>
+              {/* existing game card content */}
+            </article>
+          ))}
+        </div>
+
+        {!filteredGames.length && (
+          <section className="panel">
+            <p>No games match the current filters.</p>
+          </section>
+        )}
+
+        {scoringGame && canScore && (
+          <GameScoringConsole
+            game={scoringGame}
+            busy={scoringBusy}
+            onAction={(action) => score(scoringGame.id, action)}
+            onClose={() => setScoringGameId(null)}
+          />
         )}
       </AppShell>
     </AuthGate>

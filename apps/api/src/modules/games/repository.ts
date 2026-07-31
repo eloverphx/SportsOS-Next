@@ -384,6 +384,12 @@ export async function applyGameScoringAction(
         clockStartedAt = clockRunning ? new Date() : null;
         break;
 
+      case "setClock":
+        clockRemainingMs = action.clockRemainingMs;
+        clockRunning = false;
+        clockStartedAt = null;
+        break;
+
       case "setPeriod":
         period = action.period;
         clockRunning = false;
