@@ -66,11 +66,14 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
     const [playerRows] = await pool.query<RowDataPacket[]>(
       "SELECT COUNT(*) AS count FROM players WHERE status='ACTIVE'",
     );
+    const [gameRows] = await pool.query<RowDataPacket[]>(
+      "SELECT COUNT(*) AS count FROM games WHERE status IN ('SCHEDULED','LIVE')",
+    );
     return {
       organizations: Number(orgRows[0]?.count ?? 0),
       teams: Number(teamRows[0]?.count ?? 0),
       players: Number(playerRows[0]?.count ?? 0),
-      activeGames: 0,
+      activeGames: Number(gameRows[0]?.count ?? 0),
       liveStreams: 0,
     };
   });

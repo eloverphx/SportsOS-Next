@@ -35,6 +35,9 @@ export default function Dashboard() {
       "player:created",
       "player:updated",
       "player:deleted",
+      "game:created",
+      "game:updated",
+      "game:deleted",
     ].forEach((e) => socket.on(e, load));
     const timer = setInterval(load, 30000);
     return () => {

@@ -50,7 +50,7 @@ const links: readonly NavigationLink[] = [
   },
   {
     label: "Games",
-    href: "#",
+    href: "/games",
     permission: PERMISSIONS.GAME_READ,
   },
   {
