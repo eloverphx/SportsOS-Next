@@ -5,12 +5,35 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AuthGate } from "../../components/AuthGate";
 import { AppShell } from "../../components/AppShell";
 import { API, api } from "../../lib/api";
+import {
+  PERMISSIONS,
+  getStoredUser,
+  userHasPermission,
+  type AuthenticatedUser,
+} from "../../lib/auth";
 
-type Organization = { id: number; name: string };
-type Team = { id: number; organizationId: number; name: string };
-type Season = { id: number; organizationId: number; name: string; active: boolean };
+type Organization = {
+  id: number;
+  name: string;
+};
+
+type Team = {
+  id: number;
+  organizationId: number;
+  name: string;
+};
+
+type Season = {
+  id: number;
+  organizationId: number;
+  name: string;
+  active: boolean;
+};
+
 type Position = "Goalie" | "Defense" | "Left Wing" | "Center" | "Right Wing";
+
 type Role = "PLAYER" | "CAPTAIN" | "ALTERNATE";
+
 type Player = {
   id: number;
   organizationId: number;
@@ -22,6 +45,7 @@ type Player = {
   photoUrl: string | null;
   status: string;
 };
+
 type RosterEntry = {
   id: number;
   seasonId: number;
@@ -39,16 +63,27 @@ type RosterEntry = {
   role: Role;
   active: boolean;
 };
-type EditForm = { jerseyNumber: string; position: Position; role: Role; active: boolean };
+
+type EditForm = {
+  jerseyNumber: string;
+  position: Position;
+  role: Role;
+  active: boolean;
+};
 
 const positions: Position[] = ["Goalie", "Defense", "Left Wing", "Center", "Right Wing"];
-const roles: Array<{ value: Role; label: string }> = [
+
+const roles: Array<{
+  value: Role;
+  label: string;
+}> = [
   { value: "PLAYER", label: "Player" },
   { value: "CAPTAIN", label: "Captain" },
   { value: "ALTERNATE", label: "Alternate" },
 ];
 
 export default function RostersPage() {
+  const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
@@ -68,17 +103,27 @@ export default function RostersPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  const canManage = userHasPermission(currentUser, PERMISSIONS.TEAM_ROSTER_MANAGE);
+
+  const isSystemAdmin = currentUser?.role === "system_admin";
+
   const organizationTeams = useMemo(
     () => teams.filter((team) => team.organizationId === organizationId),
     [teams, organizationId],
   );
+
   const organizationSeasons = useMemo(
     () => seasons.filter((season) => season.organizationId === organizationId),
     [seasons, organizationId],
   );
+
   const filteredAvailable = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return available;
+
+    if (!needle) {
+      return available;
+    }
+
     return available.filter((player) =>
       `${player.firstName} ${player.lastName} ${player.preferredName ?? ""} ${player.jerseyNumber ?? ""}`
         .toLowerCase()
@@ -93,9 +138,11 @@ export default function RostersPage() {
         api<{ teams: Team[] }>("/teams"),
         api<{ seasons: Season[] }>("/seasons"),
       ]);
+
       setOrganizations(organizationResponse.organizations);
       setTeams(teamResponse.teams);
       setSeasons(seasonResponse.seasons);
+
       setOrganizationId((current) => current || organizationResponse.organizations[0]?.id || 0);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not load roster setup data");
@@ -108,53 +155,88 @@ export default function RostersPage() {
       setAvailable([]);
       return;
     }
+
     try {
       setError("");
-      const [rosterResponse, availableResponse] = await Promise.all([
-        api<{ roster: RosterEntry[] }>(`/rosters?seasonId=${seasonId}&teamId=${teamId}`),
-        api<{ players: Player[] }>(
-          `/rosters/available?organizationId=${organizationId}&seasonId=${seasonId}&teamId=${teamId}`,
-        ),
-      ]);
+
+      const rosterResponse = await api<{
+        roster: RosterEntry[];
+      }>(`/rosters?seasonId=${seasonId}&teamId=${teamId}`);
+
       setRoster(rosterResponse.roster);
-      setAvailable(availableResponse.players);
+
+      if (canManage) {
+        const availableResponse = await api<{
+          players: Player[];
+        }>(
+          `/rosters/available?organizationId=${organizationId}&seasonId=${seasonId}&teamId=${teamId}`,
+        );
+
+        setAvailable(availableResponse.players);
+      } else {
+        setAvailable([]);
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not load roster");
     }
-  }, [organizationId, teamId, seasonId]);
+  }, [organizationId, teamId, seasonId, canManage]);
+
+  useEffect(() => {
+    setCurrentUser(getStoredUser());
+  }, []);
 
   useEffect(() => {
     void loadFoundation();
   }, [loadFoundation]);
+
   useEffect(() => {
     const firstTeam = organizationTeams[0]?.id ?? 0;
     const firstActiveSeason =
       organizationSeasons.find((season) => season.active)?.id ?? organizationSeasons[0]?.id ?? 0;
-    if (!organizationTeams.some((team) => team.id === teamId)) setTeamId(firstTeam);
-    if (!organizationSeasons.some((season) => season.id === seasonId))
+
+    if (!organizationTeams.some((team) => team.id === teamId)) {
+      setTeamId(firstTeam);
+    }
+
+    if (!organizationSeasons.some((season) => season.id === seasonId)) {
       setSeasonId(firstActiveSeason);
+    }
   }, [organizationId, organizationTeams, organizationSeasons, teamId, seasonId]);
+
   useEffect(() => {
     void loadRoster();
   }, [loadRoster]);
+
   useEffect(() => {
     const socket = io(API);
-    const refresh = () => {
+
+    const refresh = (): void => {
       void loadRoster();
     };
+
     socket.on("roster:created", refresh);
     socket.on("roster:updated", refresh);
     socket.on("roster:deleted", refresh);
     socket.on("player:updated", refresh);
+
     return () => {
       socket.disconnect();
     };
   }, [loadRoster]);
 
-  async function addPlayer(player: Player) {
-    if (!teamId || !seasonId) return;
+  async function addPlayer(player: Player): Promise<void> {
+    if (!canManage) {
+      setError("You do not have permission to manage rosters.");
+      return;
+    }
+
+    if (!teamId || !seasonId) {
+      return;
+    }
+
     setBusy(true);
     setError("");
+
     try {
       await api("/rosters", {
         method: "POST",
@@ -168,6 +250,7 @@ export default function RostersPage() {
           active: true,
         }),
       });
+
       await loadRoster();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not add player");
@@ -176,7 +259,11 @@ export default function RostersPage() {
     }
   }
 
-  function beginEdit(entry: RosterEntry) {
+  function beginEdit(entry: RosterEntry): void {
+    if (!canManage) {
+      return;
+    }
+
     setEditing(entry.id);
     setEditForm({
       jerseyNumber: entry.jerseyNumber?.toString() ?? "",
@@ -186,9 +273,15 @@ export default function RostersPage() {
     });
   }
 
-  async function saveEdit(entryId: number) {
+  async function saveEdit(entryId: number): Promise<void> {
+    if (!canManage) {
+      setError("You do not have permission to manage rosters.");
+      return;
+    }
+
     setBusy(true);
     setError("");
+
     try {
       await api(`/rosters/${entryId}`, {
         method: "PUT",
@@ -199,6 +292,7 @@ export default function RostersPage() {
           active: editForm.active,
         }),
       });
+
       setEditing(null);
       await loadRoster();
     } catch (cause) {
@@ -208,17 +302,28 @@ export default function RostersPage() {
     }
   }
 
-  async function removeEntry(entry: RosterEntry) {
+  async function removeEntry(entry: RosterEntry): Promise<void> {
+    if (!canManage) {
+      setError("You do not have permission to manage rosters.");
+      return;
+    }
+
     if (
-      !confirm(
+      !window.confirm(
         `Remove ${entry.preferredName || entry.firstName} ${entry.lastName} from this roster?`,
       )
-    )
+    ) {
       return;
+    }
+
     setBusy(true);
     setError("");
+
     try {
-      await api(`/rosters/${entry.id}`, { method: "DELETE" });
+      await api(`/rosters/${entry.id}`, {
+        method: "DELETE",
+      });
+
       await loadRoster();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not remove player");
@@ -237,24 +342,38 @@ export default function RostersPage() {
               Build season-aware team rosters, assign jersey numbers, and designate captains.
             </p>
           </div>
+
           <div className="filters">
-            <select
-              value={organizationId || ""}
-              onChange={(event) => setOrganizationId(Number(event.target.value))}
-            >
-              <option value="">Select organization</option>
-              {organizations.map((org) => (
-                <option key={org.id} value={org.id}>
-                  {org.name}
-                </option>
-              ))}
-            </select>
+            {isSystemAdmin ? (
+              <select
+                value={organizationId || ""}
+                onChange={(event) => setOrganizationId(Number(event.target.value))}
+              >
+                <option value="">Select organization</option>
+
+                {organizations.map((organization) => (
+                  <option key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <select value={organizationId || ""} disabled>
+                {organizations.map((organization) => (
+                  <option key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </option>
+                ))}
+              </select>
+            )}
+
             <select
               value={seasonId || ""}
               onChange={(event) => setSeasonId(Number(event.target.value))}
               disabled={!organizationId}
             >
               <option value="">Select season</option>
+
               {organizationSeasons.map((season) => (
                 <option key={season.id} value={season.id}>
                   {season.name}
@@ -262,12 +381,14 @@ export default function RostersPage() {
                 </option>
               ))}
             </select>
+
             <select
               value={teamId || ""}
               onChange={(event) => setTeamId(Number(event.target.value))}
               disabled={!organizationId}
             >
               <option value="">Select team</option>
+
               {organizationTeams.map((team) => (
                 <option key={team.id} value={team.id}>
                   {team.name}
@@ -277,59 +398,75 @@ export default function RostersPage() {
           </div>
         </div>
 
+        {!canManage && (
+          <section className="panel">
+            <h2>Roster directory</h2>
+            <p className="muted">Your account has read-only access to team rosters.</p>
+          </section>
+        )}
+
         {error && <p className="error">{error}</p>}
+
         {!organizationId || !seasonId || !teamId ? (
           <section className="panel">
-            <p>Select an organization, season, and team to manage a roster.</p>
+            <p>Select an organization, season, and team to view a roster.</p>
           </section>
         ) : (
           <div className="rosterWorkspace">
-            <section className="panel">
-              <div className="sectionHead">
-                <div>
-                  <h2>Available Players</h2>
-                  <p className="muted">
-                    {available.length} player{available.length === 1 ? "" : "s"} available
-                  </p>
+            {canManage && (
+              <section className="panel">
+                <div className="sectionHead">
+                  <div>
+                    <h2>Available Players</h2>
+                    <p className="muted">
+                      {available.length} player
+                      {available.length === 1 ? "" : "s"} available
+                    </p>
+                  </div>
+
+                  <input
+                    className="search"
+                    placeholder="Search players"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                  />
                 </div>
-                <input
-                  className="search"
-                  placeholder="Search players"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
-              </div>
-              <div className="rosterList">
-                {filteredAvailable.map((player) => (
-                  <article className="rosterRow" key={player.id}>
-                    <div className="entityTop">
-                      {player.photoUrl ? (
-                        <img className="logo playerPhoto" src={player.photoUrl} alt="" />
-                      ) : (
-                        <div className="logo fallback playerPhoto">
-                          {player.firstName[0]}
-                          {player.lastName[0]}
+
+                <div className="rosterList">
+                  {filteredAvailable.map((player) => (
+                    <article className="rosterRow" key={player.id}>
+                      <div className="entityTop">
+                        {player.photoUrl ? (
+                          <img className="logo playerPhoto" src={player.photoUrl} alt="" />
+                        ) : (
+                          <div className="logo fallback playerPhoto">
+                            {player.firstName[0]}
+                            {player.lastName[0]}
+                          </div>
+                        )}
+
+                        <div>
+                          <h3>
+                            {player.preferredName || player.firstName} {player.lastName}
+                          </h3>
+                          <p>
+                            {player.position} · {player.status}
+                          </p>
                         </div>
-                      )}
-                      <div>
-                        <h3>
-                          {player.preferredName || player.firstName} {player.lastName}
-                        </h3>
-                        <p>
-                          {player.position} · {player.status}
-                        </p>
                       </div>
-                    </div>
-                    <button disabled={busy} onClick={() => addPlayer(player)}>
-                      Add
-                    </button>
-                  </article>
-                ))}
-              </div>
-              {!filteredAvailable.length && (
-                <p className="muted">No available players match this search.</p>
-              )}
-            </section>
+
+                      <button disabled={busy} onClick={() => void addPlayer(player)}>
+                        Add
+                      </button>
+                    </article>
+                  ))}
+                </div>
+
+                {!filteredAvailable.length && (
+                  <p className="muted">No available players match this search.</p>
+                )}
+              </section>
+            )}
 
             <section className="panel">
               <div className="sectionHead">
@@ -340,10 +477,11 @@ export default function RostersPage() {
                   </p>
                 </div>
               </div>
+
               <div className="rosterList">
                 {roster.map((entry) => (
                   <article className="rosterRow rosterEntry" key={entry.id}>
-                    {editing === entry.id ? (
+                    {editing === entry.id && canManage ? (
                       <div className="rosterEdit">
                         <label>
                           Jersey
@@ -353,16 +491,23 @@ export default function RostersPage() {
                             max="99"
                             value={editForm.jerseyNumber}
                             onChange={(event) =>
-                              setEditForm({ ...editForm, jerseyNumber: event.target.value })
+                              setEditForm({
+                                ...editForm,
+                                jerseyNumber: event.target.value,
+                              })
                             }
                           />
                         </label>
+
                         <label>
                           Position
                           <select
                             value={editForm.position}
                             onChange={(event) =>
-                              setEditForm({ ...editForm, position: event.target.value as Position })
+                              setEditForm({
+                                ...editForm,
+                                position: event.target.value as Position,
+                              })
                             }
                           >
                             {positions.map((position) => (
@@ -370,12 +515,16 @@ export default function RostersPage() {
                             ))}
                           </select>
                         </label>
+
                         <label>
                           Role
                           <select
                             value={editForm.role}
                             onChange={(event) =>
-                              setEditForm({ ...editForm, role: event.target.value as Role })
+                              setEditForm({
+                                ...editForm,
+                                role: event.target.value as Role,
+                              })
                             }
                           >
                             {roles.map((role) => (
@@ -385,20 +534,26 @@ export default function RostersPage() {
                             ))}
                           </select>
                         </label>
+
                         <label className="checkLabel">
                           <input
                             type="checkbox"
                             checked={editForm.active}
                             onChange={(event) =>
-                              setEditForm({ ...editForm, active: event.target.checked })
+                              setEditForm({
+                                ...editForm,
+                                active: event.target.checked,
+                              })
                             }
                           />{" "}
                           Active
                         </label>
+
                         <div className="cardActions">
-                          <button disabled={busy} onClick={() => saveEdit(entry.id)}>
+                          <button disabled={busy} onClick={() => void saveEdit(entry.id)}>
                             Save
                           </button>
+
                           <button className="secondary" onClick={() => setEditing(null)}>
                             Cancel
                           </button>
@@ -415,6 +570,7 @@ export default function RostersPage() {
                               {entry.lastName[0]}
                             </div>
                           )}
+
                           <div>
                             <h3>
                               {entry.preferredName || entry.firstName} {entry.lastName}
@@ -429,29 +585,36 @@ export default function RostersPage() {
                             </p>
                           </div>
                         </div>
+
                         <div className="rosterNumber">
                           {entry.jerseyNumber === null ? "—" : `#${entry.jerseyNumber}`}
                         </div>
+
                         <span className={entry.active ? "badge" : "badge off"}>
                           {entry.active ? "Active" : "Inactive"}
                         </span>
-                        <div className="cardActions">
-                          <button className="secondary" onClick={() => beginEdit(entry)}>
-                            Edit
-                          </button>
-                          <button
-                            className="danger"
-                            disabled={busy}
-                            onClick={() => removeEntry(entry)}
-                          >
-                            Remove
-                          </button>
-                        </div>
+
+                        {canManage && (
+                          <div className="cardActions">
+                            <button className="secondary" onClick={() => beginEdit(entry)}>
+                              Edit
+                            </button>
+
+                            <button
+                              className="danger"
+                              disabled={busy}
+                              onClick={() => void removeEntry(entry)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
                       </>
                     )}
                   </article>
                 ))}
               </div>
+
               {!roster.length && (
                 <p className="muted">
                   This team does not have any players assigned for the selected season.
