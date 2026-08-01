@@ -153,6 +153,25 @@ export async function runMigrations(): Promise<void> {
     CONSTRAINT fk_games_away_team FOREIGN KEY (away_team_id) REFERENCES teams(id) ON DELETE RESTRICT
   ) ENGINE=InnoDB`);
 
+  await pool.execute(`CREATE TABLE IF NOT EXISTS scoreboard_devices (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    organization_id BIGINT UNSIGNED NOT NULL,
+    game_id BIGINT UNSIGNED NULL,
+    name VARCHAR(160) NOT NULL,
+    location VARCHAR(160) NULL,
+    device_key VARCHAR(128) NOT NULL UNIQUE,
+    last_seen_at DATETIME(3) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_scoreboard_devices_org (organization_id),
+    INDEX idx_scoreboard_devices_game (game_id),
+    INDEX idx_scoreboard_devices_last_seen (last_seen_at),
+    CONSTRAINT fk_scoreboard_devices_org
+      FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_scoreboard_devices_game
+      FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE SET NULL
+  ) ENGINE=InnoDB`);
+
   await pool.execute(`CREATE TABLE IF NOT EXISTS settings (
     setting_key VARCHAR(120) NOT NULL PRIMARY KEY,
     setting_value TEXT NOT NULL,

@@ -6,11 +6,18 @@ import { io } from "socket.io-client";
 import { AuthGate } from "../../components/AuthGate";
 import { AppShell } from "../../components/AppShell";
 import { API, api } from "../../lib/api";
+import {
+  PERMISSIONS,
+  getStoredUser,
+  userHasPermission,
+  type AuthenticatedUser,
+} from "../../lib/auth";
 
 type GameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
 
 type Game = {
   id: number;
+  organizationId: number;
   organizationName: string;
   seasonName: string;
   homeTeamName: string;
@@ -26,12 +33,37 @@ type Game = {
   clockStartedAt: string | null;
 };
 
+type Device = {
+  id: number;
+  organizationId: number;
+  organizationName: string;
+  gameId: number | null;
+  gameLabel: string | null;
+  name: string;
+  location: string | null;
+  deviceKey: string;
+  status: "ONLINE" | "OFFLINE";
+  lastSeenAt: string | null;
+};
+
+type DeviceForm = {
+  organizationId: number;
+  gameId: number | null;
+  name: string;
+  location: string;
+};
+
+const blankDeviceForm: DeviceForm = {
+  organizationId: 0,
+  gameId: null,
+  name: "",
+  location: "",
+};
+
 const statuses: readonly GameStatus[] = ["SCHEDULED", "LIVE", "FINAL", "POSTPONED", "CANCELED"];
 
 function remainingMs(game: Game, now: number): number {
-  if (!game.clockRunning || !game.clockStartedAt) {
-    return Math.max(0, game.clockRemainingMs);
-  }
+  if (!game.clockRunning || !game.clockStartedAt) return Math.max(0, game.clockRemainingMs);
   return Math.max(0, game.clockRemainingMs - (now - new Date(game.clockStartedAt).getTime()));
 }
 
@@ -41,17 +73,56 @@ function formatClock(milliseconds: number): string {
 }
 
 export default function ScoreboardsPage() {
+  const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [games, setGames] = useState<Game[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [deviceForm, setDeviceForm] = useState<DeviceForm>(blankDeviceForm);
+  const [editingDeviceId, setEditingDeviceId] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+
+  const canManageDevices = userHasPermission(user, PERMISSIONS.SCOREBOARD_MANAGE);
+  const isSystemAdmin = user?.role === "system_admin";
+
+  const organizations = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          games.map((game) => [
+            game.organizationId,
+            { id: game.organizationId, name: game.organizationName },
+          ]),
+        ).values(),
+      ),
+    [games],
+  );
+
+  const organizationGames = useMemo(
+    () => games.filter((game) => game.organizationId === deviceForm.organizationId),
+    [games, deviceForm.organizationId],
+  );
 
   const load = useCallback(async () => {
     try {
-      const response = await api<{ games: Game[] }>("/games");
-      setGames(response.games);
+      const [gameResponse, deviceResponse] = await Promise.all([
+        api<{ games: Game[] }>("/games"),
+        api<{ devices: Device[] }>("/scoreboard-devices"),
+      ]);
+
+      setGames(gameResponse.games);
+      setDevices(deviceResponse.devices);
+      setDeviceForm((current) =>
+        current.organizationId
+          ? current
+          : {
+              ...current,
+              organizationId: gameResponse.games[0]?.organizationId ?? 0,
+            },
+      );
       setError("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not load scoreboards");
@@ -59,11 +130,24 @@ export default function ScoreboardsPage() {
   }, []);
 
   useEffect(() => {
+    setUser(getStoredUser());
+  }, []);
+
+  useEffect(() => {
     void load();
     const socket = io(API);
-    ["game:created", "game:updated", "game:deleted", "game:scored"].forEach((eventName) =>
-      socket.on(eventName, load),
-    );
+
+    [
+      "game:created",
+      "game:updated",
+      "game:deleted",
+      "game:scored",
+      "scoreboard-device:created",
+      "scoreboard-device:updated",
+      "scoreboard-device:deleted",
+      "scoreboard-device:status",
+    ].forEach((eventName) => socket.on(eventName, load));
+
     return () => {
       socket.disconnect();
     };
@@ -87,13 +171,86 @@ export default function ScoreboardsPage() {
     [games, search, statusFilter],
   );
 
-  async function copyUrl(gameId: number): Promise<void> {
+  function resetDeviceForm(): void {
+    setEditingDeviceId(null);
+    setDeviceForm({
+      ...blankDeviceForm,
+      organizationId: organizations[0]?.id ?? 0,
+    });
+  }
+
+  function editDevice(device: Device): void {
+    setEditingDeviceId(device.id);
+    setDeviceForm({
+      organizationId: device.organizationId,
+      gameId: device.gameId,
+      name: device.name,
+      location: device.location ?? "",
+    });
+  }
+
+  async function saveDevice(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!canManageDevices) return;
+
+    setBusy(true);
+    setError("");
+
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/games/${gameId}/scoreboard`);
-      setCopied(gameId);
+      await api(
+        editingDeviceId ? `/scoreboard-devices/${editingDeviceId}` : "/scoreboard-devices",
+        {
+          method: editingDeviceId ? "PUT" : "POST",
+          body: JSON.stringify({
+            ...deviceForm,
+            location: deviceForm.location || null,
+          }),
+        },
+      );
+
+      resetDeviceForm();
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not save scoreboard device");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeDevice(id: number): Promise<void> {
+    if (!canManageDevices || !window.confirm("Delete this scoreboard device?")) return;
+
+    try {
+      await api(`/scoreboard-devices/${id}`, { method: "DELETE" });
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not delete scoreboard device");
+    }
+  }
+
+  async function rotateKey(id: number): Promise<void> {
+    if (
+      !canManageDevices ||
+      !window.confirm("Rotate this device key? The old key will stop working.")
+    ) {
+      return;
+    }
+
+    try {
+      await api(`/scoreboard-devices/${id}/rotate-key`, { method: "POST" });
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not rotate device key");
+    }
+  }
+
+  async function copy(value: string, label: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(label);
       window.setTimeout(() => setCopied(null), 1800);
     } catch {
-      setError("Could not copy scoreboard URL.");
+      setError("Could not copy to clipboard.");
     }
   }
 
@@ -103,7 +260,7 @@ export default function ScoreboardsPage() {
         <div className="pageHead">
           <div>
             <h1>Scoreboards</h1>
-            <p className="muted">Open, monitor, and share realtime scoreboard displays.</p>
+            <p className="muted">Monitor games and manage physical scoreboard devices.</p>
           </div>
 
           <div className="filters">
@@ -126,6 +283,146 @@ export default function ScoreboardsPage() {
         </div>
 
         {error && <p className="error">{error}</p>}
+
+        {canManageDevices && (
+          <section className="panel">
+            <h2>{editingDeviceId ? "Edit scoreboard device" : "Register scoreboard device"}</h2>
+
+            <form className="formGrid" onSubmit={saveDevice}>
+              <label>
+                Organization
+                <select
+                  disabled={!isSystemAdmin}
+                  value={deviceForm.organizationId}
+                  onChange={(event) =>
+                    setDeviceForm({
+                      ...deviceForm,
+                      organizationId: Number(event.target.value),
+                      gameId: null,
+                    })
+                  }
+                >
+                  {organizations.map((organization) => (
+                    <option key={organization.id} value={organization.id}>
+                      {organization.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Device name
+                <input
+                  required
+                  maxLength={160}
+                  value={deviceForm.name}
+                  onChange={(event) => setDeviceForm({ ...deviceForm, name: event.target.value })}
+                />
+              </label>
+
+              <label>
+                Location
+                <input
+                  maxLength={160}
+                  value={deviceForm.location}
+                  onChange={(event) =>
+                    setDeviceForm({ ...deviceForm, location: event.target.value })
+                  }
+                />
+              </label>
+
+              <label>
+                Assigned game
+                <select
+                  value={deviceForm.gameId ?? ""}
+                  onChange={(event) =>
+                    setDeviceForm({
+                      ...deviceForm,
+                      gameId: event.target.value ? Number(event.target.value) : null,
+                    })
+                  }
+                >
+                  <option value="">Unassigned</option>
+                  {organizationGames.map((game) => (
+                    <option key={game.id} value={game.id}>
+                      {game.awayTeamName} at {game.homeTeamName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="formActions">
+                <button disabled={busy}>{busy ? "Saving…" : "Save device"}</button>
+                {editingDeviceId && (
+                  <button type="button" className="secondary" onClick={resetDeviceForm}>
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+          </section>
+        )}
+
+        <section className="panel">
+          <div className="sectionHead">
+            <div>
+              <h2>Registered devices</h2>
+              <p className="muted">Devices are online when they heartbeat within 90 seconds.</p>
+            </div>
+          </div>
+
+          <div className="entityGrid">
+            {devices.map((device) => (
+              <article className="entityCard" key={device.id}>
+                <div className="sectionHead">
+                  <div>
+                    <h3>{device.name}</h3>
+                    <p>{device.organizationName}</p>
+                  </div>
+                  <span className={device.status === "ONLINE" ? "badge" : "badge off"}>
+                    {device.status}
+                  </span>
+                </div>
+
+                <p>{device.location || "Location not set"}</p>
+                <p>{device.gameLabel || "No game assigned"}</p>
+                <p>
+                  Last seen:{" "}
+                  {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleString() : "Never"}
+                </p>
+
+                {canManageDevices && (
+                  <>
+                    <label className="deviceKeyLabel">
+                      Device key
+                      <input readOnly value={device.deviceKey} />
+                    </label>
+
+                    <div className="cardActions">
+                      <button
+                        className="secondary"
+                        onClick={() => void copy(device.deviceKey, `key-${device.id}`)}
+                      >
+                        {copied === `key-${device.id}` ? "Copied" : "Copy key"}
+                      </button>
+                      <button className="secondary" onClick={() => editDevice(device)}>
+                        Edit
+                      </button>
+                      <button className="secondary" onClick={() => void rotateKey(device.id)}>
+                        Rotate key
+                      </button>
+                      <button className="danger" onClick={() => void removeDevice(device.id)}>
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </article>
+            ))}
+          </div>
+
+          {!devices.length && <p>No scoreboard devices registered.</p>}
+        </section>
 
         <div className="scoreboardWorkspaceGrid">
           {filteredGames.map((game) => (
@@ -158,11 +455,6 @@ export default function ScoreboardsPage() {
                 </div>
               </div>
 
-              <p className="muted">
-                {new Date(game.scheduledStart).toLocaleString()} · {game.seasonName}
-              </p>
-              <p className="muted">{game.venue || "Venue not set"}</p>
-
               <div className="cardActions">
                 <Link
                   href={`/games/${game.id}/scoreboard`}
@@ -171,22 +463,21 @@ export default function ScoreboardsPage() {
                 >
                   Open scoreboard
                 </Link>
-                <button className="secondary" onClick={() => void copyUrl(game.id)}>
-                  {copied === game.id ? "Copied" : "Copy URL"}
+                <button
+                  className="secondary"
+                  onClick={() =>
+                    void copy(
+                      `${window.location.origin}/games/${game.id}/scoreboard`,
+                      `url-${game.id}`,
+                    )
+                  }
+                >
+                  {copied === `url-${game.id}` ? "Copied" : "Copy URL"}
                 </button>
-                <Link className="secondary" href="/games">
-                  Open controls
-                </Link>
               </div>
             </article>
           ))}
         </div>
-
-        {!filteredGames.length && (
-          <section className="panel">
-            <p>No scoreboards match the current filters.</p>
-          </section>
-        )}
       </AppShell>
     </AuthGate>
   );
