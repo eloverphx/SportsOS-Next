@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { GameScoringConsole, type ScoringAction } from "../../components/games/GameScoringConsole";
 import { io } from "socket.io-client";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -694,19 +695,6 @@ export default function GamesPage() {
                   )}
                 </div>
               )}
-            </article>
-          ))}
-        </div>
-
-        {!filteredGames.length && (
-          <section className="panel">
-            <p>No games match the current filters.</p>
-          </section>
-        )}
-        <div className="entityGrid">
-          {filteredGames.map((game) => (
-            <article className="entityCard" key={game.id}>
-              {/* existing game card content */}
             </article>
           ))}
         </div>

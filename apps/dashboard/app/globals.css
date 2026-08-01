@@ -496,4 +496,12 @@ select {
     align-items: stretch;
     flex-direction: column;
   }
+  .cardActions a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-weight: 800;
+  }
 }

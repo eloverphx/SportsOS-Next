@@ -85,6 +85,41 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     return { game };
   });
 
+  app.get("/public/games/:id/scoreboard", async (request, reply) => {
+    const id = gameIdSchema.safeParse((request.params as { id: string }).id);
+
+    if (!id.success) {
+      return reply.code(400).send({ error: "Invalid game id" });
+    }
+
+    const game = await findGameById(id.data);
+
+    if (!game) {
+      return reply.code(404).send({ error: "Game not found" });
+    }
+
+    return {
+      game: {
+        id: game.id,
+        organizationName: game.organizationName,
+        seasonName: game.seasonName,
+        homeTeamName: game.homeTeamName,
+        awayTeamName: game.awayTeamName,
+        scheduledStart: game.scheduledStart,
+        timezone: game.timezone,
+        venue: game.venue,
+        status: game.status,
+        homeScore: game.homeScore,
+        awayScore: game.awayScore,
+        period: game.period,
+        periodLengthMs: game.periodLengthMs,
+        clockRemainingMs: game.clockRemainingMs,
+        clockRunning: game.clockRunning,
+        clockStartedAt: game.clockStartedAt,
+      },
+    };
+  });
+
   app.post("/games", async (request, reply) => {
     const parsed = gameInputSchema.safeParse(request.body);
 
