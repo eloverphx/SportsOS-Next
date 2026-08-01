@@ -185,28 +185,6 @@ export default function GamesPage() {
       socket.on(eventName, load),
     );
 
-    async function score(gameId: number, action: ScoringAction): Promise<void> {
-      if (!canScore || scoringBusy) return;
-
-      setScoringBusy(true);
-      setError("");
-
-      try {
-        const response = await api<{ game: Game }>(`/games/${gameId}/scoring`, {
-          method: "POST",
-          body: JSON.stringify(action),
-        });
-
-        setGames((current) =>
-          current.map((game) => (game.id === response.game.id ? response.game : game)),
-        );
-      } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Could not update game");
-      } finally {
-        setScoringBusy(false);
-      }
-    }
-
     return () => {
       socket.disconnect();
     };
@@ -681,20 +659,30 @@ export default function GamesPage() {
 
               {game.notes && <p>{game.notes}</p>}
 
-              {canManage && (
-                <div className="cardActions">
-                  <button className="secondary" onClick={() => edit(game)}>
-                    Edit
-                  </button>
+              <div className="cardActions">
+                <Link
+                  className="secondary"
+                  href={`/games/${game.id}/scoreboard`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Open scoreboard
+                </Link>
 
-                  <button className="danger" onClick={() => void remove(game.id)}>
-                    Delete
-                  </button>
-                  {canScore && (
-                    <button onClick={() => setScoringGameId(game.id)}>Score game</button>
-                  )}
-                </div>
-              )}
+                {canScore && <button onClick={() => setScoringGameId(game.id)}>Score game</button>}
+
+                {canManage && (
+                  <>
+                    <button className="secondary" onClick={() => edit(game)}>
+                      Edit
+                    </button>
+
+                    <button className="danger" onClick={() => void remove(game.id)}>
+                      Delete
+                    </button>
+                  </>
+                )}
+              </div>
             </article>
           ))}
         </div>
