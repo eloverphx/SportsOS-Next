@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { GameScoringConsole, type ScoringAction } from "../../components/games/GameScoringConsole";
 import { io } from "socket.io-client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AuthGate } from "../../components/AuthGate";
 import { AppShell } from "../../components/AppShell";
+import { GameScoringConsole, type ScoringAction } from "../../components/games/GameScoringConsole";
 import { API, api } from "../../lib/api";
 import {
   PERMISSIONS,
@@ -15,23 +15,14 @@ import {
 } from "../../lib/auth";
 import { AMERICAS_TIME_ZONES } from "../../lib/timezones";
 
-type Organization = {
-  id: number;
-  name: string;
-};
-
-type Season = {
+type Organization = { id: number; name: string };
+type Season = { id: number; organizationId: number; name: string };
+type TeamOption = {
   id: number;
   organizationId: number;
+  organizationName: string;
   name: string;
 };
-
-type Team = {
-  id: number;
-  organizationId: number;
-  name: string;
-};
-
 type GameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
 
 type Game = {
@@ -40,10 +31,14 @@ type Game = {
   organizationName: string;
   seasonId: number;
   seasonName: string;
-  homeTeamId: number;
+  homeTeamId: number | null;
   homeTeamName: string;
-  awayTeamId: number;
+  homeTeamOrganizationName: string | null;
+  homeExternalName: string | null;
+  awayTeamId: number | null;
   awayTeamName: string;
+  awayTeamOrganizationName: string | null;
+  awayExternalName: string | null;
   scheduledStart: string;
   timezone: string;
   venue: string | null;
@@ -61,8 +56,10 @@ type Game = {
 type Form = {
   organizationId: number;
   seasonId: number;
-  homeTeamId: number;
-  awayTeamId: number;
+  homeTeamId: number | null;
+  homeExternalName: string;
+  awayTeamId: number | null;
+  awayExternalName: string;
   scheduledStart: string;
   timezone: string;
   venue: string;
@@ -77,8 +74,10 @@ const statuses: readonly GameStatus[] = ["SCHEDULED", "LIVE", "FINAL", "POSTPONE
 const blank: Form = {
   organizationId: 0,
   seasonId: 0,
-  homeTeamId: 0,
-  awayTeamId: 0,
+  homeTeamId: null,
+  homeExternalName: "",
+  awayTeamId: null,
+  awayExternalName: "",
   scheduledStart: "",
   timezone: "America/Chicago",
   venue: "",
@@ -91,7 +90,6 @@ const blank: Form = {
 function toLocalDateTime(isoValue: string): string {
   const date = new Date(isoValue);
   const offsetMilliseconds = date.getTimezoneOffset() * 60_000;
-
   return new Date(date.getTime() - offsetMilliseconds).toISOString().slice(0, 16);
 }
 
@@ -103,7 +101,7 @@ export default function GamesPage() {
   const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamOptions, setTeamOptions] = useState<TeamOption[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [form, setForm] = useState<Form>(blank);
   const [editing, setEditing] = useState<number | null>(null);
@@ -117,17 +115,11 @@ export default function GamesPage() {
 
   const canManage = userHasPermission(currentUser, PERMISSIONS.GAME_MANAGE);
   const canScore = userHasPermission(currentUser, PERMISSIONS.GAME_SCORE);
-
   const isSystemAdmin = currentUser?.role === "system_admin";
 
   const organizationSeasons = useMemo(
     () => seasons.filter((season) => season.organizationId === form.organizationId),
     [seasons, form.organizationId],
-  );
-
-  const organizationTeams = useMemo(
-    () => teams.filter((team) => team.organizationId === form.organizationId),
-    [teams, form.organizationId],
   );
 
   const filteredGames = useMemo(
@@ -143,6 +135,7 @@ export default function GamesPage() {
       }),
     [games, organizationFilter, statusFilter, search],
   );
+
   const scoringGame = games.find((game) => game.id === scoringGameId) ?? null;
 
   const load = useCallback(async () => {
@@ -150,13 +143,13 @@ export default function GamesPage() {
       const [organizationResponse, seasonResponse, teamResponse, gameResponse] = await Promise.all([
         api<{ organizations: Organization[] }>("/organizations"),
         api<{ seasons: Season[] }>("/seasons"),
-        api<{ teams: Team[] }>("/teams"),
+        api<{ teams: TeamOption[] }>("/games/team-options"),
         api<{ games: Game[] }>("/games"),
       ]);
 
       setOrganizations(organizationResponse.organizations);
       setSeasons(seasonResponse.seasons);
-      setTeams(teamResponse.teams);
+      setTeamOptions(teamResponse.teams);
       setGames(gameResponse.games);
 
       setForm((current) =>
@@ -167,57 +160,35 @@ export default function GamesPage() {
               organizationId: organizationResponse.organizations[0]?.id ?? 0,
             },
       );
+      setError("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not load games");
     }
   }, []);
 
-  useEffect(() => {
-    setCurrentUser(getStoredUser());
-  }, []);
+  useEffect(() => setCurrentUser(getStoredUser()), []);
 
   useEffect(() => {
     void load();
-
     const socket = io(API);
-
     ["game:created", "game:updated", "game:deleted", "game:scored"].forEach((eventName) =>
       socket.on(eventName, load),
     );
-
     return () => {
       socket.disconnect();
     };
   }, [load]);
 
   useEffect(() => {
-    if (!form.organizationId) {
-      return;
-    }
+    if (!form.organizationId) return;
 
-    const firstSeasonId = organizationSeasons[0]?.id ?? 0;
-    const firstTeamId = organizationTeams[0]?.id ?? 0;
-    const secondTeamId = organizationTeams.find((team) => team.id !== firstTeamId)?.id ?? 0;
-
-    setForm((current) => {
-      const homeTeamId = organizationTeams.some((team) => team.id === current.homeTeamId)
-        ? current.homeTeamId
-        : firstTeamId;
-
-      return {
-        ...current,
-        seasonId: organizationSeasons.some((season) => season.id === current.seasonId)
-          ? current.seasonId
-          : firstSeasonId,
-        homeTeamId,
-        awayTeamId:
-          organizationTeams.some((team) => team.id === current.awayTeamId) &&
-          current.awayTeamId !== homeTeamId
-            ? current.awayTeamId
-            : (organizationTeams.find((team) => team.id !== homeTeamId)?.id ?? secondTeamId),
-      };
-    });
-  }, [form.organizationId, organizationSeasons, organizationTeams]);
+    setForm((current) => ({
+      ...current,
+      seasonId: organizationSeasons.some((season) => season.id === current.seasonId)
+        ? current.seasonId
+        : (organizationSeasons[0]?.id ?? 0),
+    }));
+  }, [form.organizationId, organizationSeasons]);
 
   function reset(): void {
     setEditing(null);
@@ -229,16 +200,16 @@ export default function GamesPage() {
   }
 
   function edit(game: Game): void {
-    if (!canManage) {
-      return;
-    }
+    if (!canManage) return;
 
     setEditing(game.id);
     setForm({
       organizationId: game.organizationId,
       seasonId: game.seasonId,
       homeTeamId: game.homeTeamId,
+      homeExternalName: game.homeExternalName ?? "",
       awayTeamId: game.awayTeamId,
+      awayExternalName: game.awayExternalName ?? "",
       scheduledStart: toLocalDateTime(game.scheduledStart),
       timezone: game.timezone,
       venue: game.venue ?? "",
@@ -248,10 +219,7 @@ export default function GamesPage() {
       notes: game.notes ?? "",
     });
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function save(event: React.FormEvent<HTMLFormElement>): Promise<void> {
@@ -267,7 +235,17 @@ export default function GamesPage() {
       return;
     }
 
-    if (form.homeTeamId === form.awayTeamId) {
+    if (!form.homeTeamId && !form.homeExternalName.trim()) {
+      setError("Select or enter a home team.");
+      return;
+    }
+
+    if (!form.awayTeamId && !form.awayExternalName.trim()) {
+      setError("Select or enter an away team.");
+      return;
+    }
+
+    if (form.homeTeamId && form.awayTeamId && form.homeTeamId === form.awayTeamId) {
       setError("Home and away teams must be different.");
       return;
     }
@@ -280,6 +258,8 @@ export default function GamesPage() {
         method: editing ? "PUT" : "POST",
         body: JSON.stringify({
           ...form,
+          homeExternalName: form.homeTeamId ? null : form.homeExternalName.trim() || null,
+          awayExternalName: form.awayTeamId ? null : form.awayExternalName.trim() || null,
           scheduledStart: new Date(form.scheduledStart).toISOString(),
           venue: form.venue || null,
           notes: form.notes || null,
@@ -296,20 +276,10 @@ export default function GamesPage() {
   }
 
   async function remove(id: number): Promise<void> {
-    if (!canManage) {
-      setError("You do not have permission to manage games.");
-      return;
-    }
-
-    if (!window.confirm("Delete this game?")) {
-      return;
-    }
+    if (!canManage || !window.confirm("Delete this game?")) return;
 
     try {
-      await api(`/games/${id}`, {
-        method: "DELETE",
-      });
-
+      await api(`/games/${id}`, { method: "DELETE" });
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not delete game");
@@ -317,9 +287,7 @@ export default function GamesPage() {
   }
 
   async function score(gameId: number, action: ScoringAction): Promise<void> {
-    if (!canScore || scoringBusy) {
-      return;
-    }
+    if (!canScore || scoringBusy) return;
 
     setScoringBusy(true);
     setError("");
@@ -340,13 +308,66 @@ export default function GamesPage() {
     }
   }
 
+  function sideFields(side: "home" | "away") {
+    const teamId = side === "home" ? form.homeTeamId : form.awayTeamId;
+    const externalName = side === "home" ? form.homeExternalName : form.awayExternalName;
+
+    return (
+      <>
+        <label>
+          {side === "home" ? "Home team" : "Away team"}
+          <select
+            value={teamId ?? "external"}
+            onChange={(event) => {
+              const external = event.target.value === "external";
+              setForm({
+                ...form,
+                [`${side}TeamId`]: external ? null : Number(event.target.value),
+                [`${side}ExternalName`]: external ? externalName : "",
+              });
+            }}
+          >
+            <option value="external">External opponent</option>
+            {teamOptions
+              .filter((team) => team.id !== (side === "home" ? form.awayTeamId : form.homeTeamId))
+              .map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.organizationName} · {team.name}
+                </option>
+              ))}
+          </select>
+        </label>
+
+        {!teamId && (
+          <label>
+            {side === "home" ? "External home name" : "External away name"}
+            <input
+              required
+              maxLength={160}
+              value={externalName}
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  [`${side}ExternalName`]: event.target.value,
+                })
+              }
+              placeholder="Example: Lakeville North"
+            />
+          </label>
+        )}
+      </>
+    );
+  }
+
   return (
     <AuthGate>
       <AppShell>
         <div className="pageHead">
           <div>
             <h1>Games</h1>
-            <p className="muted">Schedule matchups and maintain game status and scores.</p>
+            <p className="muted">
+              Schedule registered teams across organizations or enter an external opponent.
+            </p>
           </div>
 
           <div className="filters">
@@ -355,8 +376,7 @@ export default function GamesPage() {
                 value={organizationFilter}
                 onChange={(event) => setOrganizationFilter(event.target.value)}
               >
-                <option value="">All organizations</option>
-
+                <option value="">All managing organizations</option>
                 {organizations.map((organization) => (
                   <option key={organization.id} value={organization.id}>
                     {organization.name}
@@ -367,7 +387,6 @@ export default function GamesPage() {
 
             <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
               <option value="">All statuses</option>
-
               {statuses.map((status) => (
                 <option key={status} value={status}>
                   {status}
@@ -384,29 +403,18 @@ export default function GamesPage() {
           </div>
         </div>
 
-        {!canManage && (
-          <section className="panel">
-            <h2>Game schedule</h2>
-            <p className="muted">Your account has read-only access to games.</p>
-          </section>
-        )}
-
         {canManage && (
           <section className="panel">
             <h2>{editing ? "Edit game" : "Add game"}</h2>
 
             {!organizations.length ? (
-              <p>Create an organization first.</p>
-            ) : organizationTeams.length < 2 ? (
-              <p>
-                Create at least two teams in the selected organization before scheduling a game.
-              </p>
+              <p>Create a managing organization first.</p>
             ) : !organizationSeasons.length ? (
-              <p>Create a season in the selected organization before scheduling a game.</p>
+              <p>Create a season for the managing organization first.</p>
             ) : (
               <form className="formGrid" onSubmit={save}>
                 <label>
-                  Organization
+                  Managing organization
                   <select
                     required
                     disabled={!isSystemAdmin}
@@ -416,8 +424,6 @@ export default function GamesPage() {
                         ...form,
                         organizationId: Number(event.target.value),
                         seasonId: 0,
-                        homeTeamId: 0,
-                        awayTeamId: 0,
                       })
                     }
                   >
@@ -434,15 +440,9 @@ export default function GamesPage() {
                   <select
                     required
                     value={form.seasonId}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        seasonId: Number(event.target.value),
-                      })
-                    }
+                    onChange={(event) => setForm({ ...form, seasonId: Number(event.target.value) })}
                   >
                     <option value={0}>Select season</option>
-
                     {organizationSeasons.map((season) => (
                       <option key={season.id} value={season.id}>
                         {season.name}
@@ -451,57 +451,8 @@ export default function GamesPage() {
                   </select>
                 </label>
 
-                <label>
-                  Home team
-                  <select
-                    required
-                    value={form.homeTeamId}
-                    onChange={(event) => {
-                      const homeTeamId = Number(event.target.value);
-
-                      setForm({
-                        ...form,
-                        homeTeamId,
-                        awayTeamId:
-                          form.awayTeamId === homeTeamId
-                            ? (organizationTeams.find((team) => team.id !== homeTeamId)?.id ?? 0)
-                            : form.awayTeamId,
-                      });
-                    }}
-                  >
-                    <option value={0}>Select team</option>
-
-                    {organizationTeams.map((team) => (
-                      <option key={team.id} value={team.id}>
-                        {team.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label>
-                  Away team
-                  <select
-                    required
-                    value={form.awayTeamId}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        awayTeamId: Number(event.target.value),
-                      })
-                    }
-                  >
-                    <option value={0}>Select team</option>
-
-                    {organizationTeams
-                      .filter((team) => team.id !== form.homeTeamId)
-                      .map((team) => (
-                        <option key={team.id} value={team.id}>
-                          {team.name}
-                        </option>
-                      ))}
-                  </select>
-                </label>
+                {sideFields("home")}
+                {sideFields("away")}
 
                 <label>
                   Scheduled start
@@ -509,12 +460,7 @@ export default function GamesPage() {
                     required
                     type="datetime-local"
                     value={form.scheduledStart}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        scheduledStart: event.target.value,
-                      })
-                    }
+                    onChange={(event) => setForm({ ...form, scheduledStart: event.target.value })}
                   />
                 </label>
 
@@ -523,12 +469,7 @@ export default function GamesPage() {
                   <select
                     required
                     value={form.timezone}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        timezone: event.target.value,
-                      })
-                    }
+                    onChange={(event) => setForm({ ...form, timezone: event.target.value })}
                   >
                     {AMERICAS_TIME_ZONES.map((timezone) => (
                       <option key={timezone} value={timezone}>
@@ -542,12 +483,7 @@ export default function GamesPage() {
                   Venue
                   <input
                     value={form.venue}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        venue: event.target.value,
-                      })
-                    }
+                    onChange={(event) => setForm({ ...form, venue: event.target.value })}
                   />
                 </label>
 
@@ -578,10 +514,7 @@ export default function GamesPage() {
                     max="999"
                     value={form.homeScore}
                     onChange={(event) =>
-                      setForm({
-                        ...form,
-                        homeScore: Number(event.target.value),
-                      })
+                      setForm({ ...form, homeScore: Number(event.target.value) })
                     }
                   />
                 </label>
@@ -594,10 +527,7 @@ export default function GamesPage() {
                     max="999"
                     value={form.awayScore}
                     onChange={(event) =>
-                      setForm({
-                        ...form,
-                        awayScore: Number(event.target.value),
-                      })
+                      setForm({ ...form, awayScore: Number(event.target.value) })
                     }
                   />
                 </label>
@@ -606,12 +536,7 @@ export default function GamesPage() {
                   Notes
                   <textarea
                     value={form.notes}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        notes: event.target.value,
-                      })
-                    }
+                    onChange={(event) => setForm({ ...form, notes: event.target.value })}
                   />
                 </label>
 
@@ -619,7 +544,6 @@ export default function GamesPage() {
                   <button disabled={busy}>
                     {busy ? "Saving…" : editing ? "Save changes" : "Create game"}
                   </button>
-
                   {editing && (
                     <button type="button" className="secondary" onClick={reset}>
                       Cancel
@@ -640,23 +564,20 @@ export default function GamesPage() {
                 <h3>
                   {game.awayTeamName} at {game.homeTeamName}
                 </h3>
-                <p>{game.organizationName}</p>
+                <p>Managed by {game.organizationName}</p>
               </div>
 
               <div className="entityStats">
                 <b>
                   {game.awayScore} – {game.homeScore}
                 </b>
-
                 <span className={statusClassName(game.status)}>{game.status}</span>
               </div>
 
               <p>
                 {new Date(game.scheduledStart).toLocaleString()} · {game.seasonName}
               </p>
-
               <p>{game.venue || "Venue not set"}</p>
-
               {game.notes && <p>{game.notes}</p>}
 
               <div className="cardActions">
@@ -676,7 +597,6 @@ export default function GamesPage() {
                     <button className="secondary" onClick={() => edit(game)}>
                       Edit
                     </button>
-
                     <button className="danger" onClick={() => void remove(game.id)}>
                       Delete
                     </button>

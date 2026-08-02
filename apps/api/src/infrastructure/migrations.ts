@@ -228,6 +228,35 @@ export async function runMigrations(): Promise<void> {
       await pool.execute(`ALTER TABLE games ADD COLUMN ${name} ${sql}`);
     }
   }
+  const [crossOrgGameColumns] = await pool.query<RowDataPacket[]>(
+    `SELECT COLUMN_NAME
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'games'`,
+    [config.database.name],
+  );
+
+  const presentCrossOrgGameColumns = new Set(
+    crossOrgGameColumns.map((row) => String(row.COLUMN_NAME)),
+  );
+
+  if (!presentCrossOrgGameColumns.has("home_external_name")) {
+    await pool.execute(
+      `ALTER TABLE games ADD COLUMN home_external_name VARCHAR(160) NULL AFTER home_team_id`,
+    );
+  }
+
+  if (!presentCrossOrgGameColumns.has("away_external_name")) {
+    await pool.execute(
+      `ALTER TABLE games ADD COLUMN away_external_name VARCHAR(160) NULL AFTER away_team_id`,
+    );
+  }
+
+  await pool.execute(
+    `ALTER TABLE games
+       MODIFY COLUMN home_team_id BIGINT UNSIGNED NULL,
+       MODIFY COLUMN away_team_id BIGINT UNSIGNED NULL`,
+  );
+
   if (!(await minio.bucketExists(config.storage.bucket)))
     await minio.makeBucket(config.storage.bucket);
 }

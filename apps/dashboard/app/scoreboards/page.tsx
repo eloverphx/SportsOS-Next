@@ -13,6 +13,7 @@ import {
   type AuthenticatedUser,
 } from "../../lib/auth";
 
+type Organization = { id: number; name: string };
 type GameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
 
 type Game = {
@@ -63,7 +64,9 @@ const blankDeviceForm: DeviceForm = {
 const statuses: readonly GameStatus[] = ["SCHEDULED", "LIVE", "FINAL", "POSTPONED", "CANCELED"];
 
 function remainingMs(game: Game, now: number): number {
-  if (!game.clockRunning || !game.clockStartedAt) return Math.max(0, game.clockRemainingMs);
+  if (!game.clockRunning || !game.clockStartedAt) {
+    return Math.max(0, game.clockRemainingMs);
+  }
   return Math.max(0, game.clockRemainingMs - (now - new Date(game.clockStartedAt).getTime()));
 }
 
@@ -74,6 +77,7 @@ function formatClock(milliseconds: number): string {
 
 export default function ScoreboardsPage() {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [deviceForm, setDeviceForm] = useState<DeviceForm>(blankDeviceForm);
@@ -88,19 +92,6 @@ export default function ScoreboardsPage() {
   const canManageDevices = userHasPermission(user, PERMISSIONS.SCOREBOARD_MANAGE);
   const isSystemAdmin = user?.role === "system_admin";
 
-  const organizations = useMemo(
-    () =>
-      Array.from(
-        new Map(
-          games.map((game) => [
-            game.organizationId,
-            { id: game.organizationId, name: game.organizationName },
-          ]),
-        ).values(),
-      ),
-    [games],
-  );
-
   const organizationGames = useMemo(
     () => games.filter((game) => game.organizationId === deviceForm.organizationId),
     [games, deviceForm.organizationId],
@@ -108,11 +99,13 @@ export default function ScoreboardsPage() {
 
   const load = useCallback(async () => {
     try {
-      const [gameResponse, deviceResponse] = await Promise.all([
+      const [organizationResponse, gameResponse, deviceResponse] = await Promise.all([
+        api<{ organizations: Organization[] }>("/organizations"),
         api<{ games: Game[] }>("/games"),
         api<{ devices: Device[] }>("/scoreboard-devices"),
       ]);
 
+      setOrganizations(organizationResponse.organizations);
       setGames(gameResponse.games);
       setDevices(deviceResponse.devices);
       setDeviceForm((current) =>
@@ -120,7 +113,7 @@ export default function ScoreboardsPage() {
           ? current
           : {
               ...current,
-              organizationId: gameResponse.games[0]?.organizationId ?? 0,
+              organizationId: organizationResponse.organizations[0]?.id ?? 0,
             },
       );
       setError("");
@@ -129,9 +122,7 @@ export default function ScoreboardsPage() {
     }
   }, []);
 
-  useEffect(() => {
-    setUser(getStoredUser());
-  }, []);
+  useEffect(() => setUser(getStoredUser()), []);
 
   useEffect(() => {
     void load();
@@ -218,7 +209,9 @@ export default function ScoreboardsPage() {
   }
 
   async function removeDevice(id: number): Promise<void> {
-    if (!canManageDevices || !window.confirm("Delete this scoreboard device?")) return;
+    if (!canManageDevices || !window.confirm("Delete this scoreboard device?")) {
+      return;
+    }
 
     try {
       await api(`/scoreboard-devices/${id}`, { method: "DELETE" });
@@ -237,7 +230,9 @@ export default function ScoreboardsPage() {
     }
 
     try {
-      await api(`/scoreboard-devices/${id}/rotate-key`, { method: "POST" });
+      await api(`/scoreboard-devices/${id}/rotate-key`, {
+        method: "POST",
+      });
       await load();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not rotate device key");
@@ -292,6 +287,7 @@ export default function ScoreboardsPage() {
               <label>
                 Organization
                 <select
+                  required
                   disabled={!isSystemAdmin}
                   value={deviceForm.organizationId}
                   onChange={(event) =>
@@ -302,6 +298,7 @@ export default function ScoreboardsPage() {
                     })
                   }
                 >
+                  <option value={0}>Select organization</option>
                   {organizations.map((organization) => (
                     <option key={organization.id} value={organization.id}>
                       {organization.name}
@@ -316,7 +313,12 @@ export default function ScoreboardsPage() {
                   required
                   maxLength={160}
                   value={deviceForm.name}
-                  onChange={(event) => setDeviceForm({ ...deviceForm, name: event.target.value })}
+                  onChange={(event) =>
+                    setDeviceForm({
+                      ...deviceForm,
+                      name: event.target.value,
+                    })
+                  }
                 />
               </label>
 
@@ -326,7 +328,10 @@ export default function ScoreboardsPage() {
                   maxLength={160}
                   value={deviceForm.location}
                   onChange={(event) =>
-                    setDeviceForm({ ...deviceForm, location: event.target.value })
+                    setDeviceForm({
+                      ...deviceForm,
+                      location: event.target.value,
+                    })
                   }
                 />
               </label>

@@ -4,12 +4,19 @@ import { gameStatuses } from "./types.js";
 const emptyToNull = (value: unknown): unknown =>
   value === "" || value === undefined ? null : value;
 
+const nullablePositiveId = z.preprocess(emptyToNull, z.coerce.number().int().positive().nullable());
+
 export const gameInputSchema = z
   .object({
     organizationId: z.coerce.number().int().positive(),
     seasonId: z.coerce.number().int().positive(),
-    homeTeamId: z.coerce.number().int().positive(),
-    awayTeamId: z.coerce.number().int().positive(),
+
+    homeTeamId: nullablePositiveId,
+    homeExternalName: z.preprocess(emptyToNull, z.string().trim().min(1).max(160).nullable()),
+
+    awayTeamId: nullablePositiveId,
+    awayExternalName: z.preprocess(emptyToNull, z.string().trim().min(1).max(160).nullable()),
+
     scheduledStart: z.string().datetime({ offset: true }),
     timezone: z.string().trim().min(1).max(100),
     venue: z.preprocess(emptyToNull, z.string().trim().max(160).nullable()),
@@ -19,10 +26,38 @@ export const gameInputSchema = z
     notes: z.preprocess(emptyToNull, z.string().trim().max(2000).nullable()),
   })
   .superRefine((value, context) => {
-    if (value.homeTeamId === value.awayTeamId) {
+    if (!value.homeTeamId && !value.homeExternalName) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["homeExternalName"],
+        message: "Select a registered home team or enter an external home team",
+      });
+    }
+
+    if (!value.awayTeamId && !value.awayExternalName) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["awayExternalName"],
+        message: "Select a registered away team or enter an external away team",
+      });
+    }
+
+    if (value.homeTeamId && value.awayTeamId && value.homeTeamId === value.awayTeamId) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["awayTeamId"],
+        message: "Home and away teams must be different",
+      });
+    }
+
+    if (
+      !value.homeTeamId &&
+      !value.awayTeamId &&
+      value.homeExternalName?.toLowerCase() === value.awayExternalName?.toLowerCase()
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["awayExternalName"],
         message: "Home and away teams must be different",
       });
     }
@@ -47,12 +82,8 @@ export const scoreActionSchema = z.discriminatedUnion("action", [
     homeScore: z.coerce.number().int().min(0).max(999),
     awayScore: z.coerce.number().int().min(0).max(999),
   }),
-  z.object({
-    action: z.literal("startClock"),
-  }),
-  z.object({
-    action: z.literal("pauseClock"),
-  }),
+  z.object({ action: z.literal("startClock") }),
+  z.object({ action: z.literal("pauseClock") }),
   z.object({
     action: z.literal("resetClock"),
     periodLengthMs: z.coerce.number().int().min(60_000).max(7_200_000).optional(),

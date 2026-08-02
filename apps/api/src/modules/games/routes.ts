@@ -8,6 +8,7 @@ import {
   deleteGame,
   findGameById,
   listGames,
+  listGameTeamOptions,
   updateGame,
   validateGameRelationships,
 } from "./repository.js";
@@ -23,24 +24,31 @@ function relationshipErrorMessage(
 ): string {
   switch (error) {
     case "organization":
-      return "Organization not found";
+      return "Managing organization not found";
     case "season":
-      return "Season does not belong to the selected organization";
+      return "Season does not belong to the managing organization";
     case "homeTeam":
-      return "Home team does not belong to the selected organization";
+      return "Registered home team was not found";
     case "awayTeam":
-      return "Away team does not belong to the selected organization";
+      return "Registered away team was not found";
   }
 }
 
 export async function gameRoutes(app: FastifyInstance): Promise<void> {
+  app.get("/games/team-options", async (request) => {
+    await requirePermission(request, {
+      permission: PERMISSIONS.GAME_READ,
+    });
+
+    return { teams: await listGameTeamOptions() };
+  });
+
   app.get("/games", async (request, reply) => {
     const identity = await requirePermission(request, {
       permission: PERMISSIONS.GAME_READ,
     });
 
     const parsed = gameListQuerySchema.safeParse(request.query);
-
     if (!parsed.success) {
       return reply.code(400).send({
         error: "Invalid game filters",
@@ -52,30 +60,17 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       games: await listGames(
         identity.role === ROLES.SYSTEM_ADMIN
           ? parsed.data
-          : {
-              ...parsed.data,
-              organizationId: identity.organizationId,
-            },
+          : { ...parsed.data, organizationId: identity.organizationId },
       ),
     };
   });
 
   app.get("/games/:id", async (request, reply) => {
     const id = gameIdSchema.safeParse((request.params as { id: string }).id);
-
-    if (!id.success) {
-      return reply.code(400).send({
-        error: "Invalid game id",
-      });
-    }
+    if (!id.success) return reply.code(400).send({ error: "Invalid game id" });
 
     const game = await findGameById(id.data);
-
-    if (!game) {
-      return reply.code(404).send({
-        error: "Game not found",
-      });
-    }
+    if (!game) return reply.code(404).send({ error: "Game not found" });
 
     await requirePermission(request, {
       permission: PERMISSIONS.GAME_READ,
@@ -87,16 +82,10 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
 
   app.get("/public/games/:id/scoreboard", async (request, reply) => {
     const id = gameIdSchema.safeParse((request.params as { id: string }).id);
-
-    if (!id.success) {
-      return reply.code(400).send({ error: "Invalid game id" });
-    }
+    if (!id.success) return reply.code(400).send({ error: "Invalid game id" });
 
     const game = await findGameById(id.data);
-
-    if (!game) {
-      return reply.code(404).send({ error: "Game not found" });
-    }
+    if (!game) return reply.code(404).send({ error: "Game not found" });
 
     return {
       game: {
@@ -122,7 +111,6 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
 
   app.post("/games", async (request, reply) => {
     const parsed = gameInputSchema.safeParse(request.body);
-
     if (!parsed.success) {
       return reply.code(400).send({
         error: "Invalid game data",
@@ -136,7 +124,6 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     });
 
     const relationshipError = await validateGameRelationships(parsed.data);
-
     if (relationshipError) {
       return reply.code(400).send({
         error: relationshipErrorMessage(relationshipError),
@@ -150,7 +137,9 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       organizationId: game.organizationId,
       seasonId: game.seasonId,
       homeTeamId: game.homeTeamId,
+      homeExternalName: game.homeExternalName,
       awayTeamId: game.awayTeamId,
+      awayExternalName: game.awayExternalName,
     });
 
     realtime().emit("game:created", {
@@ -173,12 +162,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const existing = await findGameById(id.data);
-
-    if (!existing) {
-      return reply.code(404).send({
-        error: "Game not found",
-      });
-    }
+    if (!existing) return reply.code(404).send({ error: "Game not found" });
 
     const identity = await requirePermission(request, {
       permission: PERMISSIONS.GAME_MANAGE,
@@ -200,7 +184,6 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     });
 
     const relationshipError = await validateGameRelationships(parsed.data);
-
     if (relationshipError) {
       return reply.code(400).send({
         error: relationshipErrorMessage(relationshipError),
@@ -208,12 +191,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const game = await updateGame(id.data, parsed.data);
-
-    if (!game) {
-      return reply.code(404).send({
-        error: "Game not found",
-      });
-    }
+    if (!game) return reply.code(404).send({ error: "Game not found" });
 
     await audit(identity.sub, "game.updated", {
       gameId: game.id,
@@ -241,12 +219,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const existing = await findGameById(id.data);
-
-    if (!existing) {
-      return reply.code(404).send({
-        error: "Game not found",
-      });
-    }
+    if (!existing) return reply.code(404).send({ error: "Game not found" });
 
     const identity = await requirePermission(request, {
       permission: PERMISSIONS.GAME_SCORE,
@@ -254,12 +227,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     });
 
     const game = await applyGameScoringAction(id.data, parsed.data);
-
-    if (!game) {
-      return reply.code(404).send({
-        error: "Game not found",
-      });
-    }
+    if (!game) return reply.code(404).send({ error: "Game not found" });
 
     await audit(identity.sub, "game.scored", {
       gameId: game.id,
@@ -273,11 +241,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       status: game.status,
     });
 
-    const payload = {
-      game,
-      action: parsed.data.action,
-    };
-
+    const payload = { game, action: parsed.data.action };
     realtime().emit("game:scored", payload);
     realtime().emit("game:updated", {
       id: game.id,
@@ -289,20 +253,10 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
 
   app.delete("/games/:id", async (request, reply) => {
     const id = gameIdSchema.safeParse((request.params as { id: string }).id);
-
-    if (!id.success) {
-      return reply.code(400).send({
-        error: "Invalid game id",
-      });
-    }
+    if (!id.success) return reply.code(400).send({ error: "Invalid game id" });
 
     const game = await findGameById(id.data);
-
-    if (!game) {
-      return reply.code(404).send({
-        error: "Game not found",
-      });
-    }
+    if (!game) return reply.code(404).send({ error: "Game not found" });
 
     const identity = await requirePermission(request, {
       permission: PERMISSIONS.GAME_MANAGE,
@@ -310,9 +264,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     });
 
     if (!(await deleteGame(id.data))) {
-      return reply.code(404).send({
-        error: "Game not found",
-      });
+      return reply.code(404).send({ error: "Game not found" });
     }
 
     await audit(identity.sub, "game.deleted", {
