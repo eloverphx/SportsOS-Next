@@ -55,18 +55,34 @@ export function GameScoringConsole({ game, busy, onAction, onClose }: GameScorin
   const [now, setNow] = useState(() => Date.now());
   const [minutes, setMinutes] = useState("20");
   const [seconds, setSeconds] = useState("00");
+
   const displayedRemaining = useMemo(() => remainingMs(game, now), [game, now]);
 
   useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     const timer = window.setInterval(() => setNow(Date.now()), 250);
-    return () => window.clearInterval(timer);
-  }, []);
+
+    function closeOnEscape(event: KeyboardEvent): void {
+      if (event.key === "Escape") onClose();
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onClose]);
 
   useEffect(() => {
     const totalSeconds = Math.ceil(remainingMs(game, Date.now()) / 1000);
+
     setMinutes(String(Math.floor(totalSeconds / 60)));
     setSeconds(String(totalSeconds % 60).padStart(2, "0"));
-  }, [game.id]);
+  }, [game.id, game.clockRemainingMs, game.clockStartedAt]);
 
   async function setExactClock(): Promise<void> {
     const minuteValue = Number(minutes);
@@ -89,210 +105,204 @@ export function GameScoringConsole({ game, busy, onAction, onClose }: GameScorin
   }
 
   return (
-    <section className="panel">
-      <div className="pageHead">
-        <div>
-          <h2>Live scoring</h2>
-          <p className="muted">
-            {game.awayTeamName} at {game.homeTeamName}
-          </p>
-        </div>
-
-        <button className="secondary" onClick={onClose}>
-          Close
-        </button>
-      </div>
-
-      <div className="cards">
-        <div className="metric">
-          <span>{game.awayTeamName}</span>
-          <b>{game.awayScore}</b>
-          <div className="cardActions">
-            <button
-              disabled={busy}
-              onClick={() =>
-                void onAction({
-                  action: "adjustScore",
-                  side: "away",
-                  amount: -1,
-                })
-              }
-            >
-              −
-            </button>
-            <button
-              disabled={busy}
-              onClick={() =>
-                void onAction({
-                  action: "adjustScore",
-                  side: "away",
-                  amount: 1,
-                })
-              }
-            >
-              +
-            </button>
+    <div
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 10000,
+        display: "grid",
+        placeItems: "center",
+        padding: "16px",
+        background: "rgba(2, 6, 23, 0.82)",
+        backdropFilter: "blur(6px)",
+      }}
+    >
+      <section
+        className="panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="live-scoring-title"
+        style={{
+          width: "min(1100px, 100%)",
+          maxHeight: "calc(100vh - 32px)",
+          overflowY: "auto",
+          boxShadow: "0 30px 90px rgba(0, 0, 0, 0.55)",
+        }}
+      >
+        <div className="pageHead">
+          <div>
+            <h2 id="live-scoring-title">Live scoring</h2>
+            <p className="muted">
+              {game.awayTeamName} at {game.homeTeamName}
+            </p>
           </div>
-        </div>
 
-        <div className="metric">
-          <span>Period {game.period}</span>
-          <b>{formatClock(displayedRemaining)}</b>
-          <span>{game.clockRunning ? "Running" : "Paused"}</span>
-        </div>
-
-        <div className="metric">
-          <span>{game.homeTeamName}</span>
-          <b>{game.homeScore}</b>
-          <div className="cardActions">
-            <button
-              disabled={busy}
-              onClick={() =>
-                void onAction({
-                  action: "adjustScore",
-                  side: "home",
-                  amount: -1,
-                })
-              }
-            >
-              −
-            </button>
-            <button
-              disabled={busy}
-              onClick={() =>
-                void onAction({
-                  action: "adjustScore",
-                  side: "home",
-                  amount: 1,
-                })
-              }
-            >
-              +
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="formActions">
-        <button
-          disabled={busy}
-          onClick={() =>
-            void onAction({
-              action: game.clockRunning ? "pauseClock" : "startClock",
-            })
-          }
-        >
-          {game.clockRunning ? "Pause clock" : "Start clock"}
-        </button>
-
-        <button
-          className="secondary"
-          disabled={busy}
-          onClick={() => void onAction({ action: "resetClock" })}
-        >
-          Reset clock
-        </button>
-
-        <button
-          className="secondary"
-          disabled={busy || game.period <= 1}
-          onClick={() =>
-            void onAction({
-              action: "setPeriod",
-              period: Math.max(1, game.period - 1),
-            })
-          }
-        >
-          Period −
-        </button>
-
-        <button
-          className="secondary"
-          disabled={busy}
-          onClick={() =>
-            void onAction({
-              action: "setPeriod",
-              period: game.period + 1,
-            })
-          }
-        >
-          Period +
-        </button>
-      </div>
-
-      <h3>Realtime clock adjustments</h3>
-
-      <div className="formActions">
-        {[
-          ["−1m", -60_000],
-          ["+1m", 60_000],
-          ["−10s", -10_000],
-          ["+10s", 10_000],
-          ["−1s", -1_000],
-          ["+1s", 1_000],
-        ].map(([label, amount]) => (
-          <button
-            className="secondary"
-            disabled={busy}
-            key={String(label)}
-            onClick={() =>
-              void onAction({
-                action: "adjustClock",
-                amountMs: Number(amount),
-              })
-            }
-          >
-            {label}
+          <button type="button" className="secondary" onClick={onClose}>
+            Close
           </button>
-        ))}
-      </div>
+        </div>
 
-      <div className="formGrid">
-        <label>
-          Minutes
-          <input
-            type="number"
-            min="0"
-            max="120"
-            value={minutes}
-            onChange={(event) => setMinutes(event.target.value)}
-          />
-        </label>
+        <div className="cards">
+          <div className="metric">
+            <span>{game.awayTeamName}</span>
+            <b>{game.awayScore}</b>
+            <div className="cardActions">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void onAction({ action: "adjustScore", side: "away", amount: -1 })}
+              >
+                −
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void onAction({ action: "adjustScore", side: "away", amount: 1 })}
+              >
+                +
+              </button>
+            </div>
+          </div>
 
-        <label>
-          Seconds
-          <input
-            type="number"
-            min="0"
-            max="59"
-            value={seconds}
-            onChange={(event) => setSeconds(event.target.value)}
-          />
-        </label>
+          <div className="metric">
+            <span>Period {game.period}</span>
+            <b>{formatClock(displayedRemaining)}</b>
+            <span>{game.clockRunning ? "Running" : "Paused"}</span>
+          </div>
+
+          <div className="metric">
+            <span>{game.homeTeamName}</span>
+            <b>{game.homeScore}</b>
+            <div className="cardActions">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void onAction({ action: "adjustScore", side: "home", amount: -1 })}
+              >
+                −
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void onAction({ action: "adjustScore", side: "home", amount: 1 })}
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div className="formActions">
-          <button disabled={busy} onClick={() => void setExactClock()}>
-            Set clock
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              void onAction({ action: game.clockRunning ? "pauseClock" : "startClock" })
+            }
+          >
+            {game.clockRunning ? "Pause clock" : "Start clock"}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            onClick={() => void onAction({ action: "resetClock" })}
+          >
+            Reset clock
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy || game.period <= 1}
+            onClick={() =>
+              void onAction({ action: "setPeriod", period: Math.max(1, game.period - 1) })
+            }
+          >
+            Period −
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            onClick={() => void onAction({ action: "setPeriod", period: game.period + 1 })}
+          >
+            Period +
           </button>
         </div>
-      </div>
 
-      <div className="formActions">
-        <button
-          disabled={busy}
-          onClick={() => void onAction({ action: "setStatus", status: "LIVE" })}
-        >
-          Mark live
-        </button>
+        <h3>Realtime clock adjustments</h3>
 
-        <button
-          className="secondary"
-          disabled={busy}
-          onClick={() => void onAction({ action: "setStatus", status: "FINAL" })}
-        >
-          Mark final
-        </button>
-      </div>
-    </section>
+        <div className="formActions">
+          {[
+            ["−1m", -60_000],
+            ["+1m", 60_000],
+            ["−10s", -10_000],
+            ["+10s", 10_000],
+            ["−1s", -1_000],
+            ["+1s", 1_000],
+          ].map(([label, amount]) => (
+            <button
+              type="button"
+              className="secondary"
+              disabled={busy}
+              key={String(label)}
+              onClick={() => void onAction({ action: "adjustClock", amountMs: Number(amount) })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="formGrid">
+          <label>
+            Minutes
+            <input
+              type="number"
+              min="0"
+              max="120"
+              value={minutes}
+              onChange={(event) => setMinutes(event.target.value)}
+            />
+          </label>
+          <label>
+            Seconds
+            <input
+              type="number"
+              min="0"
+              max="59"
+              value={seconds}
+              onChange={(event) => setSeconds(event.target.value)}
+            />
+          </label>
+          <div className="formActions">
+            <button type="button" disabled={busy} onClick={() => void setExactClock()}>
+              Set clock
+            </button>
+          </div>
+        </div>
+
+        <div className="formActions">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void onAction({ action: "setStatus", status: "LIVE" })}
+          >
+            Mark live
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy}
+            onClick={() => void onAction({ action: "setStatus", status: "FINAL" })}
+          >
+            Mark final
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
