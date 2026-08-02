@@ -86,7 +86,7 @@ function mapGame(row: RowDataPacket): Game {
     periodLengthMs: Number(row.period_length_ms ?? 1_200_000),
     clockRemainingMs,
     clockRunning: clockRunning && clockRemainingMs > 0,
-    clockStartedAt: clockRunning && clockRemainingMs > 0 ? dateToIso(row.clock_started_at) : null,
+    clockStartedAt: clockRunning && clockRemainingMs > 0 ? new Date().toISOString() : null,
     notes: row.notes == null ? null : String(row.notes),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
