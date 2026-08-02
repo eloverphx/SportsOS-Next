@@ -401,13 +401,13 @@ export async function applyGameScoringAction(
         break;
       case "setClock":
         clockRemainingMs = action.clockRemainingMs;
+        periodLengthMs = action.clockRemainingMs;
         clockRunning = false;
         clockStartedAt = null;
         break;
       case "setPeriod":
         period = action.period;
-        clockRunning = false;
-        clockStartedAt = null;
+        clockStartedAt = clockRunning ? new Date() : null;
         break;
       case "setStatus":
         status = action.status;
