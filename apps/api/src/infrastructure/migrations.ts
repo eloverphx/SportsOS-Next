@@ -257,6 +257,35 @@ export async function runMigrations(): Promise<void> {
        MODIFY COLUMN away_team_id BIGINT UNSIGNED NULL`,
   );
 
+  await pool.execute(`CREATE TABLE IF NOT EXISTS game_events (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    game_id BIGINT UNSIGNED NOT NULL,
+    organization_id BIGINT UNSIGNED NOT NULL,
+    type ENUM('GOAL', 'PENALTY') NOT NULL,
+    side ENUM('home', 'away') NOT NULL,
+    period SMALLINT UNSIGNED NOT NULL,
+    clock_remaining_ms INT UNSIGNED NOT NULL,
+    player_id BIGINT UNSIGNED NULL,
+    assist1_player_id BIGINT UNSIGNED NULL,
+    assist2_player_id BIGINT UNSIGNED NULL,
+    penalty_code VARCHAR(100) NULL,
+    penalty_minutes SMALLINT UNSIGNED NULL,
+    notes VARCHAR(500) NULL,
+    created_by_user_id BIGINT UNSIGNED NULL,
+    voided_at DATETIME(3) NULL,
+    voided_by_user_id BIGINT UNSIGNED NULL,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    INDEX idx_game_events_game (game_id, id),
+    INDEX idx_game_events_org (organization_id),
+    CONSTRAINT fk_game_events_game FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+    CONSTRAINT fk_game_events_org FOREIGN KEY (organization_id) REFERENCES organizations(id),
+    CONSTRAINT fk_game_events_player FOREIGN KEY (player_id) REFERENCES players(id) ON DELETE SET NULL,
+    CONSTRAINT fk_game_events_assist1 FOREIGN KEY (assist1_player_id) REFERENCES players(id) ON DELETE SET NULL,
+    CONSTRAINT fk_game_events_assist2 FOREIGN KEY (assist2_player_id) REFERENCES players(id) ON DELETE SET NULL,
+    CONSTRAINT fk_game_events_created_by FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_game_events_voided_by FOREIGN KEY (voided_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+  ) ENGINE=InnoDB`);
+
   if (!(await minio.bucketExists(config.storage.bucket)))
     await minio.makeBucket(config.storage.bucket);
 }

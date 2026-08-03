@@ -12,6 +12,8 @@ import {
   userHasPermission,
   type AuthenticatedUser,
 } from "../../../../lib/auth";
+import { GameEventsPanel } from "../../../../components/game-events/GameEventsPanel";
+import "../../../../components/game-events/game-events.css";
 import styles from "./control.module.css";
 
 type GameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
@@ -32,7 +34,10 @@ type Game = {
   id: number;
   organizationId: number;
   organizationName: string;
+  seasonId: number;
   seasonName: string;
+  homeTeamId: number | null;
+  awayTeamId: number | null;
   homeTeamName: string;
   awayTeamName: string;
   scheduledStart: string;
@@ -82,6 +87,7 @@ export default function ScoreboardControlPage() {
   const [now, setNow] = useState(() => Date.now());
   const [minutes, setMinutes] = useState("20");
   const [seconds, setSeconds] = useState("00");
+  const [eventRefreshToken, setEventRefreshToken] = useState(0);
   const actionQueue = useRef<Promise<void>>(Promise.resolve());
   const pendingActions = useRef(0);
 
@@ -148,6 +154,14 @@ export default function ScoreboardControlPage() {
     socket.on("game:scored", refreshForGame);
     socket.on("game:updated", refreshForGame);
     socket.on("game:deleted", refreshForGame);
+    socket.on("game:event-created", () => {
+      setEventRefreshToken((v) => v + 1);
+      void load();
+    });
+    socket.on("game:event-voided", () => {
+      setEventRefreshToken((v) => v + 1);
+      void load();
+    });
     socket.on("scoreboard-device:updated", refreshForDevice);
     socket.on("scoreboard-device:deleted", refreshForDevice);
     socket.on("scoreboard-device:status", refreshForDevice);
@@ -481,6 +495,17 @@ export default function ScoreboardControlPage() {
                 </div>
               </div>
             </section>
+
+            <GameEventsPanel
+              gameId={game.id}
+              homeTeamId={game.homeTeamId}
+              awayTeamId={game.awayTeamId}
+              homeTeamName={game.homeTeamName}
+              awayTeamName={game.awayTeamName}
+              canScore={canScore}
+              refreshToken={eventRefreshToken}
+              onScoreChanged={load}
+            />
 
             {!canScore && (
               <p className={styles.error}>

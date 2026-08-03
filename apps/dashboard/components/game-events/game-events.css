@@ -1,0 +1,88 @@
+.gameEventsPanel {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1.1fr);
+  gap: 14px;
+  max-width: 1500px;
+  margin: 16px auto 0;
+}
+.gameEventsEntry,
+.gameEventsHistory {
+  border: 1px solid #24344d;
+  border-radius: 20px;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.94);
+}
+.gameEventsEntry {
+  display: grid;
+  gap: 12px;
+}
+.gameEventsEntry label {
+  display: grid;
+  gap: 6px;
+  color: #cbd5e1;
+  font-weight: 700;
+}
+.gameEventsEntry input,
+.gameEventsEntry select {
+  min-height: 50px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: #fff;
+  background: #020617;
+  font: inherit;
+}
+.gameEventsEntry button,
+.gameEventsHistory button {
+  min-height: 50px;
+  border: 0;
+  border-radius: 10px;
+  padding: 9px 14px;
+  color: #fff;
+  background: #2563eb;
+  font: inherit;
+  font-weight: 900;
+}
+.gameEventsTabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.gameEventsTabs button:not(.active) {
+  background: #334155;
+}
+.gameEventsHistory {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  max-height: 620px;
+  overflow: auto;
+}
+.gameEventsHistory article {
+  border: 1px solid #334155;
+  border-radius: 14px;
+  padding: 14px;
+  background: #020617;
+}
+.gameEventsHistory article > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.gameEventsHistory article.voided {
+  opacity: 0.48;
+}
+.gameEventsVoided,
+.gameEventsError {
+  color: #fecaca;
+  font-weight: 800;
+}
+.gameEventsNotice {
+  color: #facc15;
+  font-weight: 800;
+}
+@media (max-width: 850px) {
+  .gameEventsPanel {
+    grid-template-columns: 1fr;
+  }
+}
