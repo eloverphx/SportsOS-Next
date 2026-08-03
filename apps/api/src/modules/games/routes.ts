@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { realtime } from "../../infrastructure/realtime.js";
 import { audit } from "../../lib/audit.js";
 import { PERMISSIONS, ROLES, requirePermission } from "../auth/index.js";
+import { listActivePenalties } from "../penalties/repository.js";
 import {
   applyGameScoringAction,
   createGame,
@@ -87,6 +88,8 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     const game = await findGameById(id.data);
     if (!game) return reply.code(404).send({ error: "Game not found" });
 
+    const penalties = await listActivePenalties(game.id);
+
     return {
       game: {
         id: game.id,
@@ -105,6 +108,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
         clockRemainingMs: game.clockRemainingMs,
         clockRunning: game.clockRunning,
         clockStartedAt: game.clockStartedAt,
+        penalties,
       },
     };
   });

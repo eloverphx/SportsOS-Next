@@ -14,6 +14,8 @@ import {
 } from "../../../../lib/auth";
 import { GameEventsPanel } from "../../../../components/game-events/GameEventsPanel";
 import "../../../../components/game-events/game-events.css";
+import { ActivePenaltiesPanel } from "../../../../components/penalties/ActivePenaltiesPanel";
+import "../../../../components/penalties/penalties.css";
 import styles from "./control.module.css";
 
 type GameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
@@ -157,6 +159,9 @@ export default function ScoreboardControlPage() {
     socket.on("game:event-created", () => {
       setEventRefreshToken((v) => v + 1);
       void load();
+    });
+    socket.on("game:penalties-updated", () => {
+      setEventRefreshToken((v) => v + 1);
     });
     socket.on("game:event-voided", () => {
       setEventRefreshToken((v) => v + 1);
@@ -495,6 +500,14 @@ export default function ScoreboardControlPage() {
                 </div>
               </div>
             </section>
+
+            <ActivePenaltiesPanel
+              gameId={game.id}
+              homeTeamName={game.homeTeamName}
+              awayTeamName={game.awayTeamName}
+              canScore={canScore}
+              refreshToken={eventRefreshToken}
+            />
 
             <GameEventsPanel
               gameId={game.id}

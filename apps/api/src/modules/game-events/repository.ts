@@ -2,6 +2,11 @@ import mysql, { type RowDataPacket } from "mysql2/promise";
 import { pool } from "../../infrastructure/database.js";
 import type { GameEventInput } from "./schemas.js";
 import type { GameEvent, GameEventPlayerOption } from "./types.js";
+import {
+  clearEarliestEligibleMinorOnGoal,
+  clearPenaltyForVoidedEvent,
+  createPenaltyClock,
+} from "../penalties/repository.js";
 
 const SELECT_EVENT = `SELECT ge.*,
   p.first_name player_first_name, p.last_name player_last_name,
@@ -153,6 +158,20 @@ export async function createGameEvent(gameId: number, input: GameEventInput, use
         Number(userId),
       ],
     );
+    if (input.type === "PENALTY") {
+      await createPenaltyClock(connection, {
+        gameEventId: result.insertId,
+        gameId,
+        side: input.side,
+        durationMs: input.penaltyMinutes * 60_000,
+        gameClockRunning: Boolean(game.clock_running),
+      });
+    }
+
+    if (input.type === "GOAL") {
+      await clearEarliestEligibleMinorOnGoal(connection, gameId, input.side);
+    }
+
     await connection.commit();
 
     const [rows] = await pool.execute<RowDataPacket[]>(`${SELECT_EVENT} WHERE ge.id = ? LIMIT 1`, [
@@ -195,6 +214,10 @@ export async function voidGameEvent(gameId: number, eventId: number, userId: str
         gameId,
       ]);
     }
+    if (event.type === "PENALTY") {
+      await clearPenaltyForVoidedEvent(connection, eventId);
+    }
+
     await connection.execute(
       `UPDATE game_events SET voided_at = CURRENT_TIMESTAMP(3),
        voided_by_user_id = ? WHERE id = ?`,

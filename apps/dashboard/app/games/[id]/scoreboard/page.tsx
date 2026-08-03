@@ -8,6 +8,16 @@ import styles from "./scoreboard.module.css";
 
 type GameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
 
+type Penalty = {
+  id: number;
+  side: "home" | "away";
+  playerName: string | null;
+  infraction: string;
+  remainingMs: number;
+  running: boolean;
+  startedAt: string | null;
+};
+
 type ScoreboardGame = {
   id: number;
   organizationName: string;
@@ -25,6 +35,7 @@ type ScoreboardGame = {
   clockRemainingMs: number;
   clockRunning: boolean;
   clockStartedAt: string | null;
+  penalties: Penalty[];
 };
 
 function effectiveRemainingMs(game: ScoreboardGame, now: number): number {
@@ -80,9 +91,12 @@ export default function ScoreboardPage() {
     };
     socket.on("game:scored", refreshForGame);
     socket.on("game:updated", refreshForGame);
+    socket.on("game:penalties-updated", refreshForGame);
+    socket.on("game:event-created", refreshForGame);
+    socket.on("game:event-voided", refreshForGame);
     return () => {
-  socket.disconnect();
-};
+      socket.disconnect();
+    };
   }, [gameId, load]);
 
   useEffect(() => {
@@ -139,6 +153,27 @@ export default function ScoreboardPage() {
           <div className={styles.score}>{game.homeScore}</div>
         </article>
       </section>
+      {game.penalties.length > 0 && (
+        <section className={styles.penalties}>
+          {game.penalties.map((penalty) => (
+            <div key={penalty.id}>
+              <strong>{penalty.side === "home" ? "HOME" : "AWAY"} PENALTY</strong>
+              <span>
+                {formatClock(
+                  penalty.running && penalty.startedAt
+                    ? Math.max(
+                        0,
+                        penalty.remainingMs - (now - new Date(penalty.startedAt).getTime()),
+                      )
+                    : penalty.remainingMs,
+                )}
+              </span>
+              <small>{penalty.playerName || penalty.infraction}</small>
+            </div>
+          ))}
+        </section>
+      )}
+
       <footer className={styles.footer}>
         <span>{game.venue || "Venue not set"}</span>
         <span>{new Date(game.scheduledStart).toLocaleString()}</span>

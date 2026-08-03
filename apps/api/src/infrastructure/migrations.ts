@@ -286,6 +286,25 @@ export async function runMigrations(): Promise<void> {
     CONSTRAINT fk_game_events_voided_by FOREIGN KEY (voided_by_user_id) REFERENCES users(id) ON DELETE SET NULL
   ) ENGINE=InnoDB`);
 
+  await pool.execute(`CREATE TABLE IF NOT EXISTS game_penalties (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    game_event_id BIGINT UNSIGNED NOT NULL UNIQUE,
+    game_id BIGINT UNSIGNED NOT NULL,
+    side ENUM('home', 'away') NOT NULL,
+    original_duration_ms INT UNSIGNED NOT NULL,
+    remaining_ms INT UNSIGNED NOT NULL,
+    running BOOLEAN NOT NULL DEFAULT FALSE,
+    started_at DATETIME(3) NULL,
+    cleared_at DATETIME(3) NULL,
+    clear_reason VARCHAR(40) NULL,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    INDEX idx_game_penalties_active (game_id, cleared_at, side),
+    CONSTRAINT fk_game_penalties_event
+      FOREIGN KEY (game_event_id) REFERENCES game_events(id) ON DELETE CASCADE,
+    CONSTRAINT fk_game_penalties_game
+      FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB`);
+
   if (!(await minio.bucketExists(config.storage.bucket)))
     await minio.makeBucket(config.storage.bucket);
 }
