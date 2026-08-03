@@ -220,8 +220,17 @@ export function GameEventsPanel(props: Props) {
             <label>
               Minutes
               <select value={penaltyMinutes} onChange={(e) => setPenaltyMinutes(e.target.value)}>
-                {[1, 2, 4, 5, 10].map((m) => (
-                  <option key={m}>{m}</option>
+                {[
+                  ["1", "1:00"],
+                  ["1.5", "1:30"],
+                  ["2", "2:00"],
+                  ["4", "4:00"],
+                  ["5", "5:00"],
+                  ["10", "10:00"],
+                ].map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
                 ))}
               </select>
             </label>

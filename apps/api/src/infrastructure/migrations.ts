@@ -305,6 +305,8 @@ export async function runMigrations(): Promise<void> {
       FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
   ) ENGINE=InnoDB`);
 
+  await pool.execute("ALTER TABLE game_events MODIFY penalty_minutes DECIMAL(4,1) UNSIGNED NULL");
+
   if (!(await minio.bucketExists(config.storage.bucket)))
     await minio.makeBucket(config.storage.bucket);
 }

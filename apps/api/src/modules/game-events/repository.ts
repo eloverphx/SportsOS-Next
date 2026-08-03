@@ -163,7 +163,7 @@ export async function createGameEvent(gameId: number, input: GameEventInput, use
         gameEventId: result.insertId,
         gameId,
         side: input.side,
-        durationMs: input.penaltyMinutes * 60_000,
+        durationMs: Math.round(input.penaltyMinutes * 60_000),
         gameClockRunning: Boolean(game.clock_running),
       });
     }

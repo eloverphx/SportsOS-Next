@@ -2,7 +2,11 @@ import mysql, { type PoolConnection, type RowDataPacket } from "mysql2/promise";
 import { pool } from "../../infrastructure/database.js";
 import type { GameInput, ScoreAction } from "./schemas.js";
 import type { Game, GameStatus, GameTeamOption } from "./types.js";
-import { materializePenaltyClocks, setPenaltyClockRunning } from "../penalties/repository.js";
+import {
+  adjustActivePenaltyClocks,
+  materializePenaltyClocks,
+  setPenaltyClockRunning,
+} from "../penalties/repository.js";
 
 const SELECT_GAME = `SELECT
   g.*,
@@ -367,6 +371,7 @@ export async function applyGameScoringAction(
     let clockStartedAt: Date | null = clockRunning ? new Date() : null;
 
     await materializePenaltyClocks(connection, id);
+    const previousClockRemainingMs = clockRemainingMs;
 
     switch (action.action) {
       case "adjustScore":
@@ -425,6 +430,15 @@ export async function applyGameScoringAction(
       clockRunning = false;
       clockStartedAt = null;
     }
+
+    const penaltyClockAdjustmentMs =
+      action.action === "adjustClock" ||
+      action.action === "setClock" ||
+      action.action === "resetClock"
+        ? clockRemainingMs - previousClockRemainingMs
+        : 0;
+
+    await adjustActivePenaltyClocks(connection, id, penaltyClockAdjustmentMs);
 
     await connection.execute(
       `UPDATE games SET

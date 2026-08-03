@@ -208,6 +208,7 @@ export default function ScoreboardControlPage() {
       });
 
       setGame(response.game);
+      setEventRefreshToken((value) => value + 1);
     });
 
     actionQueue.current = request

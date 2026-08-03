@@ -176,3 +176,41 @@ export async function clearEarliestEligibleMinorOnGoal(
   );
   return id;
 }
+
+export async function adjustActivePenaltyClocks(
+  connection: PoolConnection,
+  gameId: number,
+  amountMs: number,
+): Promise<void> {
+  if (amountMs === 0) return;
+
+  const [rows] = await connection.execute<RowDataPacket[]>(
+    `SELECT id, original_duration_ms, remaining_ms
+     FROM game_penalties
+     WHERE game_id = ? AND cleared_at IS NULL
+     FOR UPDATE`,
+    [gameId],
+  );
+
+  for (const row of rows) {
+    const remainingMs = Math.max(
+      0,
+      Math.min(Number(row.original_duration_ms), Number(row.remaining_ms) + amountMs),
+    );
+
+    await connection.execute(
+      `UPDATE game_penalties
+       SET remaining_ms = ?,
+           cleared_at = CASE
+             WHEN ? = 0 THEN CURRENT_TIMESTAMP(3)
+             ELSE NULL
+           END,
+           clear_reason = CASE
+             WHEN ? = 0 THEN 'EXPIRED'
+             ELSE NULL
+           END
+       WHERE id = ?`,
+      [remainingMs, remainingMs, remainingMs, row.id],
+    );
+  }
+}

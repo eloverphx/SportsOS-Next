@@ -21,7 +21,7 @@ export const gameEventInputSchema = z.discriminatedUnion("type", [
     side: z.enum(gameEventSides),
     playerId: nullablePlayerId,
     penaltyCode: z.string().trim().min(1).max(100),
-    penaltyMinutes: z.coerce.number().int().min(1).max(20),
+    penaltyMinutes: z.coerce.number().min(1).max(10),
     notes: z.preprocess(emptyToNull, z.string().trim().max(500).nullable()),
   }),
 ]);
