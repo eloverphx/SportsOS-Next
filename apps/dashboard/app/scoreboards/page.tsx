@@ -404,6 +404,10 @@ export default function ScoreboardsPage() {
                     </label>
 
                     <div className="cardActions">
+                      {device.gameId && (
+                        <Link href={`/scoreboards/${device.id}/control`}>Control</Link>
+                      )}
+
                       <button
                         className="secondary"
                         onClick={() => void copy(device.deviceKey, `key-${device.id}`)}

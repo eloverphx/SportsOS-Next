@@ -1,0 +1,289 @@
+.page {
+  min-height: 100vh;
+  padding: clamp(14px, 2vw, 28px);
+  color: #f8fafc;
+  background: radial-gradient(circle at top, rgba(30, 64, 175, 0.22), transparent 38rem), #020617;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin: 0 auto 22px;
+  max-width: 1500px;
+}
+
+.header h1 {
+  margin: 4px 0;
+  font-size: clamp(1.65rem, 3vw, 2.6rem);
+}
+
+.header p,
+.eyebrow {
+  margin: 0;
+  color: #94a3b8;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.online,
+.offline {
+  padding: 9px 13px;
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+.online {
+  background: #14532d;
+}
+
+.offline {
+  background: #7f1d1d;
+}
+
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+  background: #0f172a;
+}
+
+.scoreboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 0.85fr) minmax(0, 1fr);
+  gap: clamp(10px, 2vw, 20px);
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+.teamPanel,
+.clockPanel,
+.controlGroup,
+.message {
+  border: 1px solid #24344d;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.94);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+}
+
+.teamPanel,
+.clockPanel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  min-height: 360px;
+  padding: clamp(18px, 3vw, 34px);
+}
+
+.teamPanel span,
+.clockPanel span,
+.clockPanel small {
+  color: #94a3b8;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.teamPanel h2 {
+  min-height: 2.6em;
+  margin: 12px 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(1.25rem, 2.7vw, 2.25rem);
+}
+
+.teamPanel strong {
+  font-size: clamp(5rem, 12vw, 10rem);
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.clockPanel strong {
+  margin: 12px 0;
+  font-size: clamp(4rem, 9vw, 7.5rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.scoreButtons,
+.buttonRow,
+.buttonGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.scoreButtons,
+.buttonRow {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.scoreButtons {
+  margin-top: 24px;
+}
+
+.scoreButtons button {
+  min-height: 72px;
+  font-size: 1.6rem;
+}
+
+.primaryClockButton {
+  min-height: 76px;
+  margin-top: 26px;
+  font-size: 1.45rem;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  max-width: 1500px;
+  margin: 16px auto 0;
+}
+
+.controlGroup {
+  padding: 18px;
+}
+
+.controlGroup h3 {
+  margin: 0 0 14px;
+}
+
+.buttonGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.controlGroup button {
+  min-height: 56px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 900;
+  color: white;
+  background: #2563eb;
+  cursor: pointer;
+}
+
+.controlGroup button:disabled,
+.scoreButtons button:disabled,
+.primaryClockButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.scoreButtons button,
+.primaryClockButton {
+  border: 0;
+  border-radius: 14px;
+  font-weight: 1000;
+  color: white;
+  background: #2563eb;
+}
+
+.finalButton {
+  background: #991b1b !important;
+}
+
+.clockInputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.clockInputs label {
+  display: grid;
+  gap: 6px;
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+.clockInputs input {
+  width: 100%;
+  min-height: 52px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: white;
+  background: #020617;
+  font: inherit;
+  font-size: 1.2rem;
+}
+
+.error,
+.message {
+  max-width: 1500px;
+  margin: 18px auto;
+  padding: 18px;
+}
+
+.error {
+  border: 1px solid #7f1d1d;
+  border-radius: 12px;
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.28);
+}
+
+@media (max-width: 1050px) {
+  .controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .scoreboard {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .clockPanel {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-height: 280px;
+  }
+
+  .teamPanel {
+    min-height: 300px;
+  }
+
+  .controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 500px) {
+  .scoreboard {
+    grid-template-columns: 1fr;
+  }
+
+  .clockPanel,
+  .teamPanel {
+    grid-column: auto;
+  }
+
+  .clockPanel {
+    grid-row: auto;
+  }
+}
