@@ -472,6 +472,9 @@ export default function ScoreboardsPage() {
                 >
                   Open scoreboard
                 </Link>
+                <Link href={`/games/${game.id}/overlay`} target="_blank" rel="noopener noreferrer">
+                  Open overlay
+                </Link>
                 <button
                   className="secondary"
                   onClick={() =>

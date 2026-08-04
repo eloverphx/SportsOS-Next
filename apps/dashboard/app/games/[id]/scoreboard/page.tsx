@@ -23,9 +23,18 @@ type Penalty = {
 type ScoreboardGame = {
   id: number;
   organizationName: string;
+  organizationLogoUrl: string | null;
+  organizationPrimaryColor: string;
+  organizationSecondaryColor: string;
   seasonName: string;
   homeTeamName: string;
+  homeTeamLogoUrl: string | null;
+  homeTeamPrimaryColor: string;
+  homeTeamSecondaryColor: string;
   awayTeamName: string;
+  awayTeamLogoUrl: string | null;
+  awayTeamPrimaryColor: string;
+  awayTeamSecondaryColor: string;
   scheduledStart: string;
   timezone: string;
   venue: string | null;
@@ -55,6 +64,18 @@ type BroadcastSound = {
   soundId: string;
   type: SoundType;
 };
+
+function TeamBrand(props: { url: string | null; name: string }) {
+  return (
+    <div className={styles.brandLogo}>
+      {props.url ? (
+        <img src={props.url} alt={`${props.name} logo`} />
+      ) : (
+        <span>{props.name.slice(0, 2).toUpperCase()}</span>
+      )}
+    </div>
+  );
+}
 
 function effectiveRemainingMs(game: ScoreboardGame, now: number): number {
   if (!game.clockRunning || !game.clockStartedAt) return Math.max(0, game.clockRemainingMs);
@@ -312,7 +333,15 @@ export default function ScoreboardPage() {
   const effectTeam = effect?.side === "home" ? game.homeTeamName : game.awayTeamName;
 
   return (
-    <main className={styles.scoreboard}>
+    <main
+      className={styles.scoreboard}
+      style={
+        {
+          "--home-primary": game.homeTeamPrimaryColor,
+          "--away-primary": game.awayTeamPrimaryColor,
+        } as React.CSSProperties
+      }
+    >
       {effect && (
         <section
           className={`${styles.effectOverlay} ${
@@ -367,8 +396,9 @@ export default function ScoreboardPage() {
       )}
 
       <section className={styles.game}>
-        <article className={styles.team}>
+        <article className={`${styles.team} ${styles.teamBrandAway}`}>
           <span className={styles.side}>AWAY</span>
+          <TeamBrand url={game.awayTeamLogoUrl} name={game.awayTeamName} />
           <h1>{game.awayTeamName}</h1>
           <div className={styles.score}>{game.awayScore}</div>
         </article>
@@ -379,8 +409,9 @@ export default function ScoreboardPage() {
           <span className={styles.clockState}>{game.clockRunning ? "RUNNING" : "PAUSED"}</span>
         </section>
 
-        <article className={styles.team}>
+        <article className={`${styles.team} ${styles.teamBrandHome}`}>
           <span className={styles.side}>HOME</span>
+          <TeamBrand url={game.homeTeamLogoUrl} name={game.homeTeamName} />
           <h1>{game.homeTeamName}</h1>
           <div className={styles.score}>{game.homeScore}</div>
         </article>

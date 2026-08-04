@@ -1,5 +1,6 @@
 import mysql, { type PoolConnection, type RowDataPacket } from "mysql2/promise";
 import { pool } from "../../infrastructure/database.js";
+import { logoUrl } from "../../lib/media.js";
 import type { GameInput, ScoreAction } from "./schemas.js";
 import type { Game, GameStatus, GameTeamOption } from "./types.js";
 import {
@@ -11,10 +12,19 @@ import {
 const SELECT_GAME = `SELECT
   g.*,
   o.name AS organization_name,
+  o.logo_asset_id AS organization_logo_asset_id,
+  o.primary_color AS organization_primary_color,
+  o.secondary_color AS organization_secondary_color,
   s.name AS season_name,
   home.name AS registered_home_team_name,
+  home.logo_asset_id AS home_logo_asset_id,
+  home.primary_color AS home_primary_color,
+  home.secondary_color AS home_secondary_color,
   home_org.name AS home_team_organization_name,
   away.name AS registered_away_team_name,
+  away.logo_asset_id AS away_logo_asset_id,
+  away.primary_color AS away_primary_color,
+  away.secondary_color AS away_secondary_color,
   away_org.name AS away_team_organization_name
 FROM games g
 JOIN organizations o ON o.id = g.organization_id
@@ -57,6 +67,11 @@ function mapGame(row: RowDataPacket): Game {
     id: Number(row.id),
     organizationId: Number(row.organization_id),
     organizationName: String(row.organization_name),
+    organizationLogoUrl: logoUrl(
+      row.organization_logo_asset_id == null ? null : Number(row.organization_logo_asset_id),
+    ),
+    organizationPrimaryColor: String(row.organization_primary_color ?? "#ef4444"),
+    organizationSecondaryColor: String(row.organization_secondary_color ?? "#0f172a"),
     seasonId: Number(row.season_id),
     seasonName: String(row.season_name),
 
@@ -68,6 +83,15 @@ function mapGame(row: RowDataPacket): Game {
     homeTeamOrganizationName:
       row.home_team_organization_name == null ? null : String(row.home_team_organization_name),
     homeExternalName,
+    homeTeamLogoUrl: logoUrl(
+      row.home_logo_asset_id == null ? null : Number(row.home_logo_asset_id),
+    ),
+    homeTeamPrimaryColor: String(
+      row.home_primary_color ?? row.organization_primary_color ?? "#ef4444",
+    ),
+    homeTeamSecondaryColor: String(
+      row.home_secondary_color ?? row.organization_secondary_color ?? "#0f172a",
+    ),
 
     awayTeamId: row.away_team_id == null ? null : Number(row.away_team_id),
     awayTeamName:
@@ -77,6 +101,15 @@ function mapGame(row: RowDataPacket): Game {
     awayTeamOrganizationName:
       row.away_team_organization_name == null ? null : String(row.away_team_organization_name),
     awayExternalName,
+    awayTeamLogoUrl: logoUrl(
+      row.away_logo_asset_id == null ? null : Number(row.away_logo_asset_id),
+    ),
+    awayTeamPrimaryColor: String(
+      row.away_primary_color ?? row.organization_primary_color ?? "#64748b",
+    ),
+    awayTeamSecondaryColor: String(
+      row.away_secondary_color ?? row.organization_secondary_color ?? "#0f172a",
+    ),
 
     scheduledStart:
       row.scheduled_start instanceof Date
