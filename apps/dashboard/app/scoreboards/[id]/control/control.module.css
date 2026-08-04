@@ -294,3 +294,9 @@
   background: #b91c1c !important;
   font-size: 1.25rem !important;
 }
+
+.nextPeriodButton {
+  grid-column: 1 / -1;
+  min-height: 68px !important;
+  background: #0f766e !important;
+}

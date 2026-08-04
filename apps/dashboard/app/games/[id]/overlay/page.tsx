@@ -30,6 +30,7 @@ type Game = {
   clockRemainingMs: number;
   clockRunning: boolean;
   clockStartedAt: string | null;
+  periodLabel: string;
   penalties: Penalty[];
 };
 
@@ -128,7 +129,7 @@ export default function OverlayPage() {
           <b>{game.awayScore}</b>
         </div>
         <div className={styles.center}>
-          <span>P{game.period}</span>
+          <span>{game.periodLabel === "OVERTIME" ? "OT" : `P${game.period}`}</span>
           <strong>{formatClock(remaining(game, now))}</strong>
           {powerPlay && <small>POWER PLAY · {powerPlay}</small>}
         </div>

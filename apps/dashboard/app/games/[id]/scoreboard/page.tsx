@@ -46,6 +46,13 @@ type ScoreboardGame = {
   clockRemainingMs: number;
   clockRunning: boolean;
   clockStartedAt: string | null;
+  regulationPeriods: number;
+  regulationPeriodLengthMs: number;
+  intermissionLengthMs: number;
+  overtimeEnabled: boolean;
+  overtimeLengthMs: number;
+  periodLabel: string;
+  canAdvancePeriod: boolean;
   penalties: Penalty[];
 };
 
@@ -404,7 +411,7 @@ export default function ScoreboardPage() {
         </article>
 
         <section className={styles.clockPanel}>
-          <span className={styles.period}>PERIOD {game.period}</span>
+          <span className={styles.period}>{game.periodLabel ?? `PERIOD ${game.period}`}</span>
           <div className={styles.clock}>{clock}</div>
           <span className={styles.clockState}>{game.clockRunning ? "RUNNING" : "PAUSED"}</span>
         </section>

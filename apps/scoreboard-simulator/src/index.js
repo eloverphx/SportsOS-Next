@@ -224,7 +224,7 @@ ${effectHtml}
             <div class="score">${currentGame.awayScore}</div>
           </article>
           <section class="clock">
-            <span class="muted">PERIOD ${currentGame.period}</span>
+            <span class="muted">${currentGame.periodLabel ?? `PERIOD ${currentGame.period}`}</span>
             <strong>${currentGame.formattedClock}</strong>
             <span class="muted">${currentGame.clockRunning ? "RUNNING" : "PAUSED"} · ${currentGame.status}</span>
           </section>

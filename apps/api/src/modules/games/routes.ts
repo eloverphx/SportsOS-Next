@@ -117,6 +117,13 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
         clockRemainingMs: game.clockRemainingMs,
         clockRunning: game.clockRunning,
         clockStartedAt: game.clockStartedAt,
+        regulationPeriods: game.regulationPeriods,
+        regulationPeriodLengthMs: game.regulationPeriodLengthMs,
+        intermissionLengthMs: game.intermissionLengthMs,
+        overtimeEnabled: game.overtimeEnabled,
+        overtimeLengthMs: game.overtimeLengthMs,
+        periodLabel: game.periodLabel,
+        canAdvancePeriod: game.canAdvancePeriod,
         penalties,
       },
     };

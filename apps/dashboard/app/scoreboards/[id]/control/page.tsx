@@ -52,12 +52,20 @@ type Game = {
   clockRemainingMs: number;
   clockRunning: boolean;
   clockStartedAt: string | null;
+  regulationPeriods: number;
+  regulationPeriodLengthMs: number;
+  intermissionLengthMs: number;
+  overtimeEnabled: boolean;
+  overtimeLengthMs: number;
+  periodLabel: string;
+  canAdvancePeriod: boolean;
 };
 
 type ScoringAction =
   | { action: "adjustScore"; side: "home" | "away"; amount: number }
   | { action: "startClock" }
   | { action: "pauseClock" }
+  | { action: "nextPeriod" }
   | { action: "resetClock" }
   | { action: "adjustClock"; amountMs: number }
   | { action: "setClock"; clockRemainingMs: number }
@@ -335,7 +343,7 @@ export default function ScoreboardControlPage() {
               </article>
 
               <section className={styles.clockPanel}>
-                <span>PERIOD {game.period}</span>
+                <span>{game.periodLabel ?? `PERIOD ${game.period}`}</span>
                 <strong>{displayedClock}</strong>
                 <small>
                   {game.clockRunning ? "RUNNING" : "PAUSED"} · {game.status}
@@ -415,6 +423,24 @@ export default function ScoreboardControlPage() {
                     }
                   >
                     Period +
+                  </button>
+
+                  <button
+                    className={styles.nextPeriodButton}
+                    disabled={!canScore || !game.canAdvancePeriod}
+                    onClick={() => {
+                      const finalRegulation = game.period >= game.regulationPeriods;
+                      const tied = game.homeScore === game.awayScore;
+                      const willFinish = finalRegulation && !(tied && game.overtimeEnabled);
+
+                      if (willFinish && !window.confirm("Mark this game final?")) {
+                        return;
+                      }
+
+                      void score({ action: "nextPeriod" });
+                    }}
+                  >
+                    Next period / finish
                   </button>
                 </div>
               </div>

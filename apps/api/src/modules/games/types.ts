@@ -36,6 +36,13 @@ export interface Game {
   clockRemainingMs: number;
   clockRunning: boolean;
   clockStartedAt: string | null;
+  regulationPeriods: number;
+  regulationPeriodLengthMs: number;
+  intermissionLengthMs: number;
+  overtimeEnabled: boolean;
+  overtimeLengthMs: number;
+  periodLabel: string;
+  canAdvancePeriod: boolean;
   notes: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;

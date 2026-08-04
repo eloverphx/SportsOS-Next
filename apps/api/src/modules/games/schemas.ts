@@ -23,6 +23,11 @@ export const gameInputSchema = z
     status: z.enum(gameStatuses).default("SCHEDULED"),
     homeScore: z.coerce.number().int().min(0).max(999).default(0),
     awayScore: z.coerce.number().int().min(0).max(999).default(0),
+    regulationPeriods: z.coerce.number().int().min(1).max(10).default(3),
+    regulationPeriodLengthMs: z.coerce.number().int().min(60_000).max(7_200_000).default(1_200_000),
+    intermissionLengthMs: z.coerce.number().int().min(0).max(3_600_000).default(900_000),
+    overtimeEnabled: z.coerce.boolean().default(true),
+    overtimeLengthMs: z.coerce.number().int().min(60_000).max(3_600_000).default(300_000),
     notes: z.preprocess(emptyToNull, z.string().trim().max(2000).nullable()),
   })
   .superRefine((value, context) => {
@@ -84,6 +89,7 @@ export const scoreActionSchema = z.discriminatedUnion("action", [
   }),
   z.object({ action: z.literal("startClock") }),
   z.object({ action: z.literal("pauseClock") }),
+  z.object({ action: z.literal("nextPeriod") }),
   z.object({
     action: z.literal("resetClock"),
     periodLengthMs: z.coerce.number().int().min(60_000).max(7_200_000).optional(),

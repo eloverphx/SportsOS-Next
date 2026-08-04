@@ -221,6 +221,17 @@ export async function runMigrations(): Promise<void> {
     ["clock_remaining_ms", "INT UNSIGNED NOT NULL DEFAULT 1200000 AFTER period_length_ms"],
     ["clock_running", "BOOLEAN NOT NULL DEFAULT FALSE AFTER clock_remaining_ms"],
     ["clock_started_at", "DATETIME(3) NULL AFTER clock_running"],
+    ["regulation_periods", "SMALLINT UNSIGNED NOT NULL DEFAULT 3 AFTER clock_started_at"],
+    [
+      "regulation_period_length_ms",
+      "INT UNSIGNED NOT NULL DEFAULT 1200000 AFTER regulation_periods",
+    ],
+    [
+      "intermission_length_ms",
+      "INT UNSIGNED NOT NULL DEFAULT 900000 AFTER regulation_period_length_ms",
+    ],
+    ["overtime_enabled", "BOOLEAN NOT NULL DEFAULT TRUE AFTER intermission_length_ms"],
+    ["overtime_length_ms", "INT UNSIGNED NOT NULL DEFAULT 300000 AFTER overtime_enabled"],
   ];
 
   for (const [name, sql] of gameAdditions) {

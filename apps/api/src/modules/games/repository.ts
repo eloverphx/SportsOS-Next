@@ -125,6 +125,18 @@ function mapGame(row: RowDataPacket): Game {
     clockRemainingMs,
     clockRunning: clockRunning && clockRemainingMs > 0,
     clockStartedAt: clockRunning && clockRemainingMs > 0 ? new Date().toISOString() : null,
+    regulationPeriods: Number(row.regulation_periods ?? 3),
+    regulationPeriodLengthMs: Number(
+      row.regulation_period_length_ms ?? row.period_length_ms ?? 1_200_000,
+    ),
+    intermissionLengthMs: Number(row.intermission_length_ms ?? 900_000),
+    overtimeEnabled: Boolean(row.overtime_enabled ?? true),
+    overtimeLengthMs: Number(row.overtime_length_ms ?? 300_000),
+    periodLabel:
+      Number(row.period ?? 1) > Number(row.regulation_periods ?? 3)
+        ? "OVERTIME"
+        : `PERIOD ${Number(row.period ?? 1)}`,
+    canAdvancePeriod: String(row.status) !== "FINAL" && Number(row.clock_remaining_ms ?? 0) === 0,
     notes: row.notes == null ? null : String(row.notes),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -267,9 +279,14 @@ export async function createGame(input: GameInput): Promise<Game> {
        status,
        home_score,
        away_score,
+       regulation_periods,
+       regulation_period_length_ms,
+       intermission_length_ms,
+       overtime_enabled,
+       overtime_length_ms,
        notes
      )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       input.organizationId,
       input.seasonId,
@@ -283,6 +300,11 @@ export async function createGame(input: GameInput): Promise<Game> {
       input.status,
       input.homeScore,
       input.awayScore,
+      input.regulationPeriods,
+      input.regulationPeriodLengthMs,
+      input.intermissionLengthMs,
+      input.overtimeEnabled,
+      input.overtimeLengthMs,
       input.notes,
     ],
   );
@@ -307,6 +329,11 @@ export async function updateGame(id: number, input: GameInput): Promise<Game | n
        status = ?,
        home_score = ?,
        away_score = ?,
+       regulation_periods = ?,
+       regulation_period_length_ms = ?,
+       intermission_length_ms = ?,
+       overtime_enabled = ?,
+       overtime_length_ms = ?,
        notes = ?
      WHERE id = ?`,
     [
@@ -322,6 +349,11 @@ export async function updateGame(id: number, input: GameInput): Promise<Game | n
       input.status,
       input.homeScore,
       input.awayScore,
+      input.regulationPeriods,
+      input.regulationPeriodLengthMs,
+      input.intermissionLengthMs,
+      input.overtimeEnabled,
+      input.overtimeLengthMs,
       input.notes,
       id,
     ],
@@ -348,6 +380,11 @@ interface LockedScoringRow extends RowDataPacket {
   clock_remaining_ms: number;
   clock_running: number;
   clock_started_at: Date | null;
+  regulation_periods: number;
+  regulation_period_length_ms: number;
+  intermission_length_ms: number;
+  overtime_enabled: number;
+  overtime_length_ms: number;
 }
 
 function materializedRemainingMs(row: LockedScoringRow): number {
@@ -369,7 +406,12 @@ async function lockGame(connection: PoolConnection, id: number): Promise<LockedS
        period_length_ms,
        clock_remaining_ms,
        clock_running,
-       clock_started_at
+       clock_started_at,
+       regulation_periods,
+       regulation_period_length_ms,
+       intermission_length_ms,
+       overtime_enabled,
+       overtime_length_ms
      FROM games
      WHERE id = ?
      FOR UPDATE`,
@@ -429,6 +471,30 @@ export async function applyGameScoringAction(
         clockRunning = false;
         clockStartedAt = null;
         break;
+      case "nextPeriod": {
+        clockRunning = false;
+        clockStartedAt = null;
+
+        const regulationPeriods = Number(row.regulation_periods ?? 3);
+        const regulationLength = Number(row.regulation_period_length_ms ?? periodLengthMs);
+        const overtimeEnabled = Boolean(row.overtime_enabled);
+        const overtimeLength = Number(row.overtime_length_ms ?? 300_000);
+        const tied = homeScore === awayScore;
+
+        if (period < regulationPeriods) {
+          period += 1;
+          periodLengthMs = regulationLength;
+          clockRemainingMs = regulationLength;
+        } else if (period === regulationPeriods && tied && overtimeEnabled) {
+          period += 1;
+          periodLengthMs = overtimeLength;
+          clockRemainingMs = overtimeLength;
+        } else {
+          status = "FINAL";
+          clockRemainingMs = 0;
+        }
+        break;
+      }
       case "resetClock":
         periodLengthMs = action.periodLengthMs ?? periodLengthMs;
         clockRemainingMs = periodLengthMs;
