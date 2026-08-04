@@ -287,3 +287,10 @@
     grid-row: auto;
   }
 }
+
+.hornButton {
+  width: 100%;
+  min-height: 72px !important;
+  background: #b91c1c !important;
+  font-size: 1.25rem !important;
+}

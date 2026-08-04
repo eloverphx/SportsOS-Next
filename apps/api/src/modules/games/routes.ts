@@ -255,6 +255,35 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     return payload;
   });
 
+  app.post("/games/:id/broadcast", async (request, reply) => {
+    const id = gameIdSchema.safeParse((request.params as { id: string }).id);
+    const body = request.body as { type?: string };
+
+    if (!id.success || body.type !== "HORN") {
+      return reply.code(400).send({ error: "Invalid broadcast action" });
+    }
+
+    const game = await findGameById(id.data);
+    if (!game) return reply.code(404).send({ error: "Game not found" });
+
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.GAME_SCORE,
+      organizationId: game.organizationId,
+    });
+
+    await audit(identity.sub, "scoreboard.horn.triggered", {
+      gameId: game.id,
+      organizationId: game.organizationId,
+    });
+
+    realtime().emit("scoreboard:sound", {
+      gameId: game.id,
+      soundId: `manual-horn-${game.id}-${Date.now()}`,
+      type: "HORN",
+    });
+
+    return { success: true };
+  });
   app.delete("/games/:id", async (request, reply) => {
     const id = gameIdSchema.safeParse((request.params as { id: string }).id);
     if (!id.success) return reply.code(400).send({ error: "Invalid game id" });

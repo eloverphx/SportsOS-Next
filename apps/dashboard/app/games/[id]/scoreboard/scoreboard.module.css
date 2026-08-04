@@ -169,3 +169,99 @@
 .penalties small {
   grid-column: 1 / -1;
 }
+
+.effectOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  pointer-events: none;
+  animation: effectFade 3s ease both;
+}
+
+.effectOverlay strong {
+  font-size: clamp(5rem, 19vw, 16rem);
+  line-height: 0.82;
+  letter-spacing: -0.05em;
+  text-shadow: 0 10px 50px #000;
+}
+
+.effectOverlay span {
+  font-size: clamp(2rem, 7vw, 6rem);
+  font-weight: 950;
+}
+
+.effectOverlay small {
+  font-size: clamp(1.1rem, 3vw, 2.4rem);
+  font-weight: 800;
+}
+
+.goalEffect {
+  background: radial-gradient(circle, #dc2626ee 0%, #7f1d1df2 48%, #020617f7 100%);
+  animation-duration: 4.5s;
+}
+
+.noticeEffect {
+  background: rgba(2, 6, 23, 0.9);
+}
+
+.powerPlayBanner {
+  padding: 11px 20px;
+  text-align: center;
+  background: #facc15;
+  color: #111827;
+  font-size: clamp(1rem, 2.2vw, 1.7rem);
+  font-weight: 1000;
+  letter-spacing: 0.08em;
+}
+
+@keyframes effectFade {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  10%,
+  78% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .effectOverlay {
+    animation: none;
+  }
+}
+
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.soundButton,
+.soundEnabled {
+  min-height: 42px;
+  padding: 8px 14px;
+  border: 1px solid #475569;
+  border-radius: 999px;
+  color: white;
+  background: #0f172a;
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.soundEnabled {
+  border-color: #166534;
+  background: #14532d;
+}

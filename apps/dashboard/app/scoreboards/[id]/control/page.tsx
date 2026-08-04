@@ -226,6 +226,20 @@ export default function ScoreboardControlPage() {
     return request;
   }
 
+  async function triggerHorn(): Promise<void> {
+    if (!game || !canScore) return;
+
+    setError("");
+
+    try {
+      await api(`/games/${game.id}/broadcast`, {
+        method: "POST",
+        body: JSON.stringify({ type: "HORN" }),
+      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not trigger horn.");
+    }
+  }
   async function setExactClock(): Promise<void> {
     const minuteValue = Number(minutes);
     const secondValue = Number(seconds);
@@ -468,6 +482,18 @@ export default function ScoreboardControlPage() {
                     Reset clock
                   </button>
                 </div>
+              </div>
+
+              <div className={styles.controlGroup}>
+                <h3>Broadcast</h3>
+
+                <button
+                  className={styles.hornButton}
+                  disabled={!canScore}
+                  onClick={() => void triggerHorn()}
+                >
+                  Manual horn
+                </button>
               </div>
 
               <div className={styles.controlGroup}>

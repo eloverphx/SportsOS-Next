@@ -60,6 +60,22 @@ export async function gameEventRoutes(app: FastifyInstance): Promise<void> {
         type: result.event.type,
       });
       realtime().emit("game:event-created", { gameId: id.data, event: result.event });
+      realtime().emit("scoreboard:effect", {
+        gameId: id.data,
+        effectId: `game-event-${result.event.id}`,
+        type: result.event.type === "GOAL" ? "GOAL" : "PENALTY",
+        side: result.event.side,
+        playerName: result.event.playerName,
+        jerseyNumber: result.event.playerJerseyNumber,
+        infraction: result.event.penaltyCode,
+        penaltyMinutes: result.event.penaltyMinutes,
+        createdAt: result.event.createdAt,
+      });
+      realtime().emit("scoreboard:sound", {
+        gameId: id.data,
+        soundId: `game-event-sound-${result.event.id}`,
+        type: result.event.type === "GOAL" ? "GOAL" : "PENALTY",
+      });
       realtime().emit("game:updated", { id: id.data, organizationId: game.organizationId });
       return reply.code(201).send(result);
     } catch (cause) {
