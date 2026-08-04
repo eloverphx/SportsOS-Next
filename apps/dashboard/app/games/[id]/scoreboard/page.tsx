@@ -177,6 +177,8 @@ export default function ScoreboardPage() {
   const audioContext = useRef<AudioContext | null>(null);
   const priorDisplayedClock = useRef<number | null>(null);
   const periodHornPlayed = useRef(false);
+  const priorDisplayedIntermission = useRef<number | null>(null);
+  const intermissionHornPlayed = useRef(false);
 
   const playBroadcastSound = useCallback(
     (sound: BroadcastSound) => {
@@ -298,6 +300,11 @@ export default function ScoreboardPage() {
 
   const displayedClockMs = useMemo(() => (game ? effectiveRemainingMs(game, now) : 0), [game, now]);
 
+  const displayedIntermissionMs = useMemo(
+    () => (game ? effectiveIntermissionMs(game, now) : 0),
+    [game, now],
+  );
+
   useEffect(() => {
     if (!game) return;
 
@@ -319,6 +326,31 @@ export default function ScoreboardPage() {
 
     priorDisplayedClock.current = displayedClockMs;
   }, [displayedClockMs, game, soundEnabled]);
+
+  useEffect(() => {
+    if (!game) return;
+
+    const previous = priorDisplayedIntermission.current;
+
+    if (displayedIntermissionMs > 0) {
+      intermissionHornPlayed.current = false;
+    }
+
+    if (
+      soundEnabled &&
+      game.intermissionRunning &&
+      previous !== null &&
+      previous > 0 &&
+      displayedIntermissionMs === 0 &&
+      !intermissionHornPlayed.current
+    ) {
+      intermissionHornPlayed.current = true;
+      const context = audioContext.current;
+      if (context) playSound(context, "HORN");
+    }
+
+    priorDisplayedIntermission.current = displayedIntermissionMs;
+  }, [displayedIntermissionMs, game, soundEnabled]);
 
   const clock = formatClock(displayedClockMs);
 
@@ -439,7 +471,7 @@ export default function ScoreboardPage() {
           </span>
           <div className={styles.clock}>
             {game.intermissionRunning || game.intermissionRemainingMs > 0
-              ? formatClock(effectiveIntermissionMs(game, now))
+              ? formatClock(displayedIntermissionMs)
               : clock}
           </div>
           <span className={styles.clockState}>{game.clockRunning ? "RUNNING" : "PAUSED"}</span>

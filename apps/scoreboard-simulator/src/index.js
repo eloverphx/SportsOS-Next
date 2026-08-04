@@ -26,6 +26,9 @@ let activeEffectExpiresAt = 0;
 let previousHomeScore = null;
 let previousAwayScore = null;
 let previousPenaltyIds = new Set();
+let previousIntermissionMs = null;
+let hornSequence = 0;
+let hornReason = null;
 
 function effectiveRemainingMs(currentGame) {
   if (!currentGame) return 0;
@@ -36,6 +39,20 @@ function effectiveRemainingMs(currentGame) {
   return Math.max(
     0,
     currentGame.clockRemainingMs - (Date.now() - new Date(currentGame.clockStartedAt).getTime()),
+  );
+}
+
+function effectiveIntermissionRemainingMs(currentGame) {
+  if (!currentGame) return 0;
+
+  if (!currentGame.intermissionRunning || !currentGame.intermissionStartedAt) {
+    return Math.max(0, currentGame.intermissionRemainingMs ?? 0);
+  }
+
+  return Math.max(
+    0,
+    Number(currentGame.intermissionRemainingMs ?? 0) -
+      (Date.now() - new Date(currentGame.intermissionStartedAt).getTime()),
   );
 }
 
@@ -60,11 +77,22 @@ function state() {
     lastHeartbeatAt,
     lastGameFetchAt,
     lastError,
+    hornSequence,
+    hornReason,
     game: game
       ? {
           ...game,
           effectiveClockRemainingMs: effectiveRemainingMs(game),
-          formattedClock: formatClock(effectiveRemainingMs(game)),
+          effectiveIntermissionRemainingMs: effectiveIntermissionRemainingMs(game),
+          formattedClock: formatClock(
+            game.intermissionRunning || Number(game.intermissionRemainingMs ?? 0) > 0
+              ? effectiveIntermissionRemainingMs(game)
+              : effectiveRemainingMs(game),
+          ),
+          displayMode:
+            game.intermissionRunning || Number(game.intermissionRemainingMs ?? 0) > 0
+              ? "INTERMISSION"
+              : "GAME",
         }
       : null,
   };
@@ -114,6 +142,25 @@ async function fetchGame() {
     }
 
     const nextGame = body.game;
+    const nextIntermissionMs = effectiveIntermissionRemainingMs(nextGame);
+
+    if (
+      previousIntermissionMs !== null &&
+      previousIntermissionMs > 0 &&
+      nextIntermissionMs === 0 &&
+      nextGame.intermissionRunning
+    ) {
+      hornSequence += 1;
+      hornReason = "INTERMISSION_COMPLETE";
+      activeEffect = {
+        type: "HORN",
+        teamName: "Ready for next period",
+      };
+      activeEffectExpiresAt = Date.now() + 3500;
+      console.log("Intermission complete: horn triggered");
+    }
+
+    previousIntermissionMs = nextIntermissionMs;
 
     if (previousHomeScore !== null && nextGame.homeScore > previousHomeScore) {
       activeEffect = { type: "GOAL", teamName: nextGame.homeTeamName };
@@ -168,7 +215,11 @@ function html() {
 
   const effectHtml = activeEffect
     ? `<section class="effect"><strong>${
-        activeEffect.type === "GOAL" ? "GOAL!" : "PENALTY ENDED"
+        activeEffect.type === "GOAL"
+          ? "GOAL!"
+          : activeEffect.type === "HORN"
+            ? "HORN"
+            : "PENALTY ENDED"
       }</strong><span>${activeEffect.teamName}</span></section>`
     : "";
 
@@ -200,6 +251,8 @@ function html() {
   .effect strong { font-size:clamp(5rem,20vw,14rem); line-height:.85; }
   .effect span { margin-top:16px; font-size:clamp(2rem,6vw,5rem); font-weight:900; }
   .power-play { margin:0 0 16px; padding:10px 16px; border-radius:12px; text-align:center; background:#facc15; color:#111827; font-weight:1000; }
+  .intermission-ready { margin:0 0 16px; padding:12px 16px; border:1px solid #0f766e; border-radius:12px; text-align:center; color:#99f6e4; background:rgba(15,118,110,.18); font-weight:1000; }
+  .sound-button { border:1px solid #334155; border-radius:10px; padding:9px 12px; color:#fff; background:#0f172a; font:inherit; font-weight:900; cursor:pointer; }
   @media (max-width:720px) { .game { grid-template-columns:1fr 1fr; } .clock { grid-column:1/-1; grid-row:1; } }
 </style>
 </head>
@@ -211,9 +264,18 @@ ${effectHtml}
       <strong>SportsOS Device Simulator #${DEVICE_ID}</strong>
       <div class="muted">API: ${API_URL}</div>
     </div>
-    <span class="status">${current.connected ? "ONLINE" : "OFFLINE"}</span>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button id="sound-button" class="sound-button" type="button">Enable horn sound</button>
+      <span class="status">${current.connected ? "ONLINE" : "OFFLINE"}</span>
+    </div>
   </header>
   ${powerPlay}
+  ${
+    currentGame?.displayMode === "INTERMISSION" &&
+    currentGame.effectiveIntermissionRemainingMs === 0
+      ? '<div class="intermission-ready">INTERMISSION COMPLETE · READY FOR NEXT PERIOD</div>'
+      : ""
+  }
   ${
     currentGame
       ? `<section class="game">
@@ -224,9 +286,21 @@ ${effectHtml}
             <div class="score">${currentGame.awayScore}</div>
           </article>
           <section class="clock">
-            <span class="muted">${currentGame.periodLabel ?? `PERIOD ${currentGame.period}`}</span>
+            <span class="muted">${
+              currentGame.displayMode === "INTERMISSION"
+                ? "INTERMISSION"
+                : (currentGame.periodLabel ?? `PERIOD ${currentGame.period}`)
+            }</span>
             <strong>${currentGame.formattedClock}</strong>
-            <span class="muted">${currentGame.clockRunning ? "RUNNING" : "PAUSED"} · ${currentGame.status}</span>
+            <span class="muted">${
+              currentGame.displayMode === "INTERMISSION"
+                ? currentGame.effectiveIntermissionRemainingMs === 0
+                  ? "READY FOR NEXT PERIOD"
+                  : currentGame.intermissionRunning
+                    ? "RUNNING · PENALTIES PAUSED"
+                    : "PAUSED · PENALTIES PAUSED"
+                : `${currentGame.clockRunning ? "RUNNING" : "PAUSED"} · ${currentGame.status}`
+            }</span>
           </section>
           <article class="team">
             <span class="muted">HOME</span>
@@ -251,6 +325,75 @@ ${effectHtml}
   }
   ${current.lastError ? `<p class="error">${current.lastError}</p>` : ""}
 </main>
+<script>
+(() => {
+  const enabledKey = "sportsos-simulator-sound-enabled";
+  const sequenceKey = "sportsos-simulator-horn-sequence";
+  const button = document.getElementById("sound-button");
+
+  function playHorn() {
+    const AudioContextClass =
+      window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+
+    const context = new AudioContextClass();
+    const start = context.currentTime + 0.02;
+
+    for (const [frequency, offset, duration] of [
+      [190, 0, 1.25],
+      [145, 0.08, 1.35],
+    ]) {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+
+      oscillator.type = "square";
+      oscillator.frequency.setValueAtTime(frequency, start + offset);
+      gain.gain.setValueAtTime(0.0001, start + offset);
+      gain.gain.exponentialRampToValueAtTime(
+        0.22,
+        start + offset + 0.02,
+      );
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        start + offset + duration,
+      );
+
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(start + offset);
+      oscillator.stop(start + offset + duration + 0.03);
+    }
+  }
+
+  function updateButton() {
+    const enabled = localStorage.getItem(enabledKey) === "true";
+    button.textContent = enabled ? "Horn sound enabled" : "Enable horn sound";
+  }
+
+  button.addEventListener("click", () => {
+    const next = localStorage.getItem(enabledKey) !== "true";
+    localStorage.setItem(enabledKey, String(next));
+    updateButton();
+
+    if (next) playHorn();
+  });
+
+  updateButton();
+
+  const sequence = String(${current.hornSequence});
+  const previous = localStorage.getItem(sequenceKey);
+
+  if (
+    localStorage.getItem(enabledKey) === "true" &&
+    previous !== null &&
+    previous !== sequence
+  ) {
+    playHorn();
+  }
+
+  localStorage.setItem(sequenceKey, sequence);
+})();
+</script>
 </body>
 </html>`;
 }

@@ -92,6 +92,10 @@ export const scoreActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("startIntermission") }),
   z.object({ action: z.literal("pauseIntermission") }),
   z.object({ action: z.literal("resetIntermission") }),
+  z.object({
+    action: z.literal("setIntermission"),
+    intermissionLengthMs: z.coerce.number().int().min(0).max(3_600_000),
+  }),
   z.object({ action: z.literal("skipIntermission") }),
   z.object({ action: z.literal("nextPeriod") }),
   z.object({ action: z.literal("startOvertime") }),

@@ -72,6 +72,10 @@ type ScoringAction =
   | { action: "startIntermission" }
   | { action: "pauseIntermission" }
   | { action: "resetIntermission" }
+  | {
+      action: "setIntermission";
+      intermissionLengthMs: number;
+    }
   | { action: "skipIntermission" }
   | { action: "nextPeriod" }
   | { action: "startOvertime" }
@@ -118,6 +122,8 @@ export default function ScoreboardControlPage() {
   const [now, setNow] = useState(() => Date.now());
   const [minutes, setMinutes] = useState("20");
   const [seconds, setSeconds] = useState("00");
+  const [intermissionMinutes, setIntermissionMinutes] = useState("15");
+  const [intermissionSeconds, setIntermissionSeconds] = useState("00");
   const [eventRefreshToken, setEventRefreshToken] = useState(0);
   const [showPeriodEndDialog, setShowPeriodEndDialog] = useState(false);
   const actionQueue = useRef<Promise<void>>(Promise.resolve());
@@ -218,6 +224,15 @@ export default function ScoreboardControlPage() {
   useEffect(() => {
     if (!game) return;
 
+    const totalIntermissionSeconds = Math.ceil(game.intermissionLengthMs / 1000);
+
+    setIntermissionMinutes(String(Math.floor(totalIntermissionSeconds / 60)));
+    setIntermissionSeconds(String(totalIntermissionSeconds % 60).padStart(2, "0"));
+  }, [game?.id, game?.intermissionLengthMs]);
+
+  useEffect(() => {
+    if (!game) return;
+
     const totalSeconds = Math.ceil(game.periodLengthMs / 1000);
 
     setMinutes(String(Math.floor(totalSeconds / 60)));
@@ -295,6 +310,28 @@ export default function ScoreboardControlPage() {
       setError(cause instanceof Error ? cause.message : "Could not trigger horn.");
     }
   }
+  async function setExactIntermission(): Promise<void> {
+    const minuteValue = Number(intermissionMinutes);
+    const secondValue = Number(intermissionSeconds);
+
+    if (
+      !Number.isInteger(minuteValue) ||
+      minuteValue < 0 ||
+      minuteValue > 60 ||
+      !Number.isInteger(secondValue) ||
+      secondValue < 0 ||
+      secondValue > 59
+    ) {
+      setError("Enter a valid intermission time.");
+      return;
+    }
+
+    await score({
+      action: "setIntermission",
+      intermissionLengthMs: minuteValue * 60_000 + secondValue * 1000,
+    });
+  }
+
   async function setExactClock(): Promise<void> {
     const minuteValue = Number(minutes);
     const secondValue = Number(seconds);
@@ -567,6 +604,37 @@ export default function ScoreboardControlPage() {
                         : "PAUSED · PENALTIES PAUSED"}
                   </span>
                 </div>
+
+                <div className={styles.clockInputs}>
+                  <label>
+                    Intermission minutes
+                    <input
+                      type="number"
+                      min="0"
+                      max="60"
+                      value={intermissionMinutes}
+                      onChange={(event) => setIntermissionMinutes(event.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    Seconds
+                    <input
+                      type="number"
+                      min="0"
+                      max="59"
+                      value={intermissionSeconds}
+                      onChange={(event) => setIntermissionSeconds(event.target.value)}
+                    />
+                  </label>
+                </div>
+
+                <button
+                  disabled={!canScore || game.intermissionRunning}
+                  onClick={() => void setExactIntermission()}
+                >
+                  Set intermission clock
+                </button>
 
                 <div className={styles.buttonRow}>
                   <button

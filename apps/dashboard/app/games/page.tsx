@@ -50,6 +50,11 @@ type Game = {
   clockRemainingMs: number;
   clockRunning: boolean;
   clockStartedAt: string | null;
+  regulationPeriods: number;
+  regulationPeriodLengthMs: number;
+  intermissionLengthMs: number;
+  overtimeEnabled: boolean;
+  overtimeLengthMs: number;
   notes: string | null;
 };
 
@@ -66,7 +71,48 @@ type Form = {
   status: GameStatus;
   homeScore: number;
   awayScore: number;
+  regulationPeriods: number;
+  regulationPeriodLengthMinutes: number;
+  intermissionLengthMinutes: number;
+  overtimeEnabled: boolean;
+  overtimeLengthMinutes: number;
   notes: string;
+};
+
+type RulesPreset = "CUSTOM" | "YOUTH" | "HIGH_SCHOOL" | "COLLEGE";
+
+const RULE_PRESETS: Record<
+  Exclude<RulesPreset, "CUSTOM">,
+  Pick<
+    Form,
+    | "regulationPeriods"
+    | "regulationPeriodLengthMinutes"
+    | "intermissionLengthMinutes"
+    | "overtimeEnabled"
+    | "overtimeLengthMinutes"
+  >
+> = {
+  YOUTH: {
+    regulationPeriods: 3,
+    regulationPeriodLengthMinutes: 15,
+    intermissionLengthMinutes: 10,
+    overtimeEnabled: true,
+    overtimeLengthMinutes: 5,
+  },
+  HIGH_SCHOOL: {
+    regulationPeriods: 3,
+    regulationPeriodLengthMinutes: 17,
+    intermissionLengthMinutes: 15,
+    overtimeEnabled: true,
+    overtimeLengthMinutes: 8,
+  },
+  COLLEGE: {
+    regulationPeriods: 3,
+    regulationPeriodLengthMinutes: 20,
+    intermissionLengthMinutes: 15,
+    overtimeEnabled: true,
+    overtimeLengthMinutes: 5,
+  },
 };
 
 const statuses: readonly GameStatus[] = ["SCHEDULED", "LIVE", "FINAL", "POSTPONED", "CANCELED"];
@@ -84,6 +130,11 @@ const blank: Form = {
   status: "SCHEDULED",
   homeScore: 0,
   awayScore: 0,
+  regulationPeriods: 3,
+  regulationPeriodLengthMinutes: 20,
+  intermissionLengthMinutes: 15,
+  overtimeEnabled: true,
+  overtimeLengthMinutes: 5,
   notes: "",
 };
 
@@ -112,6 +163,7 @@ export default function GamesPage() {
   const [busy, setBusy] = useState(false);
   const [scoringGameId, setScoringGameId] = useState<number | null>(null);
   const [scoringBusy, setScoringBusy] = useState(false);
+  const [rulesPreset, setRulesPreset] = useState<RulesPreset>("COLLEGE");
 
   const canManage = userHasPermission(currentUser, PERMISSIONS.GAME_MANAGE);
   const canScore = userHasPermission(currentUser, PERMISSIONS.GAME_SCORE);
@@ -190,9 +242,22 @@ export default function GamesPage() {
     }));
   }, [form.organizationId, organizationSeasons]);
 
+  function applyRulesPreset(preset: RulesPreset): void {
+    setRulesPreset(preset);
+
+    if (preset === "CUSTOM") return;
+
+    setForm((current) => ({
+      ...current,
+      ...RULE_PRESETS[preset],
+    }));
+  }
+
   function reset(): void {
     setEditing(null);
     setError("");
+    setRulesPreset("COLLEGE");
+    setRulesPreset("COLLEGE");
     setForm({
       ...blank,
       organizationId: organizations[0]?.id ?? 0,
@@ -203,6 +268,7 @@ export default function GamesPage() {
     if (!canManage) return;
 
     setEditing(game.id);
+    setRulesPreset("CUSTOM");
     setForm({
       organizationId: game.organizationId,
       seasonId: game.seasonId,
@@ -216,6 +282,11 @@ export default function GamesPage() {
       status: game.status,
       homeScore: game.homeScore,
       awayScore: game.awayScore,
+      regulationPeriods: game.regulationPeriods,
+      regulationPeriodLengthMinutes: game.regulationPeriodLengthMs / 60_000,
+      intermissionLengthMinutes: game.intermissionLengthMs / 60_000,
+      overtimeEnabled: game.overtimeEnabled,
+      overtimeLengthMinutes: game.overtimeLengthMs / 60_000,
       notes: game.notes ?? "",
     });
 
@@ -261,6 +332,9 @@ export default function GamesPage() {
           homeExternalName: form.homeTeamId ? null : form.homeExternalName.trim() || null,
           awayExternalName: form.awayTeamId ? null : form.awayExternalName.trim() || null,
           scheduledStart: new Date(form.scheduledStart).toISOString(),
+          regulationPeriodLengthMs: Math.round(form.regulationPeriodLengthMinutes * 60_000),
+          intermissionLengthMs: Math.round(form.intermissionLengthMinutes * 60_000),
+          overtimeLengthMs: Math.round(form.overtimeLengthMinutes * 60_000),
           venue: form.venue || null,
           notes: form.notes || null,
         }),
@@ -532,6 +606,128 @@ export default function GamesPage() {
                   />
                 </label>
 
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    padding: "18px",
+                    border: "1px solid #334155",
+                    borderRadius: "16px",
+                    background: "rgba(15, 23, 42, 0.55)",
+                  }}
+                >
+                  <h3 style={{ marginTop: 0 }}>Game rules</h3>
+
+                  <div className="formGrid">
+                    <label>
+                      Game rules preset
+                      <select
+                        value={rulesPreset}
+                        onChange={(event) => applyRulesPreset(event.target.value as RulesPreset)}
+                      >
+                        <option value="YOUTH">Youth hockey</option>
+                        <option value="HIGH_SCHOOL">High school</option>
+                        <option value="COLLEGE">College / standard</option>
+                        <option value="CUSTOM">Custom</option>
+                      </select>
+                    </label>
+
+                    <label>
+                      Regulation periods
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={form.regulationPeriods}
+                        onChange={(event) => {
+                          setRulesPreset("CUSTOM");
+                          setForm({
+                            ...form,
+                            regulationPeriods: Number(event.target.value),
+                          });
+                        }}
+                      />
+                    </label>
+
+                    <label>
+                      Period length (minutes)
+                      <input
+                        type="number"
+                        min="1"
+                        max="120"
+                        step="0.5"
+                        value={form.regulationPeriodLengthMinutes}
+                        onChange={(event) => {
+                          setRulesPreset("CUSTOM");
+                          setForm({
+                            ...form,
+                            regulationPeriodLengthMinutes: Number(event.target.value),
+                          });
+                        }}
+                      />
+                    </label>
+
+                    <label>
+                      Intermission (minutes)
+                      <input
+                        type="number"
+                        min="0"
+                        max="60"
+                        step="0.5"
+                        value={form.intermissionLengthMinutes}
+                        onChange={(event) => {
+                          setRulesPreset("CUSTOM");
+                          setForm({
+                            ...form,
+                            intermissionLengthMinutes: Number(event.target.value),
+                          });
+                        }}
+                      />
+                    </label>
+
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        checked={form.overtimeEnabled}
+                        onChange={(event) => {
+                          setRulesPreset("CUSTOM");
+                          setForm({
+                            ...form,
+                            overtimeEnabled: event.target.checked,
+                          });
+                        }}
+                      />
+                      Overtime enabled
+                    </label>
+
+                    {form.overtimeEnabled && (
+                      <label>
+                        Overtime length (minutes)
+                        <input
+                          type="number"
+                          min="1"
+                          max="60"
+                          step="0.5"
+                          value={form.overtimeLengthMinutes}
+                          onChange={(event) => {
+                            setRulesPreset("CUSTOM");
+                            setForm({
+                              ...form,
+                              overtimeLengthMinutes: Number(event.target.value),
+                            });
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  {editing && games.find((entry) => entry.id === editing)?.status === "LIVE" && (
+                    <p className="muted">
+                      Saving these rules will not reset the live game clock. Use the scoring
+                      controller to change the current clock.
+                    </p>
+                  )}
+                </div>
+
                 <label>
                   Notes
                   <textarea
@@ -578,6 +774,13 @@ export default function GamesPage() {
                 {new Date(game.scheduledStart).toLocaleString()} · {game.seasonName}
               </p>
               <p>{game.venue || "Venue not set"}</p>
+              <p>
+                {game.regulationPeriods} × {game.regulationPeriodLengthMs / 60_000} min periods ·{" "}
+                {game.intermissionLengthMs / 60_000} min intermission ·{" "}
+                {game.overtimeEnabled
+                  ? `${game.overtimeLengthMs / 60_000} min overtime`
+                  : "No overtime"}
+              </p>
               {game.notes && <p>{game.notes}</p>}
 
               <div className="cardActions">

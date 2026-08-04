@@ -311,9 +311,6 @@ export async function createGame(input: GameInput): Promise<Game> {
        intermission_length_ms,
        overtime_enabled,
        overtime_length_ms,
-       intermission_remaining_ms,
-       intermission_running,
-       intermission_started_at,
        notes
      )
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -444,7 +441,10 @@ async function lockGame(connection: PoolConnection, id: number): Promise<LockedS
        regulation_period_length_ms,
        intermission_length_ms,
        overtime_enabled,
-       overtime_length_ms
+       overtime_length_ms,
+       intermission_remaining_ms,
+       intermission_running,
+       intermission_started_at
      FROM games
      WHERE id = ?
      FOR UPDATE`,
@@ -477,6 +477,7 @@ export async function applyGameScoringAction(
     let clockRemainingMs = materializedRemainingMs(row);
     let clockRunning = Boolean(row.clock_running) && clockRemainingMs > 0;
     let clockStartedAt: Date | null = clockRunning ? new Date() : null;
+    let intermissionLengthMs = Number(row.intermission_length_ms ?? 0);
     let intermissionRemainingMs = effectiveIntermissionRemainingMs(
       Number(row.intermission_remaining_ms ?? 0),
       Boolean(row.intermission_running),
@@ -528,7 +529,13 @@ export async function applyGameScoringAction(
         intermissionStartedAt = null;
         break;
       case "resetIntermission":
-        intermissionRemainingMs = Number(row.intermission_length_ms ?? 0);
+        intermissionRemainingMs = intermissionLengthMs;
+        intermissionRunning = false;
+        intermissionStartedAt = null;
+        break;
+      case "setIntermission":
+        intermissionLengthMs = action.intermissionLengthMs;
+        intermissionRemainingMs = action.intermissionLengthMs;
         intermissionRunning = false;
         intermissionStartedAt = null;
         break;
