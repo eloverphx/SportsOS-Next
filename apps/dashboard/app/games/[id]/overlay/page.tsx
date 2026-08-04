@@ -30,6 +30,9 @@ type Game = {
   clockRemainingMs: number;
   clockRunning: boolean;
   clockStartedAt: string | null;
+  intermissionRemainingMs: number;
+  intermissionRunning: boolean;
+  intermissionStartedAt: string | null;
   periodLabel: string;
   penalties: Penalty[];
 };
@@ -42,6 +45,24 @@ function remaining(game: Game, now: number): number {
 function penaltyRemaining(penalty: Penalty, now: number): number {
   if (!penalty.running || !penalty.startedAt) return Math.max(0, penalty.remainingMs);
   return Math.max(0, penalty.remainingMs - (now - new Date(penalty.startedAt).getTime()));
+}
+
+function effectiveIntermissionMs(
+  game: {
+    intermissionRunning: boolean;
+    intermissionStartedAt: string | null;
+    intermissionRemainingMs: number;
+  },
+  now: number,
+): number {
+  if (!game.intermissionRunning || !game.intermissionStartedAt) {
+    return Math.max(0, game.intermissionRemainingMs);
+  }
+
+  return Math.max(
+    0,
+    game.intermissionRemainingMs - (now - new Date(game.intermissionStartedAt).getTime()),
+  );
 }
 
 function formatClock(ms: number): string {
@@ -129,8 +150,18 @@ export default function OverlayPage() {
           <b>{game.awayScore}</b>
         </div>
         <div className={styles.center}>
-          <span>{game.periodLabel === "OVERTIME" ? "OT" : `P${game.period}`}</span>
-          <strong>{formatClock(remaining(game, now))}</strong>
+          <span>
+            {game.intermissionRunning || game.intermissionRemainingMs > 0
+              ? "INT"
+              : game.periodLabel === "OVERTIME"
+                ? "OT"
+                : `P${game.period}`}
+          </span>
+          <strong>
+            {game.intermissionRunning || game.intermissionRemainingMs > 0
+              ? formatClock(effectiveIntermissionMs(game, now))
+              : formatClock(remaining(game, now))}
+          </strong>
           {powerPlay && <small>POWER PLAY · {powerPlay}</small>}
         </div>
         <div className={`${styles.team} ${styles.home}`}>

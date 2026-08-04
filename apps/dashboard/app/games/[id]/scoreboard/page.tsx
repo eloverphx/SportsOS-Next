@@ -46,6 +46,9 @@ type ScoreboardGame = {
   clockRemainingMs: number;
   clockRunning: boolean;
   clockStartedAt: string | null;
+  intermissionRemainingMs: number;
+  intermissionRunning: boolean;
+  intermissionStartedAt: string | null;
   regulationPeriods: number;
   regulationPeriodLengthMs: number;
   intermissionLengthMs: number;
@@ -92,6 +95,24 @@ function effectiveRemainingMs(game: ScoreboardGame, now: number): number {
 function effectivePenaltyRemaining(penalty: Penalty, now: number): number {
   if (!penalty.running || !penalty.startedAt) return Math.max(0, penalty.remainingMs);
   return Math.max(0, penalty.remainingMs - (now - new Date(penalty.startedAt).getTime()));
+}
+
+function effectiveIntermissionMs(
+  game: {
+    intermissionRunning: boolean;
+    intermissionStartedAt: string | null;
+    intermissionRemainingMs: number;
+  },
+  now: number,
+): number {
+  if (!game.intermissionRunning || !game.intermissionStartedAt) {
+    return Math.max(0, game.intermissionRemainingMs);
+  }
+
+  return Math.max(
+    0,
+    game.intermissionRemainingMs - (now - new Date(game.intermissionStartedAt).getTime()),
+  );
 }
 
 function formatClock(milliseconds: number): string {
@@ -411,8 +432,16 @@ export default function ScoreboardPage() {
         </article>
 
         <section className={styles.clockPanel}>
-          <span className={styles.period}>{game.periodLabel ?? `PERIOD ${game.period}`}</span>
-          <div className={styles.clock}>{clock}</div>
+          <span className={styles.period}>
+            {game.intermissionRunning || game.intermissionRemainingMs > 0
+              ? "INTERMISSION"
+              : (game.periodLabel ?? `PERIOD ${game.period}`)}
+          </span>
+          <div className={styles.clock}>
+            {game.intermissionRunning || game.intermissionRemainingMs > 0
+              ? formatClock(effectiveIntermissionMs(game, now))
+              : clock}
+          </div>
           <span className={styles.clockState}>{game.clockRunning ? "RUNNING" : "PAUSED"}</span>
         </section>
 

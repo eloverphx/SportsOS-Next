@@ -55,6 +55,10 @@ type Game = {
   regulationPeriods: number;
   regulationPeriodLengthMs: number;
   intermissionLengthMs: number;
+  intermissionRemainingMs: number;
+  intermissionRunning: boolean;
+  intermissionStartedAt: string | null;
+  intermissionReady: boolean;
   overtimeEnabled: boolean;
   overtimeLengthMs: number;
   periodLabel: string;
@@ -65,7 +69,13 @@ type ScoringAction =
   | { action: "adjustScore"; side: "home" | "away"; amount: number }
   | { action: "startClock" }
   | { action: "pauseClock" }
+  | { action: "startIntermission" }
+  | { action: "pauseIntermission" }
+  | { action: "resetIntermission" }
+  | { action: "skipIntermission" }
   | { action: "nextPeriod" }
+  | { action: "startOvertime" }
+  | { action: "finishGame" }
   | { action: "resetClock" }
   | { action: "adjustClock"; amountMs: number }
   | { action: "setClock"; clockRemainingMs: number }
@@ -78,6 +88,17 @@ function remainingMs(game: Game, now: number): number {
   }
 
   return Math.max(0, game.clockRemainingMs - (now - new Date(game.clockStartedAt).getTime()));
+}
+
+function intermissionRemainingMs(game: Game, now: number): number {
+  if (!game.intermissionRunning || !game.intermissionStartedAt) {
+    return Math.max(0, game.intermissionRemainingMs);
+  }
+
+  return Math.max(
+    0,
+    game.intermissionRemainingMs - (now - new Date(game.intermissionStartedAt).getTime()),
+  );
 }
 
 function formatClock(milliseconds: number): string {
@@ -98,15 +119,20 @@ export default function ScoreboardControlPage() {
   const [minutes, setMinutes] = useState("20");
   const [seconds, setSeconds] = useState("00");
   const [eventRefreshToken, setEventRefreshToken] = useState(0);
+  const [showPeriodEndDialog, setShowPeriodEndDialog] = useState(false);
   const actionQueue = useRef<Promise<void>>(Promise.resolve());
   const pendingActions = useRef(0);
 
   const canScore = userHasPermission(user, PERMISSIONS.GAME_SCORE);
 
-  const displayedClock = useMemo(
-    () => (game ? formatClock(remainingMs(game, now)) : "--:--"),
-    [game, now],
-  );
+  const displayedClockMs = useMemo(() => (game ? remainingMs(game, now) : 0), [game, now]);
+
+  const displayedClock = formatClock(displayedClockMs);
+
+  const displayedIntermissionMs = game ? intermissionRemainingMs(game, now) : 0;
+  const displayedIntermission = formatClock(displayedIntermissionMs);
+
+  const canAdvancePeriod = Boolean(game) && game?.status !== "FINAL" && displayedClockMs === 0;
 
   const load = useCallback(async () => {
     if (!Number.isInteger(deviceId) || deviceId <= 0) {
@@ -234,6 +260,27 @@ export default function ScoreboardControlPage() {
     return request;
   }
 
+  function advanceGameFlow(): void {
+    if (!game || !canScore || !canAdvancePeriod) return;
+
+    if (game.period >= game.regulationPeriods) {
+      setShowPeriodEndDialog(true);
+      return;
+    }
+
+    void score({ action: "nextPeriod" });
+  }
+
+  async function chooseOvertime(): Promise<void> {
+    setShowPeriodEndDialog(false);
+    await score({ action: "startOvertime" });
+  }
+
+  async function chooseFinal(): Promise<void> {
+    setShowPeriodEndDialog(false);
+    await score({ action: "finishGame" });
+  }
+
   async function triggerHorn(): Promise<void> {
     if (!game || !canScore) return;
 
@@ -277,6 +324,13 @@ export default function ScoreboardControlPage() {
             <span className={styles.eyebrow}>Scoreboard control</span>
             <h1>{device?.name ?? "Loading device…"}</h1>
             <p>{device?.location || device?.organizationName || ""}</p>
+
+            {game && (
+              <p>
+                Game rules: {game.regulationPeriods} × {game.regulationPeriodLengthMs / 60_000} min
+                {game.overtimeEnabled ? ` · OT ${game.overtimeLengthMs / 60_000} min` : " · No OT"}
+              </p>
+            )}
           </div>
 
           <div className={styles.headerActions}>
@@ -315,7 +369,7 @@ export default function ScoreboardControlPage() {
 
                 <div className={styles.scoreButtons}>
                   <button
-                    disabled={!canScore}
+                    disabled={!canScore || Boolean(game?.intermissionRunning)}
                     onClick={() =>
                       void score({
                         action: "adjustScore",
@@ -427,20 +481,10 @@ export default function ScoreboardControlPage() {
 
                   <button
                     className={styles.nextPeriodButton}
-                    disabled={!canScore || !game.canAdvancePeriod}
-                    onClick={() => {
-                      const finalRegulation = game.period >= game.regulationPeriods;
-                      const tied = game.homeScore === game.awayScore;
-                      const willFinish = finalRegulation && !(tied && game.overtimeEnabled);
-
-                      if (willFinish && !window.confirm("Mark this game final?")) {
-                        return;
-                      }
-
-                      void score({ action: "nextPeriod" });
-                    }}
+                    disabled={!canScore || !canAdvancePeriod}
+                    onClick={advanceGameFlow}
                   >
-                    Next period / finish
+                    {game.period >= game.regulationPeriods ? "End regulation" : "Next period"}
                   </button>
                 </div>
               </div>
@@ -506,6 +550,50 @@ export default function ScoreboardControlPage() {
 
                   <button disabled={!canScore} onClick={() => void score({ action: "resetClock" })}>
                     Reset clock
+                  </button>
+                </div>
+              </div>
+
+              <div className={styles.controlGroup}>
+                <h3>Intermission</h3>
+
+                <div className={styles.intermissionClock}>
+                  <strong>{displayedIntermission}</strong>
+                  <span>
+                    {game.intermissionRunning
+                      ? "RUNNING · PENALTIES PAUSED"
+                      : displayedIntermissionMs === 0
+                        ? "READY FOR NEXT PERIOD"
+                        : "PAUSED · PENALTIES PAUSED"}
+                  </span>
+                </div>
+
+                <div className={styles.buttonRow}>
+                  <button
+                    disabled={!canScore || displayedClockMs > 0}
+                    onClick={() =>
+                      void score({
+                        action: game.intermissionRunning
+                          ? "pauseIntermission"
+                          : "startIntermission",
+                      })
+                    }
+                  >
+                    {game.intermissionRunning ? "Pause intermission" : "Start intermission"}
+                  </button>
+
+                  <button
+                    disabled={!canScore}
+                    onClick={() => void score({ action: "resetIntermission" })}
+                  >
+                    Reset intermission
+                  </button>
+
+                  <button
+                    disabled={!canScore}
+                    onClick={() => void score({ action: "skipIntermission" })}
+                  >
+                    Skip intermission
                   </button>
                 </div>
               </div>
@@ -577,6 +665,58 @@ export default function ScoreboardControlPage() {
               <p className={styles.error}>
                 Your account does not have permission to score this game.
               </p>
+            )}
+
+            {showPeriodEndDialog && (
+              <div
+                className={styles.periodEndBackdrop}
+                role="presentation"
+                onClick={() => setShowPeriodEndDialog(false)}
+              >
+                <section
+                  className={styles.periodEndDialog}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="period-end-title"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <span className={styles.eyebrow}>Regulation complete</span>
+
+                  <h2 id="period-end-title">What happens next?</h2>
+
+                  <p>
+                    {game.awayTeamName} {game.awayScore} – {game.homeScore} {game.homeTeamName}
+                  </p>
+
+                  <div className={styles.periodEndActions}>
+                    {game.overtimeEnabled && (
+                      <button
+                        type="button"
+                        className={styles.overtimeButton}
+                        onClick={() => void chooseOvertime()}
+                      >
+                        Start overtime
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      className={styles.finalChoiceButton}
+                      onClick={() => void chooseFinal()}
+                    >
+                      Mark game final
+                    </button>
+
+                    <button
+                      type="button"
+                      className={styles.cancelChoiceButton}
+                      onClick={() => setShowPeriodEndDialog(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </section>
+              </div>
             )}
           </>
         )}

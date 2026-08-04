@@ -51,6 +51,17 @@ function effectiveClockRemainingMs(
   return Math.max(0, storedRemainingMs - (Date.now() - started.getTime()));
 }
 
+function effectiveIntermissionRemainingMs(
+  storedRemainingMs: number,
+  running: boolean,
+  startedAt: unknown,
+): number {
+  if (!running) return storedRemainingMs;
+  const started = startedAt instanceof Date ? startedAt : new Date(String(startedAt));
+  if (Number.isNaN(started.getTime())) return storedRemainingMs;
+  return Math.max(0, storedRemainingMs - (Date.now() - started.getTime()));
+}
+
 function mapGame(row: RowDataPacket): Game {
   const storedRemainingMs = Number(row.clock_remaining_ms ?? 0);
   const clockRunning = Boolean(row.clock_running);
@@ -58,6 +69,14 @@ function mapGame(row: RowDataPacket): Game {
     storedRemainingMs,
     clockRunning,
     row.clock_started_at,
+  );
+
+  const intermissionStoredRemainingMs = Number(row.intermission_remaining_ms ?? 0);
+  const intermissionRunning = Boolean(row.intermission_running);
+  const intermissionRemainingMs = effectiveIntermissionRemainingMs(
+    intermissionStoredRemainingMs,
+    intermissionRunning,
+    row.intermission_started_at,
   );
 
   const homeExternalName = row.home_external_name == null ? null : String(row.home_external_name);
@@ -130,13 +149,21 @@ function mapGame(row: RowDataPacket): Game {
       row.regulation_period_length_ms ?? row.period_length_ms ?? 1_200_000,
     ),
     intermissionLengthMs: Number(row.intermission_length_ms ?? 900_000),
+    intermissionRemainingMs,
+    intermissionRunning: intermissionRunning && intermissionRemainingMs > 0,
+    intermissionStartedAt:
+      intermissionRunning && intermissionRemainingMs > 0 ? new Date().toISOString() : null,
+    intermissionReady:
+      intermissionStoredRemainingMs === 0 &&
+      !intermissionRunning &&
+      Number(row.clock_remaining_ms ?? 0) === 0,
     overtimeEnabled: Boolean(row.overtime_enabled ?? true),
     overtimeLengthMs: Number(row.overtime_length_ms ?? 300_000),
     periodLabel:
       Number(row.period ?? 1) > Number(row.regulation_periods ?? 3)
         ? "OVERTIME"
         : `PERIOD ${Number(row.period ?? 1)}`,
-    canAdvancePeriod: String(row.status) !== "FINAL" && Number(row.clock_remaining_ms ?? 0) === 0,
+    canAdvancePeriod: String(row.status) !== "FINAL" && clockRemainingMs === 0,
     notes: row.notes == null ? null : String(row.notes),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -284,6 +311,9 @@ export async function createGame(input: GameInput): Promise<Game> {
        intermission_length_ms,
        overtime_enabled,
        overtime_length_ms,
+       intermission_remaining_ms,
+       intermission_running,
+       intermission_started_at,
        notes
      )
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -385,6 +415,9 @@ interface LockedScoringRow extends RowDataPacket {
   intermission_length_ms: number;
   overtime_enabled: number;
   overtime_length_ms: number;
+  intermission_remaining_ms: number;
+  intermission_running: number;
+  intermission_started_at: Date | null;
 }
 
 function materializedRemainingMs(row: LockedScoringRow): number {
@@ -444,6 +477,13 @@ export async function applyGameScoringAction(
     let clockRemainingMs = materializedRemainingMs(row);
     let clockRunning = Boolean(row.clock_running) && clockRemainingMs > 0;
     let clockStartedAt: Date | null = clockRunning ? new Date() : null;
+    let intermissionRemainingMs = effectiveIntermissionRemainingMs(
+      Number(row.intermission_remaining_ms ?? 0),
+      Boolean(row.intermission_running),
+      row.intermission_started_at,
+    );
+    let intermissionRunning = Boolean(row.intermission_running) && intermissionRemainingMs > 0;
+    let intermissionStartedAt: Date | null = intermissionRunning ? new Date() : null;
 
     await materializePenaltyClocks(connection, id);
     const previousClockRemainingMs = clockRemainingMs;
@@ -461,6 +501,9 @@ export async function applyGameScoringAction(
         awayScore = action.awayScore;
         break;
       case "startClock":
+        if (intermissionRunning) {
+          throw new Error("Pause or finish intermission before starting the game clock");
+        }
         if (clockRemainingMs > 0) {
           clockRunning = true;
           clockStartedAt = new Date();
@@ -471,30 +514,84 @@ export async function applyGameScoringAction(
         clockRunning = false;
         clockStartedAt = null;
         break;
+      case "startIntermission":
+        clockRunning = false;
+        clockStartedAt = null;
+        if (intermissionRemainingMs <= 0) {
+          intermissionRemainingMs = Number(row.intermission_length_ms ?? 0);
+        }
+        intermissionRunning = intermissionRemainingMs > 0;
+        intermissionStartedAt = intermissionRunning ? new Date() : null;
+        break;
+      case "pauseIntermission":
+        intermissionRunning = false;
+        intermissionStartedAt = null;
+        break;
+      case "resetIntermission":
+        intermissionRemainingMs = Number(row.intermission_length_ms ?? 0);
+        intermissionRunning = false;
+        intermissionStartedAt = null;
+        break;
+      case "skipIntermission":
+        intermissionRemainingMs = 0;
+        intermissionRunning = false;
+        intermissionStartedAt = null;
+        break;
       case "nextPeriod": {
         clockRunning = false;
         clockStartedAt = null;
 
         const regulationPeriods = Number(row.regulation_periods ?? 3);
-        const regulationLength = Number(row.regulation_period_length_ms ?? periodLengthMs);
-        const overtimeEnabled = Boolean(row.overtime_enabled);
-        const overtimeLength = Number(row.overtime_length_ms ?? 300_000);
-        const tied = homeScore === awayScore;
+        const regulationLength = periodLengthMs;
 
-        if (period < regulationPeriods) {
-          period += 1;
-          periodLengthMs = regulationLength;
-          clockRemainingMs = regulationLength;
-        } else if (period === regulationPeriods && tied && overtimeEnabled) {
-          period += 1;
-          periodLengthMs = overtimeLength;
-          clockRemainingMs = overtimeLength;
-        } else {
-          status = "FINAL";
-          clockRemainingMs = 0;
+        if (period >= regulationPeriods) {
+          throw new Error("Choose overtime or final after regulation has ended");
         }
+
+        period += 1;
+        periodLengthMs = regulationLength;
+        clockRemainingMs = regulationLength;
+        intermissionRemainingMs = 0;
+        intermissionRunning = false;
+        intermissionStartedAt = null;
         break;
       }
+
+      case "startOvertime": {
+        clockRunning = false;
+        clockStartedAt = null;
+
+        const regulationPeriods = Number(row.regulation_periods ?? 3);
+        const overtimeEnabled = Boolean(row.overtime_enabled);
+        const overtimeLength = Number(row.overtime_length_ms ?? 300_000);
+
+        if (!overtimeEnabled) {
+          throw new Error("Overtime is disabled for this game");
+        }
+
+        if (period < regulationPeriods) {
+          throw new Error("Regulation has not ended");
+        }
+
+        period = Math.max(period + 1, regulationPeriods + 1);
+        periodLengthMs = overtimeLength;
+        clockRemainingMs = overtimeLength;
+        clockRunning = false;
+        clockStartedAt = null;
+        status = "LIVE";
+        intermissionRemainingMs = 0;
+        intermissionRunning = false;
+        intermissionStartedAt = null;
+        break;
+      }
+
+      case "finishGame":
+        clockRunning = false;
+        clockStartedAt = null;
+        clockRemainingMs = 0;
+        status = "FINAL";
+        break;
+
       case "resetClock":
         periodLengthMs = action.periodLengthMs ?? periodLengthMs;
         clockRemainingMs = periodLengthMs;
@@ -548,7 +645,10 @@ export async function applyGameScoringAction(
        period_length_ms = ?,
        clock_remaining_ms = ?,
        clock_running = ?,
-       clock_started_at = ?
+       clock_started_at = ?,
+       intermission_remaining_ms = ?,
+       intermission_running = ?,
+       intermission_started_at = ?
        WHERE id = ?`,
       [
         homeScore,
@@ -559,11 +659,18 @@ export async function applyGameScoringAction(
         clockRemainingMs,
         clockRunning,
         clockStartedAt,
+        intermissionRemainingMs,
+        intermissionRunning,
+        intermissionStartedAt,
         id,
       ],
     );
 
-    await setPenaltyClockRunning(connection, id, clockRunning && status === "LIVE");
+    await setPenaltyClockRunning(
+      connection,
+      id,
+      clockRunning && status === "LIVE" && !intermissionRunning,
+    );
 
     await connection.commit();
   } catch (error) {

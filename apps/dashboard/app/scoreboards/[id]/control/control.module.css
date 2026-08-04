@@ -300,3 +300,86 @@
   min-height: 68px !important;
   background: #0f766e !important;
 }
+
+.periodEndBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(2, 6, 23, 0.82);
+  backdrop-filter: blur(8px);
+}
+
+.periodEndDialog {
+  width: min(520px, 100%);
+  padding: 28px;
+  border: 1px solid #475569;
+  border-radius: 22px;
+  background: #0f172a;
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.6);
+}
+
+.periodEndDialog h2 {
+  margin: 7px 0 10px;
+  font-size: clamp(1.7rem, 5vw, 2.5rem);
+}
+
+.periodEndDialog p {
+  margin: 0 0 22px;
+  color: #cbd5e1;
+  font-size: 1.1rem;
+}
+
+.periodEndActions {
+  display: grid;
+  gap: 12px;
+}
+
+.periodEndActions button {
+  min-height: 64px;
+  border: 0;
+  border-radius: 14px;
+  color: white;
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.overtimeButton {
+  background: #0f766e;
+}
+
+.finalChoiceButton {
+  background: #991b1b;
+}
+
+.cancelChoiceButton {
+  border: 1px solid #475569 !important;
+  background: #1e293b;
+}
+
+.intermissionClock {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+  padding: 16px;
+  border: 1px solid #0f766e;
+  border-radius: 14px;
+  text-align: center;
+  background: rgba(15, 118, 110, 0.16);
+}
+
+.intermissionClock strong {
+  font-size: 2.4rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.intermissionClock span {
+  color: #99f6e4;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}

@@ -232,6 +232,9 @@ export async function runMigrations(): Promise<void> {
     ],
     ["overtime_enabled", "BOOLEAN NOT NULL DEFAULT TRUE AFTER intermission_length_ms"],
     ["overtime_length_ms", "INT UNSIGNED NOT NULL DEFAULT 300000 AFTER overtime_enabled"],
+    ["intermission_remaining_ms", "INT UNSIGNED NOT NULL DEFAULT 0 AFTER overtime_length_ms"],
+    ["intermission_running", "BOOLEAN NOT NULL DEFAULT FALSE AFTER intermission_remaining_ms"],
+    ["intermission_started_at", "DATETIME(3) NULL AFTER intermission_running"],
   ];
 
   for (const [name, sql] of gameAdditions) {

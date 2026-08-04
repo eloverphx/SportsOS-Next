@@ -39,6 +39,10 @@ export interface Game {
   regulationPeriods: number;
   regulationPeriodLengthMs: number;
   intermissionLengthMs: number;
+  intermissionRemainingMs: number;
+  intermissionRunning: boolean;
+  intermissionStartedAt: string | null;
+  intermissionReady: boolean;
   overtimeEnabled: boolean;
   overtimeLengthMs: number;
   periodLabel: string;
