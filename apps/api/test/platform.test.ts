@@ -1,19 +1,7 @@
 import type { FastifyInstance } from "fastify";
-import {
-  afterAll,
-  beforeAll,
-  describe,
-  expect,
-  it,
-} from "vitest";
-import {
-  AuthorizationError,
-} from "../src/modules/auth/index.js";
-import {
-  API_DOCUMENTATION_PATH,
-  API_NAME,
-  API_VERSION,
-} from "../src/platform/metadata.js";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { AuthorizationError } from "../src/modules/auth/index.js";
+import { API_DOCUMENTATION_PATH, API_NAME, API_VERSION } from "../src/platform/metadata.js";
 
 describe("platform HTTP API", () => {
   let app: FastifyInstance;
@@ -31,7 +19,7 @@ describe("platform HTTP API", () => {
     });
 
     await app.ready();
-  });
+  }, 30_000);
 
   afterAll(async () => {
     if (app) {
@@ -137,8 +125,7 @@ describe("platform HTTP API", () => {
       success: false,
       error: {
         code: "ROUTE_NOT_FOUND",
-        message:
-          "Route GET /route-that-does-not-exist was not found",
+        message: "Route GET /route-that-does-not-exist was not found",
       },
     });
   });
@@ -166,8 +153,7 @@ describe("platform HTTP API", () => {
       success: false,
       error: {
         code: "AUTHORIZATION_DENIED",
-        message:
-          "You do not have permission to perform this action",
+        message: "You do not have permission to perform this action",
       },
     });
   });

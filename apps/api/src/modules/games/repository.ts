@@ -306,6 +306,8 @@ export async function createGame(input: GameInput): Promise<Game> {
        status,
        home_score,
        away_score,
+       period_length_ms,
+       clock_remaining_ms,
        regulation_periods,
        regulation_period_length_ms,
        intermission_length_ms,
@@ -313,7 +315,7 @@ export async function createGame(input: GameInput): Promise<Game> {
        overtime_length_ms,
        notes
      )
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       input.organizationId,
       input.seasonId,
@@ -327,6 +329,8 @@ export async function createGame(input: GameInput): Promise<Game> {
       input.status,
       input.homeScore,
       input.awayScore,
+      input.regulationPeriodLengthMs,
+      input.regulationPeriodLengthMs,
       input.regulationPeriods,
       input.regulationPeriodLengthMs,
       input.intermissionLengthMs,
@@ -653,6 +657,7 @@ export async function applyGameScoringAction(
        clock_remaining_ms = ?,
        clock_running = ?,
        clock_started_at = ?,
+       intermission_length_ms = ?,
        intermission_remaining_ms = ?,
        intermission_running = ?,
        intermission_started_at = ?
@@ -666,6 +671,7 @@ export async function applyGameScoringAction(
         clockRemainingMs,
         clockRunning,
         clockStartedAt,
+        intermissionLengthMs,
         intermissionRemainingMs,
         intermissionRunning,
         intermissionStartedAt,
