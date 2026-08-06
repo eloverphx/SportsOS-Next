@@ -89,7 +89,12 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
   const gameClock = useMemo(() => remainingMs(game, now), [game, now]);
   const breakClock = useMemo(() => intermissionMs(game, now), [game, now]);
   const showingIntermission = game.gamePhase === "INTERMISSION";
-  const canAdvance = game.status !== "FINAL" && gameClock === 0 && !game.intermissionRunning;
+  const isFinal = game.gamePhase === "FINAL";
+  const isPregame = game.gamePhase === "PREGAME";
+  const isOvertime = game.gamePhase === "OVERTIME";
+  const canUseGameClock = !busy && !isFinal && !showingIntermission;
+  const canStartIntermission = !busy && !isFinal && !showingIntermission && gameClock === 0;
+  const canAdvance = !busy && !isFinal && !showingIntermission && gameClock === 0;
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -176,6 +181,7 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
             <p className="muted">
               {game.awayTeamName} at {game.homeTeamName}
             </p>
+            <p className="muted">Phase: {game.gamePhase.replace("_", " ")}</p>
           </div>
           <button type="button" className="secondary" onClick={onClose}>
             Close
@@ -251,7 +257,7 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
         <div className="formActions">
           <button
             type="button"
-            disabled={busy || game.intermissionRunning}
+            disabled={!canUseGameClock}
             onClick={() =>
               void onAction({ action: game.clockRunning ? "pauseClock" : "startClock" })
             }
@@ -261,10 +267,10 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
           <button
             type="button"
             className="secondary"
-            disabled={busy || !canAdvance}
+            disabled={!canAdvance}
             onClick={() => void advance()}
           >
-            {game.period >= game.regulationPeriods ? "End regulation" : "Next period"}
+            {game.period >= game.regulationPeriods ? "Regulation complete" : "Start next period"}
           </button>
         </div>
 
@@ -303,14 +309,14 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
           <div className="formActions">
             <button
               type="button"
-              disabled={busy || game.intermissionRunning}
+              disabled={!canUseGameClock}
               onClick={() => void setExactIntermission()}
             >
               Set intermission
             </button>
             <button
               type="button"
-              disabled={busy || gameClock > 0}
+              disabled={showingIntermission ? busy : !canStartIntermission}
               onClick={() =>
                 void onAction({
                   action: game.intermissionRunning ? "pauseIntermission" : "startIntermission",
@@ -322,7 +328,7 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
             <button
               type="button"
               className="secondary"
-              disabled={busy}
+              disabled={busy || isFinal || !showingIntermission}
               onClick={() => void onAction({ action: "resetIntermission" })}
             >
               Reset intermission
@@ -330,7 +336,7 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
             <button
               type="button"
               className="secondary"
-              disabled={busy}
+              disabled={busy || !showingIntermission}
               onClick={() => void onAction({ action: "skipIntermission" })}
             >
               Skip intermission
@@ -361,7 +367,7 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
                 <button
                   type="button"
                   className="secondary"
-                  disabled={busy || game.intermissionRunning}
+                  disabled={!canUseGameClock}
                   key={String(label)}
                   onClick={() => void onAction({ action: "adjustClock", amountMs: Number(amount) })}
                 >
@@ -396,7 +402,7 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
             <div className="formActions">
               <button
                 type="button"
-                disabled={busy || game.intermissionRunning}
+                disabled={!canUseGameClock}
                 onClick={() => void setExactClock()}
               >
                 Set clock
@@ -404,7 +410,7 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
               <button
                 type="button"
                 className="secondary"
-                disabled={busy || game.intermissionRunning}
+                disabled={!canUseGameClock}
                 onClick={() => void onAction({ action: "resetClock" })}
               >
                 Reset clock
@@ -434,7 +440,7 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
         <div className="formActions">
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || isFinal || (!isPregame && game.status === "LIVE")}
             onClick={() => void onAction({ action: "setStatus", status: "LIVE" })}
           >
             Mark live
@@ -442,7 +448,7 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
           <button
             type="button"
             className="secondary"
-            disabled={busy}
+            disabled={busy || isFinal}
             onClick={() => void onAction({ action: "finishGame" })}
           >
             Mark final
@@ -477,7 +483,7 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
                 {game.awayTeamName} {game.awayScore} – {game.homeScore} {game.homeTeamName}
               </p>
               <div className="formActions">
-                {game.overtimeEnabled && (
+                {game.overtimeEnabled && !isOvertime && game.gamePhase === "REGULATION" && (
                   <button
                     type="button"
                     disabled={busy}

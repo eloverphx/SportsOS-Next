@@ -123,7 +123,15 @@ function formatClock(milliseconds: number): string {
 }
 
 function statusLabel(game: ScoreboardGame): string {
-  return game.status === "LIVE" && !game.clockRunning ? "LIVE · PAUSED" : game.status;
+  if (game.gamePhase === "INTERMISSION") {
+    return game.intermissionRunning ? "INTERMISSION · RUNNING" : "INTERMISSION · PAUSED";
+  }
+  if (game.gamePhase === "FINAL") return "FINAL";
+  if (game.gamePhase === "OVERTIME") {
+    return game.clockRunning ? "OVERTIME · RUNNING" : "OVERTIME · PAUSED";
+  }
+  if (game.gamePhase === "PREGAME") return "PREGAME";
+  return game.clockRunning ? "REGULATION · RUNNING" : "REGULATION · PAUSED";
 }
 
 function playTone(context: AudioContext, frequency: number, start: number, duration: number): void {

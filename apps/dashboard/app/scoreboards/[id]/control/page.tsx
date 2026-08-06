@@ -138,10 +138,26 @@ export default function ScoreboardControlPage() {
   const displayedClock = formatClock(displayedClockMs);
 
   const showingIntermission = game?.gamePhase === "INTERMISSION";
+  const isFinal = game?.gamePhase === "FINAL";
+  const isPregame = game?.gamePhase === "PREGAME";
   const displayedIntermissionMs = game ? intermissionRemainingMs(game, now) : 0;
   const displayedIntermission = formatClock(displayedIntermissionMs);
-
-  const canAdvancePeriod = Boolean(game) && game?.status !== "FINAL" && displayedClockMs === 0;
+  const displayedMainClock = showingIntermission ? displayedIntermission : displayedClock;
+  const canUseGameClock = Boolean(game) && canScore && !busy && !isFinal && !showingIntermission;
+  const canStartIntermission =
+    Boolean(game) &&
+    canScore &&
+    !busy &&
+    !isFinal &&
+    !showingIntermission &&
+    displayedClockMs === 0;
+  const canAdvancePeriod =
+    Boolean(game) &&
+    canScore &&
+    !busy &&
+    !isFinal &&
+    !showingIntermission &&
+    displayedClockMs === 0;
 
   const load = useCallback(async () => {
     if (!Number.isInteger(deviceId) || deviceId <= 0) {
@@ -367,7 +383,8 @@ export default function ScoreboardControlPage() {
 
             {game && (
               <p>
-                Game rules: {game.regulationPeriods} × {game.regulationPeriodLengthMs / 60_000} min
+                Phase: {game.gamePhase} · {game.regulationPeriods} ×{" "}
+                {game.regulationPeriodLengthMs / 60_000} min
                 {game.overtimeEnabled ? ` · OT ${game.overtimeLengthMs / 60_000} min` : " · No OT"}
               </p>
             )}
@@ -441,15 +458,23 @@ export default function ScoreboardControlPage() {
               </article>
 
               <section className={styles.clockPanel}>
-                <span>{game.periodLabel ?? `PERIOD ${game.period}`}</span>
-                <strong>{displayedClock}</strong>
+                <span>
+                  {showingIntermission
+                    ? "INTERMISSION"
+                    : (game.periodLabel ?? `PERIOD ${game.period}`)}
+                </span>
+                <strong>{displayedMainClock}</strong>
                 <small>
-                  {game.clockRunning ? "RUNNING" : "PAUSED"} · {game.status}
+                  {showingIntermission
+                    ? game.intermissionRunning
+                      ? "RUNNING · PENALTIES PAUSED"
+                      : "PAUSED · PENALTIES PAUSED"
+                    : `${game.clockRunning ? "RUNNING" : "PAUSED"} · ${game.gamePhase}`}
                 </small>
 
                 <button
                   className={styles.primaryClockButton}
-                  disabled={!canScore}
+                  disabled={!canUseGameClock}
                   onClick={() =>
                     void score({
                       action: game.clockRunning ? "pauseClock" : "startClock",
@@ -525,10 +550,12 @@ export default function ScoreboardControlPage() {
 
                   <button
                     className={styles.nextPeriodButton}
-                    disabled={!canScore || !canAdvancePeriod}
+                    disabled={!canAdvancePeriod}
                     onClick={advanceGameFlow}
                   >
-                    {game.period >= game.regulationPeriods ? "End regulation" : "Next period"}
+                    {game.period >= game.regulationPeriods
+                      ? "Regulation complete"
+                      : "Start next period"}
                   </button>
                 </div>
               </div>
@@ -645,7 +672,7 @@ export default function ScoreboardControlPage() {
 
                 <div className={styles.buttonRow}>
                   <button
-                    disabled={!canScore || displayedClockMs > 0}
+                    disabled={showingIntermission ? !canScore || busy : !canStartIntermission}
                     onClick={() =>
                       void score({
                         action: game.intermissionRunning
@@ -658,14 +685,14 @@ export default function ScoreboardControlPage() {
                   </button>
 
                   <button
-                    disabled={!canScore}
+                    disabled={!canScore || busy || isFinal || !showingIntermission}
                     onClick={() => void score({ action: "resetIntermission" })}
                   >
                     Reset intermission
                   </button>
 
                   <button
-                    disabled={!canScore}
+                    disabled={!canScore || busy || !showingIntermission}
                     onClick={() => void score({ action: "skipIntermission" })}
                   >
                     Skip intermission
@@ -764,7 +791,7 @@ export default function ScoreboardControlPage() {
                   </p>
 
                   <div className={styles.periodEndActions}>
-                    {game.overtimeEnabled && (
+                    {game.overtimeEnabled && game.gamePhase === "REGULATION" && (
                       <button
                         type="button"
                         className={styles.overtimeButton}
