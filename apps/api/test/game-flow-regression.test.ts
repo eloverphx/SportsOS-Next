@@ -523,3 +523,74 @@ describe("persistent game phase transitions", () => {
     expect(valueForColumn(sql, values, "intermission_remaining_ms")).toBe(0);
   });
 });
+
+describe("completed intermission handoff", () => {
+  it("allows the next period after a running intermission expires", async () => {
+    prepareScoring(
+      lockedRow({
+        game_phase: "INTERMISSION",
+        period: 1,
+        intermission_remaining_ms: 1_000,
+        intermission_running: 1,
+        intermission_started_at: new Date(Date.now() - 2_000),
+      }),
+    );
+
+    await applyGameScoringAction(77, { action: "nextPeriod" });
+
+    const [sql, values] = gameUpdateCall();
+    expect(valueForColumn(sql, values, "period")).toBe(2);
+    expect(valueForColumn(sql, values, "game_phase")).toBe("REGULATION");
+    expect(valueForColumn(sql, values, "intermission_remaining_ms")).toBe(0);
+  });
+
+  it("still blocks the next period while paused intermission time remains", async () => {
+    prepareScoring(
+      lockedRow({
+        game_phase: "INTERMISSION",
+        intermission_remaining_ms: 120_000,
+        intermission_running: 0,
+      }),
+    );
+
+    await expect(applyGameScoringAction(77, { action: "nextPeriod" })).rejects.toThrow(
+      "Finish or skip intermission before advancing periods",
+    );
+  });
+
+  it("allows overtime after the final regulation intermission expires", async () => {
+    prepareScoring(
+      lockedRow({
+        game_phase: "INTERMISSION",
+        period: 3,
+        regulation_periods: 3,
+        intermission_remaining_ms: 1_000,
+        intermission_running: 1,
+        intermission_started_at: new Date(Date.now() - 2_000),
+      }),
+    );
+
+    await applyGameScoringAction(77, { action: "startOvertime" });
+
+    const [sql, values] = gameUpdateCall();
+    expect(valueForColumn(sql, values, "period")).toBe(4);
+    expect(valueForColumn(sql, values, "game_phase")).toBe("OVERTIME");
+    expect(valueForColumn(sql, values, "intermission_remaining_ms")).toBe(0);
+  });
+
+  it("keeps the game clock blocked after intermission expires until advancement", async () => {
+    prepareScoring(
+      lockedRow({
+        game_phase: "INTERMISSION",
+        clock_remaining_ms: 720_000,
+        intermission_remaining_ms: 1_000,
+        intermission_running: 1,
+        intermission_started_at: new Date(Date.now() - 2_000),
+      }),
+    );
+
+    await expect(applyGameScoringAction(77, { action: "startClock" })).rejects.toThrow(
+      "Finish or skip intermission before starting the game clock",
+    );
+  });
+});

@@ -151,13 +151,14 @@ export default function ScoreboardControlPage() {
     !isFinal &&
     !showingIntermission &&
     displayedClockMs === 0;
+  const intermissionComplete = showingIntermission && displayedIntermissionMs === 0;
   const canAdvancePeriod =
     Boolean(game) &&
     canScore &&
     !busy &&
     !isFinal &&
-    !showingIntermission &&
-    displayedClockMs === 0;
+    displayedClockMs === 0 &&
+    (!showingIntermission || intermissionComplete);
 
   const load = useCallback(async () => {
     if (!Number.isInteger(deviceId) || deviceId <= 0) {
@@ -554,7 +555,9 @@ export default function ScoreboardControlPage() {
                     onClick={advanceGameFlow}
                   >
                     {game.period >= game.regulationPeriods
-                      ? "Regulation complete"
+                      ? intermissionComplete
+                        ? "Choose overtime or final"
+                        : "Regulation complete"
                       : "Start next period"}
                   </button>
                 </div>

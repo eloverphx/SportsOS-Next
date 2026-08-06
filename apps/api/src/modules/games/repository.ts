@@ -155,8 +155,8 @@ function mapGame(row: RowDataPacket): Game {
     intermissionStartedAt:
       intermissionRunning && intermissionRemainingMs > 0 ? new Date().toISOString() : null,
     intermissionReady:
-      intermissionStoredRemainingMs === 0 &&
-      !intermissionRunning &&
+      String(row.game_phase) === "INTERMISSION" &&
+      intermissionRemainingMs === 0 &&
       Number(row.clock_remaining_ms ?? 0) === 0,
     overtimeEnabled: Boolean(row.overtime_enabled ?? true),
     overtimeLengthMs: Number(row.overtime_length_ms ?? 300_000),
@@ -164,7 +164,10 @@ function mapGame(row: RowDataPacket): Game {
       Number(row.period ?? 1) > Number(row.regulation_periods ?? 3)
         ? "OVERTIME"
         : `PERIOD ${Number(row.period ?? 1)}`,
-    canAdvancePeriod: String(row.status) !== "FINAL" && clockRemainingMs === 0,
+    canAdvancePeriod:
+      String(row.status) !== "FINAL" &&
+      clockRemainingMs === 0 &&
+      (String(row.game_phase) !== "INTERMISSION" || intermissionRemainingMs === 0),
     notes: row.notes == null ? null : String(row.notes),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -589,7 +592,7 @@ export async function applyGameScoringAction(
         if (clockRemainingMs > 0) {
           throw new GamePhaseError("The game clock must be at 0:00 before advancing periods");
         }
-        if (gamePhase === "INTERMISSION") {
+        if (gamePhase === "INTERMISSION" && intermissionRemainingMs > 0) {
           throw new GamePhaseError("Finish or skip intermission before advancing periods");
         }
         if (period >= regulationPeriods) {
@@ -626,7 +629,7 @@ export async function applyGameScoringAction(
         if (clockRemainingMs > 0) {
           throw new GamePhaseError("Regulation must reach 0:00 before overtime");
         }
-        if (gamePhase === "INTERMISSION") {
+        if (gamePhase === "INTERMISSION" && intermissionRemainingMs > 0) {
           throw new GamePhaseError("Finish or skip intermission before starting overtime");
         }
 

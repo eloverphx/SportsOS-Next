@@ -94,7 +94,9 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
   const isOvertime = game.gamePhase === "OVERTIME";
   const canUseGameClock = !busy && !isFinal && !showingIntermission;
   const canStartIntermission = !busy && !isFinal && !showingIntermission && gameClock === 0;
-  const canAdvance = !busy && !isFinal && !showingIntermission && gameClock === 0;
+  const intermissionComplete = showingIntermission && breakClock === 0;
+  const canAdvance =
+    !busy && !isFinal && gameClock === 0 && (!showingIntermission || intermissionComplete);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -270,7 +272,11 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
             disabled={!canAdvance}
             onClick={() => void advance()}
           >
-            {game.period >= game.regulationPeriods ? "Regulation complete" : "Start next period"}
+            {game.period >= game.regulationPeriods
+              ? intermissionComplete
+                ? "Choose overtime or final"
+                : "Regulation complete"
+              : "Start next period"}
           </button>
         </div>
 
