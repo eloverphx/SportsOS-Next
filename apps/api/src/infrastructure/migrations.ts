@@ -215,6 +215,8 @@ export async function runMigrations(): Promise<void> {
 
   const presentGameColumns = new Set(gameColumns.map((row) => String(row.COLUMN_NAME)));
 
+  const gamePhaseWasPresent = presentGameColumns.has("game_phase");
+
   const gameAdditions: Array<[string, string]> = [
     ["period", "SMALLINT UNSIGNED NOT NULL DEFAULT 1 AFTER away_score"],
     ["period_length_ms", "INT UNSIGNED NOT NULL DEFAULT 1200000 AFTER period"],
@@ -235,6 +237,10 @@ export async function runMigrations(): Promise<void> {
     ["intermission_remaining_ms", "INT UNSIGNED NOT NULL DEFAULT 0 AFTER overtime_length_ms"],
     ["intermission_running", "BOOLEAN NOT NULL DEFAULT FALSE AFTER intermission_remaining_ms"],
     ["intermission_started_at", "DATETIME(3) NULL AFTER intermission_running"],
+    [
+      "game_phase",
+      "ENUM('PREGAME','REGULATION','INTERMISSION','OVERTIME','FINAL') NOT NULL DEFAULT 'PREGAME' AFTER status",
+    ],
   ];
 
   for (const [name, sql] of gameAdditions) {
@@ -242,6 +248,20 @@ export async function runMigrations(): Promise<void> {
       await pool.execute(`ALTER TABLE games ADD COLUMN ${name} ${sql}`);
     }
   }
+
+  if (!gamePhaseWasPresent) {
+    await pool.execute(`
+      UPDATE games
+      SET game_phase = CASE
+        WHEN status = 'FINAL' THEN 'FINAL'
+        WHEN intermission_running = TRUE OR intermission_remaining_ms > 0 THEN 'INTERMISSION'
+        WHEN period > regulation_periods THEN 'OVERTIME'
+        WHEN status = 'LIVE' THEN 'REGULATION'
+        ELSE 'PREGAME'
+      END
+    `);
+  }
+
   const [crossOrgGameColumns] = await pool.query<RowDataPacket[]>(
     `SELECT COLUMN_NAME
      FROM INFORMATION_SCHEMA.COLUMNS

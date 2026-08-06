@@ -111,6 +111,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
         timezone: game.timezone,
         venue: game.venue,
         status: game.status,
+        gamePhase: game.gamePhase,
         homeScore: game.homeScore,
         awayScore: game.awayScore,
         period: game.period,

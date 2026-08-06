@@ -85,14 +85,12 @@ function state() {
           effectiveClockRemainingMs: effectiveRemainingMs(game),
           effectiveIntermissionRemainingMs: effectiveIntermissionRemainingMs(game),
           formattedClock: formatClock(
-            game.intermissionRunning || Number(game.intermissionRemainingMs ?? 0) > 0
+            game.gamePhase === "INTERMISSION"
               ? effectiveIntermissionRemainingMs(game)
               : effectiveRemainingMs(game),
           ),
           displayMode:
-            game.intermissionRunning || Number(game.intermissionRemainingMs ?? 0) > 0
-              ? "INTERMISSION"
-              : "GAME",
+            game.gamePhase === "INTERMISSION" ? "INTERMISSION" : "GAME",
         }
       : null,
   };

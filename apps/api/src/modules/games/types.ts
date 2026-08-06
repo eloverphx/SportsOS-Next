@@ -2,6 +2,10 @@ export const gameStatuses = ["SCHEDULED", "LIVE", "FINAL", "POSTPONED", "CANCELE
 
 export type GameStatus = (typeof gameStatuses)[number];
 
+export const gamePhases = ["PREGAME", "REGULATION", "INTERMISSION", "OVERTIME", "FINAL"] as const;
+
+export type GamePhase = (typeof gamePhases)[number];
+
 export interface Game {
   id: number;
   organizationId: number;
@@ -29,6 +33,7 @@ export interface Game {
   timezone: string;
   venue: string | null;
   status: GameStatus;
+  gamePhase: GamePhase;
   homeScore: number;
   awayScore: number;
   period: number;

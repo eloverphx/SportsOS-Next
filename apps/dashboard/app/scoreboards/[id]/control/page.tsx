@@ -19,6 +19,7 @@ import "../../../../components/penalties/penalties.css";
 import styles from "./control.module.css";
 
 type GameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
+type GamePhase = "PREGAME" | "REGULATION" | "INTERMISSION" | "OVERTIME" | "FINAL";
 
 type Device = {
   id: number;
@@ -45,6 +46,7 @@ type Game = {
   scheduledStart: string;
   venue: string | null;
   status: GameStatus;
+  gamePhase: GamePhase;
   homeScore: number;
   awayScore: number;
   period: number;
@@ -135,6 +137,7 @@ export default function ScoreboardControlPage() {
 
   const displayedClock = formatClock(displayedClockMs);
 
+  const showingIntermission = game?.gamePhase === "INTERMISSION";
   const displayedIntermissionMs = game ? intermissionRemainingMs(game, now) : 0;
   const displayedIntermission = formatClock(displayedIntermissionMs);
 

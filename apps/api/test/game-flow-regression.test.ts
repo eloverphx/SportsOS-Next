@@ -39,6 +39,7 @@ type LockedRow = {
   home_score: number;
   away_score: number;
   status: "SCHEDULED" | "LIVE" | "FINAL";
+  game_phase: "PREGAME" | "REGULATION" | "INTERMISSION" | "OVERTIME" | "FINAL";
   period: number;
   period_length_ms: number;
   clock_remaining_ms: number;
@@ -60,6 +61,7 @@ function lockedRow(overrides: Partial<LockedRow> = {}): LockedRow {
     home_score: 2,
     away_score: 1,
     status: "LIVE",
+    game_phase: "REGULATION",
     period: 1,
     period_length_ms: 900_000,
     clock_remaining_ms: 0,
@@ -264,6 +266,7 @@ describe("intermission and penalty clock flow", () => {
   it("does not allow the game clock to start during intermission", async () => {
     prepareScoring(
       lockedRow({
+        game_phase: "INTERMISSION",
         clock_remaining_ms: 720_000,
         intermission_remaining_ms: 300_000,
         intermission_running: 1,
@@ -361,6 +364,7 @@ describe("server-side game phase validation", () => {
   it("requires intermission to finish or be skipped before the next period", async () => {
     prepareScoring(
       lockedRow({
+        game_phase: "INTERMISSION",
         intermission_remaining_ms: 120_000,
         intermission_running: 0,
       }),
@@ -392,6 +396,7 @@ describe("server-side game phase validation", () => {
   it("requires intermission to finish or be skipped before overtime", async () => {
     prepareScoring(
       lockedRow({
+        game_phase: "INTERMISSION",
         period: 3,
         regulation_periods: 3,
         intermission_remaining_ms: 90_000,
@@ -443,5 +448,78 @@ describe("server-side game phase validation", () => {
     expect(valueForColumn(sql, values, "period")).toBe(2);
     expect(valueForColumn(sql, values, "intermission_remaining_ms")).toBe(0);
     expect(valueForColumn(sql, values, "intermission_running")).toBe(false);
+  });
+});
+
+describe("persistent game phase transitions", () => {
+  it("enters intermission when the intermission starts", async () => {
+    prepareScoring(lockedRow());
+
+    await applyGameScoringAction(77, { action: "startIntermission" });
+
+    const [sql, values] = gameUpdateCall();
+    expect(valueForColumn(sql, values, "game_phase")).toBe("INTERMISSION");
+  });
+
+  it("keeps the intermission phase while paused", async () => {
+    prepareScoring(
+      lockedRow({
+        game_phase: "INTERMISSION",
+        intermission_remaining_ms: 120_000,
+        intermission_running: 1,
+        intermission_started_at: new Date(),
+      }),
+    );
+
+    await applyGameScoringAction(77, { action: "pauseIntermission" });
+
+    const [sql, values] = gameUpdateCall();
+    expect(valueForColumn(sql, values, "game_phase")).toBe("INTERMISSION");
+    expect(valueForColumn(sql, values, "intermission_running")).toBe(false);
+  });
+
+  it("returns to regulation after intermission is skipped", async () => {
+    prepareScoring(
+      lockedRow({
+        game_phase: "INTERMISSION",
+        intermission_remaining_ms: 120_000,
+      }),
+    );
+
+    await applyGameScoringAction(77, { action: "skipIntermission" });
+
+    const [sql, values] = gameUpdateCall();
+    expect(valueForColumn(sql, values, "game_phase")).toBe("REGULATION");
+  });
+
+  it("enters overtime through the overtime transition", async () => {
+    prepareScoring(
+      lockedRow({
+        game_phase: "REGULATION",
+        period: 3,
+        regulation_periods: 3,
+      }),
+    );
+
+    await applyGameScoringAction(77, { action: "startOvertime" });
+
+    const [sql, values] = gameUpdateCall();
+    expect(valueForColumn(sql, values, "game_phase")).toBe("OVERTIME");
+  });
+
+  it("enters final and clears both clocks", async () => {
+    prepareScoring(
+      lockedRow({
+        game_phase: "INTERMISSION",
+        intermission_remaining_ms: 90_000,
+      }),
+    );
+
+    await applyGameScoringAction(77, { action: "finishGame" });
+
+    const [sql, values] = gameUpdateCall();
+    expect(valueForColumn(sql, values, "game_phase")).toBe("FINAL");
+    expect(valueForColumn(sql, values, "clock_remaining_ms")).toBe(0);
+    expect(valueForColumn(sql, values, "intermission_remaining_ms")).toBe(0);
   });
 });

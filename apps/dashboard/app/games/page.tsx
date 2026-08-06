@@ -24,6 +24,7 @@ type TeamOption = {
   name: string;
 };
 type GameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
+type GamePhase = "PREGAME" | "REGULATION" | "INTERMISSION" | "OVERTIME" | "FINAL";
 
 type Game = {
   id: number;
@@ -43,6 +44,7 @@ type Game = {
   timezone: string;
   venue: string | null;
   status: GameStatus;
+  gamePhase: GamePhase;
   homeScore: number;
   awayScore: number;
   period: number;

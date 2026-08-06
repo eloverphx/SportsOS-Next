@@ -2,7 +2,7 @@ import mysql, { type PoolConnection, type RowDataPacket } from "mysql2/promise";
 import { pool } from "../../infrastructure/database.js";
 import { logoUrl } from "../../lib/media.js";
 import type { GameInput, ScoreAction } from "./schemas.js";
-import type { Game, GameStatus, GameTeamOption } from "./types.js";
+import type { Game, GamePhase, GameStatus, GameTeamOption } from "./types.js";
 import {
   adjustActivePenaltyClocks,
   materializePenaltyClocks,
@@ -137,6 +137,7 @@ function mapGame(row: RowDataPacket): Game {
     timezone: String(row.timezone),
     venue: row.venue == null ? null : String(row.venue),
     status: String(row.status) as GameStatus,
+    gamePhase: String(row.game_phase ?? "PREGAME") as GamePhase,
     homeScore: Number(row.home_score),
     awayScore: Number(row.away_score),
     period: Number(row.period ?? 1),
@@ -413,6 +414,7 @@ interface LockedScoringRow extends RowDataPacket {
   home_score: number;
   away_score: number;
   status: GameStatus;
+  game_phase: GamePhase;
   period: number;
   period_length_ms: number;
   clock_remaining_ms: number;
@@ -443,6 +445,7 @@ async function lockGame(connection: PoolConnection, id: number): Promise<LockedS
        home_score,
        away_score,
        status,
+       game_phase,
        period,
        period_length_ms,
        clock_remaining_ms,
@@ -483,6 +486,7 @@ export async function applyGameScoringAction(
     let homeScore = Number(row.home_score);
     let awayScore = Number(row.away_score);
     let status = row.status;
+    let gamePhase: GamePhase = row.game_phase ?? (status === "FINAL" ? "FINAL" : "PREGAME");
     let period = Number(row.period);
     let periodLengthMs = Number(row.period_length_ms);
     let clockRemainingMs = materializedRemainingMs(row);
@@ -521,13 +525,14 @@ export async function applyGameScoringAction(
         if (status === "FINAL") {
           throw new GamePhaseError("A final game cannot be restarted");
         }
-        if (intermissionRunning || intermissionPaused) {
+        if (gamePhase === "INTERMISSION") {
           throw new GamePhaseError("Finish or skip intermission before starting the game clock");
         }
         if (clockRemainingMs > 0) {
           clockRunning = true;
           clockStartedAt = new Date();
           if (status === "SCHEDULED") status = "LIVE";
+          if (gamePhase === "PREGAME") gamePhase = "REGULATION";
         }
         break;
       case "pauseClock":
@@ -548,6 +553,7 @@ export async function applyGameScoringAction(
         }
         intermissionRunning = intermissionRemainingMs > 0;
         intermissionStartedAt = intermissionRunning ? new Date() : null;
+        if (intermissionRemainingMs > 0) gamePhase = "INTERMISSION";
         break;
       case "pauseIntermission":
         intermissionRunning = false;
@@ -568,6 +574,7 @@ export async function applyGameScoringAction(
         intermissionRemainingMs = 0;
         intermissionRunning = false;
         intermissionStartedAt = null;
+        gamePhase = period > Number(row.regulation_periods ?? 3) ? "OVERTIME" : "REGULATION";
         break;
       case "nextPeriod": {
         clockRunning = false;
@@ -582,7 +589,7 @@ export async function applyGameScoringAction(
         if (clockRemainingMs > 0) {
           throw new GamePhaseError("The game clock must be at 0:00 before advancing periods");
         }
-        if (intermissionRunning || intermissionRemainingMs > 0) {
+        if (gamePhase === "INTERMISSION") {
           throw new GamePhaseError("Finish or skip intermission before advancing periods");
         }
         if (period >= regulationPeriods) {
@@ -595,6 +602,7 @@ export async function applyGameScoringAction(
         intermissionRemainingMs = 0;
         intermissionRunning = false;
         intermissionStartedAt = null;
+        gamePhase = "REGULATION";
         break;
       }
 
@@ -618,7 +626,7 @@ export async function applyGameScoringAction(
         if (clockRemainingMs > 0) {
           throw new GamePhaseError("Regulation must reach 0:00 before overtime");
         }
-        if (intermissionRunning || intermissionRemainingMs > 0) {
+        if (gamePhase === "INTERMISSION") {
           throw new GamePhaseError("Finish or skip intermission before starting overtime");
         }
 
@@ -631,6 +639,7 @@ export async function applyGameScoringAction(
         intermissionRemainingMs = 0;
         intermissionRunning = false;
         intermissionStartedAt = null;
+        gamePhase = "OVERTIME";
         break;
       }
 
@@ -642,6 +651,7 @@ export async function applyGameScoringAction(
         intermissionRunning = false;
         intermissionStartedAt = null;
         status = "FINAL";
+        gamePhase = "FINAL";
         break;
 
       case "resetClock":
@@ -666,6 +676,7 @@ export async function applyGameScoringAction(
         intermissionRemainingMs = 0;
         intermissionRunning = false;
         intermissionStartedAt = null;
+        gamePhase = period > Number(row.regulation_periods ?? 3) ? "OVERTIME" : "REGULATION";
         clockStartedAt = clockRunning ? new Date() : null;
         break;
       case "setStatus":
@@ -679,6 +690,11 @@ export async function applyGameScoringAction(
         if (status === "FINAL") {
           clockRemainingMs = 0;
           intermissionRemainingMs = 0;
+          gamePhase = "FINAL";
+        } else if (status === "SCHEDULED") {
+          gamePhase = "PREGAME";
+        } else if (status === "LIVE" && gamePhase === "PREGAME") {
+          gamePhase = period > Number(row.regulation_periods ?? 3) ? "OVERTIME" : "REGULATION";
         }
         break;
     }
@@ -702,6 +718,7 @@ export async function applyGameScoringAction(
        home_score = ?,
        away_score = ?,
        status = ?,
+       game_phase = ?,
        period = ?,
        period_length_ms = ?,
        clock_remaining_ms = ?,
@@ -716,6 +733,7 @@ export async function applyGameScoringAction(
         homeScore,
         awayScore,
         status,
+        gamePhase,
         period,
         periodLengthMs,
         clockRemainingMs,

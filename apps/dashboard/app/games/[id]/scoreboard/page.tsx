@@ -7,6 +7,7 @@ import { API } from "../../../../lib/api";
 import styles from "./scoreboard.module.css";
 
 type GameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
+type GamePhase = "PREGAME" | "REGULATION" | "INTERMISSION" | "OVERTIME" | "FINAL";
 type Side = "home" | "away";
 type SoundType = "GOAL" | "PENALTY" | "HORN";
 
@@ -39,6 +40,7 @@ type ScoreboardGame = {
   timezone: string;
   venue: string | null;
   status: GameStatus;
+  gamePhase: GamePhase;
   homeScore: number;
   awayScore: number;
   period: number;
@@ -465,14 +467,12 @@ export default function ScoreboardPage() {
 
         <section className={styles.clockPanel}>
           <span className={styles.period}>
-            {game.intermissionRunning || game.intermissionRemainingMs > 0
+            {game.gamePhase === "INTERMISSION"
               ? "INTERMISSION"
               : (game.periodLabel ?? `PERIOD ${game.period}`)}
           </span>
           <div className={styles.clock}>
-            {game.intermissionRunning || game.intermissionRemainingMs > 0
-              ? formatClock(displayedIntermissionMs)
-              : clock}
+            {game.gamePhase === "INTERMISSION" ? formatClock(displayedIntermissionMs) : clock}
           </div>
           <span className={styles.clockState}>{game.clockRunning ? "RUNNING" : "PAUSED"}</span>
         </section>

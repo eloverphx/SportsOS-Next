@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 export type ScoringGameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
+export type ScoringGamePhase = "PREGAME" | "REGULATION" | "INTERMISSION" | "OVERTIME" | "FINAL";
 
 export interface ScoringGame {
   id: number;
@@ -27,6 +28,7 @@ export interface ScoringGame {
   periodLabel: string;
   canAdvancePeriod: boolean;
   status: ScoringGameStatus;
+  gamePhase: ScoringGamePhase;
 }
 
 export type ScoringAction =
@@ -86,11 +88,7 @@ export function GameScoringConsole({ game, busy, error, onAction, onClose }: Pro
 
   const gameClock = useMemo(() => remainingMs(game, now), [game, now]);
   const breakClock = useMemo(() => intermissionMs(game, now), [game, now]);
-  const showingIntermission =
-    game.intermissionRunning ||
-    (gameClock === 0 &&
-      game.intermissionRemainingMs > 0 &&
-      game.intermissionRemainingMs < game.intermissionLengthMs);
+  const showingIntermission = game.gamePhase === "INTERMISSION";
   const canAdvance = game.status !== "FINAL" && gameClock === 0 && !game.intermissionRunning;
 
   useEffect(() => {
