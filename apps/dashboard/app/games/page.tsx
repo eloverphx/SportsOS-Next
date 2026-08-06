@@ -169,6 +169,7 @@ export default function GamesPage() {
   const [busy, setBusy] = useState(false);
   const [scoringGameId, setScoringGameId] = useState<number | null>(null);
   const [scoringBusy, setScoringBusy] = useState(false);
+  const [scoringError, setScoringError] = useState("");
   const [rulesPreset, setRulesPreset] = useState<RulesPreset>("COLLEGE");
 
   const canManage = userHasPermission(currentUser, PERMISSIONS.GAME_MANAGE);
@@ -370,7 +371,7 @@ export default function GamesPage() {
     if (!canScore || scoringBusy) return;
 
     setScoringBusy(true);
-    setError("");
+    setScoringError("");
 
     try {
       const response = await api<{ game: Game }>(`/games/${gameId}/scoring`, {
@@ -382,7 +383,7 @@ export default function GamesPage() {
         current.map((game) => (game.id === response.game.id ? response.game : game)),
       );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not update game");
+      setScoringError(cause instanceof Error ? cause.message : "Could not update game");
     } finally {
       setScoringBusy(false);
     }
@@ -799,7 +800,16 @@ export default function GamesPage() {
                   Open scoreboard
                 </Link>
 
-                {canScore && <button onClick={() => setScoringGameId(game.id)}>Score game</button>}
+                {canScore && (
+                  <button
+                    onClick={() => {
+                      setScoringError("");
+                      setScoringGameId(game.id);
+                    }}
+                  >
+                    Score game
+                  </button>
+                )}
 
                 {canManage && (
                   <>
@@ -826,8 +836,12 @@ export default function GamesPage() {
           <GameScoringConsole
             game={scoringGame}
             busy={scoringBusy}
+            error={scoringError}
             onAction={(action) => score(scoringGame.id, action)}
-            onClose={() => setScoringGameId(null)}
+            onClose={() => {
+              setScoringError("");
+              setScoringGameId(null);
+            }}
           />
         )}
       </AppShell>

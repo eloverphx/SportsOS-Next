@@ -12,9 +12,29 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   ) {
     headers.set("Content-Type", "application/json");
   }
-  const response = await fetch(`${API}${path}`, { ...options, headers });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API}${path}`, { ...options, headers });
+  } catch {
+    throw new Error("Could not connect to the SportsOS API");
+  }
+
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error ?? `Request failed (${response.status})`);
+
+  if (!response.ok) {
+    const message =
+      typeof body.error === "string" && body.error.trim()
+        ? body.error
+        : response.status === 401
+          ? "Your session has expired. Sign in again."
+          : response.status === 403
+            ? "You do not have permission to perform this action."
+            : `Request failed (${response.status})`;
+
+    throw new Error(message);
+  }
+
   return body as T;
 }
 export async function uploadLogo(

@@ -383,7 +383,11 @@ export default function ScoreboardControlPage() {
           </div>
         </header>
 
-        {error && <p className={styles.error}>{error}</p>}
+        {error && (
+          <p className={styles.error} role="alert" aria-live="assertive">
+            {error}
+          </p>
+        )}
 
         {!device && !error && (
           <section className={styles.message}>Loading scoreboard device…</section>

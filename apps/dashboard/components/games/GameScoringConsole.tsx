@@ -50,6 +50,7 @@ export type ScoringAction =
 interface Props {
   readonly game: ScoringGame;
   readonly busy: boolean;
+  readonly error: string;
   readonly onAction: (action: ScoringAction) => Promise<void>;
   readonly onClose: () => void;
 }
@@ -74,7 +75,7 @@ function formatClock(milliseconds: number): string {
   return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}`;
 }
 
-export function GameScoringConsole({ game, busy, onAction, onClose }: Props) {
+export function GameScoringConsole({ game, busy, error, onAction, onClose }: Props) {
   const [now, setNow] = useState(() => Date.now());
   const [minutes, setMinutes] = useState("20");
   const [seconds, setSeconds] = useState("00");
@@ -182,6 +183,12 @@ export function GameScoringConsole({ game, busy, onAction, onClose }: Props) {
             Close
           </button>
         </div>
+
+        {error && (
+          <p className="error" role="alert" aria-live="assertive">
+            {error}
+          </p>
+        )}
 
         <div className="cards">
           <div className="metric">
