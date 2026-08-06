@@ -401,6 +401,13 @@ export async function deleteGame(id: number): Promise<boolean> {
   return result.affectedRows > 0;
 }
 
+export class GamePhaseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "GamePhaseError";
+  }
+}
+
 interface LockedScoringRow extends RowDataPacket {
   id: number;
   home_score: number;
@@ -490,6 +497,11 @@ export async function applyGameScoringAction(
     let intermissionRunning = Boolean(row.intermission_running) && intermissionRemainingMs > 0;
     let intermissionStartedAt: Date | null = intermissionRunning ? new Date() : null;
 
+    const intermissionPaused =
+      !intermissionRunning &&
+      intermissionRemainingMs > 0 &&
+      intermissionRemainingMs < intermissionLengthMs;
+
     await materializePenaltyClocks(connection, id);
     const previousClockRemainingMs = clockRemainingMs;
 
@@ -506,8 +518,11 @@ export async function applyGameScoringAction(
         awayScore = action.awayScore;
         break;
       case "startClock":
-        if (intermissionRunning) {
-          throw new Error("Pause or finish intermission before starting the game clock");
+        if (status === "FINAL") {
+          throw new GamePhaseError("A final game cannot be restarted");
+        }
+        if (intermissionRunning || intermissionPaused) {
+          throw new GamePhaseError("Finish or skip intermission before starting the game clock");
         }
         if (clockRemainingMs > 0) {
           clockRunning = true;
@@ -520,6 +535,12 @@ export async function applyGameScoringAction(
         clockStartedAt = null;
         break;
       case "startIntermission":
+        if (status === "FINAL") {
+          throw new GamePhaseError("Intermission cannot start after the game is final");
+        }
+        if (clockRemainingMs > 0) {
+          throw new GamePhaseError("Intermission can start only when the game clock is at 0:00");
+        }
         clockRunning = false;
         clockStartedAt = null;
         if (intermissionRemainingMs <= 0) {
@@ -555,8 +576,17 @@ export async function applyGameScoringAction(
         const regulationPeriods = Number(row.regulation_periods ?? 3);
         const regulationLength = periodLengthMs;
 
+        if (status === "FINAL") {
+          throw new GamePhaseError("A final game cannot advance to another period");
+        }
+        if (clockRemainingMs > 0) {
+          throw new GamePhaseError("The game clock must be at 0:00 before advancing periods");
+        }
+        if (intermissionRunning || intermissionRemainingMs > 0) {
+          throw new GamePhaseError("Finish or skip intermission before advancing periods");
+        }
         if (period >= regulationPeriods) {
-          throw new Error("Choose overtime or final after regulation has ended");
+          throw new GamePhaseError("Choose overtime or final after regulation has ended");
         }
 
         period += 1;
@@ -576,12 +606,20 @@ export async function applyGameScoringAction(
         const overtimeEnabled = Boolean(row.overtime_enabled);
         const overtimeLength = Number(row.overtime_length_ms ?? 300_000);
 
-        if (!overtimeEnabled) {
-          throw new Error("Overtime is disabled for this game");
+        if (status === "FINAL") {
+          throw new GamePhaseError("A final game cannot enter overtime");
         }
-
+        if (!overtimeEnabled) {
+          throw new GamePhaseError("Overtime is disabled for this game");
+        }
         if (period < regulationPeriods) {
-          throw new Error("Regulation has not ended");
+          throw new GamePhaseError("Regulation has not ended");
+        }
+        if (clockRemainingMs > 0) {
+          throw new GamePhaseError("Regulation must reach 0:00 before overtime");
+        }
+        if (intermissionRunning || intermissionRemainingMs > 0) {
+          throw new GamePhaseError("Finish or skip intermission before starting overtime");
         }
 
         period = Math.max(period + 1, regulationPeriods + 1);
@@ -600,6 +638,9 @@ export async function applyGameScoringAction(
         clockRunning = false;
         clockStartedAt = null;
         clockRemainingMs = 0;
+        intermissionRemainingMs = 0;
+        intermissionRunning = false;
+        intermissionStartedAt = null;
         status = "FINAL";
         break;
 
@@ -622,6 +663,9 @@ export async function applyGameScoringAction(
         break;
       case "setPeriod":
         period = action.period;
+        intermissionRemainingMs = 0;
+        intermissionRunning = false;
+        intermissionStartedAt = null;
         clockStartedAt = clockRunning ? new Date() : null;
         break;
       case "setStatus":
@@ -629,6 +673,12 @@ export async function applyGameScoringAction(
         if (status !== "LIVE") {
           clockRunning = false;
           clockStartedAt = null;
+          intermissionRunning = false;
+          intermissionStartedAt = null;
+        }
+        if (status === "FINAL") {
+          clockRemainingMs = 0;
+          intermissionRemainingMs = 0;
         }
         break;
     }

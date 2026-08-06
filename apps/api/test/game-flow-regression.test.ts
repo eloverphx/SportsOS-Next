@@ -275,7 +275,7 @@ describe("intermission and penalty clock flow", () => {
       applyGameScoringAction(77, {
         action: "startClock",
       }),
-    ).rejects.toThrow("Pause or finish intermission before starting the game clock");
+    ).rejects.toThrow("Finish or skip intermission before starting the game clock");
 
     expect(rollback).toHaveBeenCalled();
     expect(setPenaltyClockRunning).not.toHaveBeenCalled();
@@ -324,5 +324,124 @@ describe("intermission and penalty clock flow", () => {
     expect(valueForColumn(sql, values, "clock_running")).toBe(false);
 
     expect(setPenaltyClockRunning).toHaveBeenCalledWith(expect.anything(), 77, false);
+  });
+});
+
+describe("server-side game phase validation", () => {
+  it("rejects intermission before the game clock reaches zero", async () => {
+    prepareScoring(
+      lockedRow({
+        clock_remaining_ms: 60_000,
+      }),
+    );
+
+    await expect(
+      applyGameScoringAction(77, {
+        action: "startIntermission",
+      }),
+    ).rejects.toThrow("Intermission can start only when the game clock is at 0:00");
+
+    expect(rollback).toHaveBeenCalled();
+  });
+
+  it("rejects intermission after the game is final", async () => {
+    prepareScoring(
+      lockedRow({
+        status: "FINAL",
+      }),
+    );
+
+    await expect(
+      applyGameScoringAction(77, {
+        action: "startIntermission",
+      }),
+    ).rejects.toThrow("Intermission cannot start after the game is final");
+  });
+
+  it("requires intermission to finish or be skipped before the next period", async () => {
+    prepareScoring(
+      lockedRow({
+        intermission_remaining_ms: 120_000,
+        intermission_running: 0,
+      }),
+    );
+
+    await expect(
+      applyGameScoringAction(77, {
+        action: "nextPeriod",
+      }),
+    ).rejects.toThrow("Finish or skip intermission before advancing periods");
+  });
+
+  it("requires regulation to reach zero before overtime", async () => {
+    prepareScoring(
+      lockedRow({
+        period: 3,
+        regulation_periods: 3,
+        clock_remaining_ms: 30_000,
+      }),
+    );
+
+    await expect(
+      applyGameScoringAction(77, {
+        action: "startOvertime",
+      }),
+    ).rejects.toThrow("Regulation must reach 0:00 before overtime");
+  });
+
+  it("requires intermission to finish or be skipped before overtime", async () => {
+    prepareScoring(
+      lockedRow({
+        period: 3,
+        regulation_periods: 3,
+        intermission_remaining_ms: 90_000,
+      }),
+    );
+
+    await expect(
+      applyGameScoringAction(77, {
+        action: "startOvertime",
+      }),
+    ).rejects.toThrow("Finish or skip intermission before starting overtime");
+  });
+
+  it("clears intermission state when the game is marked final", async () => {
+    prepareScoring(
+      lockedRow({
+        intermission_remaining_ms: 90_000,
+        intermission_running: 1,
+        intermission_started_at: new Date(),
+      }),
+    );
+
+    await applyGameScoringAction(77, {
+      action: "finishGame",
+    });
+
+    const [sql, values] = gameUpdateCall();
+
+    expect(valueForColumn(sql, values, "intermission_remaining_ms")).toBe(0);
+    expect(valueForColumn(sql, values, "intermission_running")).toBe(false);
+    expect(valueForColumn(sql, values, "intermission_started_at")).toBeNull();
+  });
+
+  it("clears stale intermission state after a manual period correction", async () => {
+    prepareScoring(
+      lockedRow({
+        intermission_remaining_ms: 90_000,
+        intermission_running: 0,
+      }),
+    );
+
+    await applyGameScoringAction(77, {
+      action: "setPeriod",
+      period: 2,
+    });
+
+    const [sql, values] = gameUpdateCall();
+
+    expect(valueForColumn(sql, values, "period")).toBe(2);
+    expect(valueForColumn(sql, values, "intermission_remaining_ms")).toBe(0);
+    expect(valueForColumn(sql, values, "intermission_running")).toBe(false);
   });
 });

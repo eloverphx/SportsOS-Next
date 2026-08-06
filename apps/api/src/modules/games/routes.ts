@@ -12,6 +12,7 @@ import {
   listGameTeamOptions,
   updateGame,
   validateGameRelationships,
+  GamePhaseError,
 } from "./repository.js";
 import {
   gameIdSchema,
@@ -250,7 +251,18 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       organizationId: existing.organizationId,
     });
 
-    const game = await applyGameScoringAction(id.data, parsed.data);
+    let game;
+
+    try {
+      game = await applyGameScoringAction(id.data, parsed.data);
+    } catch (error) {
+      if (error instanceof GamePhaseError) {
+        return reply.code(400).send({ error: error.message });
+      }
+
+      throw error;
+    }
+
     if (!game) return reply.code(404).send({ error: "Game not found" });
 
     await audit(identity.sub, "game.scored", {
