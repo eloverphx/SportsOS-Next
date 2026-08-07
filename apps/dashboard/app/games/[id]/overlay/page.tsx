@@ -98,7 +98,7 @@ export default function OverlayPage() {
     let connectedOnce = false;
 
     socket.on("connect", () => {
-      socket.emit("game:join", { gameId });
+      socket.emit("public-game:subscribe", { gameId });
 
       if (!connectedOnce) {
         connectedOnce = true;

@@ -72,9 +72,9 @@ export async function scoreboardDeviceRoutes(app: FastifyInstance): Promise<void
       gameId: device.gameId,
     });
 
-    realtime().emit("scoreboard-device:created", {
+    realtime().emit("scoreboard-devices:changed", {
+      reason: "created",
       id: device.id,
-      organizationId: device.organizationId,
     });
 
     return reply.code(201).send({ device });
@@ -132,9 +132,14 @@ export async function scoreboardDeviceRoutes(app: FastifyInstance): Promise<void
       gameId: device.gameId,
     });
 
-    realtime().emit("scoreboard-device:updated", {
+    realtime().to(`scoreboard-device:${device.id}`).emit("scoreboard-device:updated", {
       id: device.id,
       organizationId: device.organizationId,
+      gameId: device.gameId,
+    });
+    realtime().emit("scoreboard-devices:changed", {
+      reason: "updated",
+      id: device.id,
     });
 
     return { device };
@@ -160,9 +165,14 @@ export async function scoreboardDeviceRoutes(app: FastifyInstance): Promise<void
       organizationId: device.organizationId,
     });
 
-    realtime().emit("scoreboard-device:updated", {
+    realtime().to(`scoreboard-device:${device.id}`).emit("scoreboard-device:updated", {
       id: device.id,
       organizationId: device.organizationId,
+      gameId: device.gameId,
+    });
+    realtime().emit("scoreboard-devices:changed", {
+      reason: "updated",
+      id: device.id,
     });
 
     return { device };
@@ -179,11 +189,15 @@ export async function scoreboardDeviceRoutes(app: FastifyInstance): Promise<void
     const device = await recordScoreboardHeartbeat(id.data, parsed.data.deviceKey);
     if (!device) return reply.code(401).send({ error: "Invalid scoreboard credentials" });
 
-    realtime().emit("scoreboard-device:status", {
+    realtime().to(`scoreboard-device:${device.id}`).emit("scoreboard-device:status", {
       id: device.id,
       organizationId: device.organizationId,
       status: device.status,
       lastSeenAt: device.lastSeenAt,
+    });
+    realtime().emit("scoreboard-devices:changed", {
+      reason: "status",
+      id: device.id,
     });
 
     return {
@@ -215,9 +229,13 @@ export async function scoreboardDeviceRoutes(app: FastifyInstance): Promise<void
       organizationId: existing.organizationId,
     });
 
-    realtime().emit("scoreboard-device:deleted", {
+    realtime().to(`scoreboard-device:${id.data}`).emit("scoreboard-device:deleted", {
       id: id.data,
       organizationId: existing.organizationId,
+    });
+    realtime().emit("scoreboard-devices:changed", {
+      reason: "deleted",
+      id: id.data,
     });
 
     return { success: true };

@@ -138,12 +138,7 @@ export default function ScoreboardsPage() {
       void load();
     });
     socket.on("games:changed", load);
-    [
-      "scoreboard-device:created",
-      "scoreboard-device:updated",
-      "scoreboard-device:deleted",
-      "scoreboard-device:status",
-    ].forEach((eventName) => socket.on(eventName, load));
+    socket.on("scoreboard-devices:changed", load);
 
     return () => {
       socket.disconnect();

@@ -279,7 +279,7 @@ export default function ScoreboardPage() {
     const socket = io(API);
 
     socket.on("connect", () => {
-      socket.emit("game:join", { gameId });
+      socket.emit("public-game:subscribe", { gameId });
 
       if (!hasConnectedOnce.current) {
         hasConnectedOnce.current = true;

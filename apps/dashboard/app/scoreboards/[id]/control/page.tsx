@@ -8,6 +8,7 @@ import { AuthGate } from "../../../../components/AuthGate";
 import { API, api } from "../../../../lib/api";
 import {
   PERMISSIONS,
+  getStoredToken,
   getStoredUser,
   userHasPermission,
   type AuthenticatedUser,
@@ -202,11 +203,16 @@ export default function ScoreboardControlPage() {
   useEffect(() => {
     void load();
 
-    const socket = io(API);
+    const socket = io(API, {
+      auth: {
+        token: getStoredToken() ?? "",
+      },
+    });
     let connectedOnce = false;
 
     socket.on("connect", () => {
-      if (game?.id) socket.emit("game:join", { gameId: game.id });
+      if (game?.id) socket.emit("game:subscribe", { gameId: game.id });
+      socket.emit("scoreboard-device:subscribe", { deviceId });
 
       if (!connectedOnce) {
         connectedOnce = true;
@@ -245,6 +251,17 @@ export default function ScoreboardControlPage() {
     socket.on("scoreboard-device:updated", refreshForDevice);
     socket.on("scoreboard-device:deleted", refreshForDevice);
     socket.on("scoreboard-device:status", refreshForDevice);
+    socket.on(
+      "subscription:rejected",
+      (payload: { scope?: string; id?: number | null; reason?: string }) => {
+        if (
+          (payload.scope === "game" && payload.id === game?.id) ||
+          (payload.scope === "scoreboard-device" && payload.id === deviceId)
+        ) {
+          setError(payload.reason || "Realtime subscription denied.");
+        }
+      },
+    );
 
     return () => {
       socket.disconnect();

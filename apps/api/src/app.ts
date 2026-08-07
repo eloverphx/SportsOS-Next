@@ -19,6 +19,7 @@ import { gameEventRoutes } from "./modules/game-events/routes.js";
 import { penaltyRoutes } from "./modules/penalties/routes.js";
 import { scoreboardDeviceRoutes } from "./modules/scoreboard-devices/routes.js";
 import { startClockExpirationService } from "./modules/games/clock-expiration.js";
+import type { IdentityTokenPayload } from "./modules/auth/index.js";
 
 export interface BuildAppOptions {
   readonly logger?: boolean;
@@ -40,7 +41,9 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   });
 
   if (options.realtime ?? true) {
-    initializeRealtime(app.server);
+    initializeRealtime(app.server, {
+      verifyToken: (token) => app.jwt.verify<IdentityTokenPayload>(token),
+    });
 
     let stopClockExpirationService: (() => void) | undefined;
 
