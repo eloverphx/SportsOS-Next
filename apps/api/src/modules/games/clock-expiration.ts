@@ -1,8 +1,7 @@
 import type { PoolConnection, RowDataPacket } from "mysql2/promise";
 import { pool } from "../../infrastructure/database.js";
-import { realtime } from "../../infrastructure/realtime.js";
+import { enqueueRealtimeEvent } from "../../infrastructure/realtime-outbox.js";
 import { materializePenaltyClocks } from "../penalties/repository.js";
-import { findGameById } from "./repository.js";
 
 interface ExpirationCandidate extends RowDataPacket {
   id: number;
@@ -118,6 +117,71 @@ export async function materializeGameClockExpiration(
       );
     }
 
+    const room = `game:${gameId}`;
+
+    if (gameClockExpired) {
+      await enqueueRealtimeEvent(connection, {
+        room,
+        event: "game:clock-expired",
+        payload: {
+          gameId,
+          id: gameId,
+          organizationId: Number(row.organization_id),
+        },
+      });
+
+      await enqueueRealtimeEvent(connection, {
+        room,
+        event: "scoreboard:sound",
+        payload: {
+          gameId,
+          soundId: `period-end-${gameId}-${nowMs}`,
+          type: "HORN",
+        },
+      });
+    }
+
+    if (intermissionExpired) {
+      await enqueueRealtimeEvent(connection, {
+        room,
+        event: "game:intermission-expired",
+        payload: {
+          gameId,
+          id: gameId,
+          organizationId: Number(row.organization_id),
+        },
+      });
+
+      await enqueueRealtimeEvent(connection, {
+        room,
+        event: "scoreboard:sound",
+        payload: {
+          gameId,
+          soundId: `intermission-complete-${gameId}-${nowMs}`,
+          type: "INTERMISSION_COMPLETE",
+        },
+      });
+    }
+
+    await enqueueRealtimeEvent(connection, {
+      room,
+      event: "game:updated",
+      payload: {
+        id: gameId,
+        gameId,
+        organizationId: Number(row.organization_id),
+      },
+    });
+
+    await enqueueRealtimeEvent(connection, {
+      event: "games:changed",
+      payload: {
+        reason: gameClockExpired ? "clock-expired" : "intermission-expired",
+        id: gameId,
+        organizationId: Number(row.organization_id),
+      },
+    });
+
     await connection.commit();
 
     return {
@@ -174,52 +238,6 @@ export async function processExpiredGameClocks(nowMs = Date.now()): Promise<numb
 
     const result = await materializeGameClockExpiration(Number(row.id), nowMs);
     if (!result) continue;
-
-    const game = await findGameById(result.gameId);
-    if (!game) continue;
-
-    if (result.gameClockExpired) {
-      realtime().to(`game:${game.id}`).emit("game:clock-expired", {
-        game,
-        gameId: game.id,
-        organizationId: game.organizationId,
-      });
-
-      realtime()
-        .to(`game:${game.id}`)
-        .emit("scoreboard:sound", {
-          gameId: game.id,
-          soundId: `period-end-${game.id}-${game.period}-${Date.now()}`,
-          type: "HORN",
-        });
-    }
-
-    if (result.intermissionExpired) {
-      realtime().to(`game:${game.id}`).emit("game:intermission-expired", {
-        game,
-        gameId: game.id,
-        organizationId: game.organizationId,
-      });
-
-      realtime()
-        .to(`game:${game.id}`)
-        .emit("scoreboard:sound", {
-          gameId: game.id,
-          soundId: `intermission-complete-${game.id}-${game.period}-${Date.now()}`,
-          type: "INTERMISSION_COMPLETE",
-        });
-    }
-
-    realtime().to(`game:${game.id}`).emit("game:updated", {
-      id: game.id,
-      organizationId: game.organizationId,
-    });
-    realtime().emit("games:changed", {
-      reason: result.gameClockExpired ? "clock-expired" : "intermission-expired",
-      id: game.id,
-      organizationId: game.organizationId,
-    });
-
     processed += 1;
   }
 

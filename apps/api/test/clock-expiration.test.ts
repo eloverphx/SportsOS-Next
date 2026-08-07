@@ -8,6 +8,7 @@ const rollback = vi.fn();
 const release = vi.fn();
 const materializePenaltyClocks = vi.fn();
 const emit = vi.fn();
+const enqueueRealtimeEvent = vi.fn();
 const findGameById = vi.fn();
 
 vi.mock("../src/infrastructure/database.js", () => ({
@@ -28,6 +29,10 @@ vi.mock("../src/infrastructure/realtime.js", () => ({
     emit,
     to: vi.fn(() => ({ emit })),
   }),
+}));
+
+vi.mock("../src/infrastructure/realtime-outbox.js", () => ({
+  enqueueRealtimeEvent,
 }));
 
 vi.mock("../src/modules/penalties/repository.js", () => ({
@@ -141,7 +146,7 @@ describe("clock expiration materialization", () => {
 });
 
 describe("expiration realtime events", () => {
-  it("emits one horn and one update after a claimed game-clock expiration", async () => {
+  it("transactionally enqueues one horn and authoritative updates after expiration", async () => {
     poolExecute.mockResolvedValueOnce([[expiredRow()]]);
     connectionExecute
       .mockResolvedValueOnce([[expiredRow()]])
@@ -149,17 +154,29 @@ describe("expiration realtime events", () => {
 
     await expect(processExpiredGameClocks()).resolves.toBe(1);
 
-    expect(emit).toHaveBeenCalledWith(
-      "game:clock-expired",
-      expect.objectContaining({ gameId: 77, organizationId: 8 }),
+    expect(enqueueRealtimeEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        room: "game:77",
+        event: "game:clock-expired",
+        payload: expect.objectContaining({ gameId: 77, organizationId: 8 }),
+      }),
     );
-    expect(emit).toHaveBeenCalledWith(
-      "scoreboard:sound",
-      expect.objectContaining({ gameId: 77, type: "HORN" }),
+    expect(enqueueRealtimeEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        room: "game:77",
+        event: "scoreboard:sound",
+        payload: expect.objectContaining({ gameId: 77, type: "HORN" }),
+      }),
     );
-    expect(emit).toHaveBeenCalledWith("game:updated", {
-      id: 77,
-      organizationId: 8,
-    });
+    expect(enqueueRealtimeEvent).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        room: "game:77",
+        event: "game:updated",
+      }),
+    );
+    expect(emit).not.toHaveBeenCalled();
   });
 });

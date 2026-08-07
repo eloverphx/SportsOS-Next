@@ -20,6 +20,7 @@ import { penaltyRoutes } from "./modules/penalties/routes.js";
 import { scoreboardDeviceRoutes } from "./modules/scoreboard-devices/routes.js";
 import { startClockExpirationService } from "./modules/games/clock-expiration.js";
 import type { IdentityTokenPayload } from "./modules/auth/index.js";
+import { startRealtimeOutboxDispatcher } from "./infrastructure/realtime-outbox.js";
 
 export interface BuildAppOptions {
   readonly logger?: boolean;
@@ -46,8 +47,13 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     });
 
     let stopClockExpirationService: (() => void) | undefined;
+    let stopRealtimeOutboxDispatcher: (() => void) | undefined;
 
     app.addHook("onReady", async () => {
+      stopRealtimeOutboxDispatcher = startRealtimeOutboxDispatcher({
+        onError: (error) => app.log.error({ error }, "Realtime outbox dispatcher failed"),
+      });
+
       stopClockExpirationService = startClockExpirationService({
         onError: (error) => app.log.error({ error }, "Clock expiration service failed"),
       });
@@ -55,6 +61,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
     app.addHook("onClose", async () => {
       stopClockExpirationService?.();
+      stopRealtimeOutboxDispatcher?.();
     });
   }
 

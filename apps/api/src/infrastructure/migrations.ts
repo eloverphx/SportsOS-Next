@@ -303,6 +303,19 @@ export async function runMigrations(): Promise<void> {
       FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
   ) ENGINE=InnoDB`);
 
+  await pool.execute(`CREATE TABLE IF NOT EXISTS realtime_outbox (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    event_name VARCHAR(120) NOT NULL,
+    room_name VARCHAR(180) NULL,
+    payload_json LONGTEXT NOT NULL,
+    attempts INT UNSIGNED NOT NULL DEFAULT 0,
+    available_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    delivered_at DATETIME(3) NULL,
+    last_error TEXT NULL,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    INDEX idx_realtime_outbox_pending (delivered_at, available_at, id)
+  ) ENGINE=InnoDB`);
+
   await pool.execute(`CREATE TABLE IF NOT EXISTS game_events (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     game_id BIGINT UNSIGNED NOT NULL,
