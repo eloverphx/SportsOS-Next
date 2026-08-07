@@ -18,6 +18,7 @@ import { gameRoutes } from "./modules/games/routes.js";
 import { gameEventRoutes } from "./modules/game-events/routes.js";
 import { penaltyRoutes } from "./modules/penalties/routes.js";
 import { scoreboardDeviceRoutes } from "./modules/scoreboard-devices/routes.js";
+import { startClockExpirationService } from "./modules/games/clock-expiration.js";
 
 export interface BuildAppOptions {
   readonly logger?: boolean;
@@ -40,6 +41,18 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
   if (options.realtime ?? true) {
     initializeRealtime(app.server);
+
+    let stopClockExpirationService: (() => void) | undefined;
+
+    app.addHook("onReady", async () => {
+      stopClockExpirationService = startClockExpirationService({
+        onError: (error) => app.log.error({ error }, "Clock expiration service failed"),
+      });
+    });
+
+    app.addHook("onClose", async () => {
+      stopClockExpirationService?.();
+    });
   }
 
   await app.register(platformRoutes);
