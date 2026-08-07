@@ -2,6 +2,27 @@ import mysql, { type RowDataPacket } from "mysql2/promise";
 import { pool } from "../../infrastructure/database.js";
 import type { GameEventInput } from "./schemas.js";
 import type { GameEvent, GameEventPlayerOption } from "./types.js";
+
+export class GameEventIdempotencyConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "GameEventIdempotencyConflictError";
+  }
+}
+
+export interface GameEventMutationResult {
+  readonly event: GameEvent;
+  readonly homeScore: number;
+  readonly awayScore: number;
+  readonly replayed: boolean;
+}
+
+interface EventRequestLedgerPayload {
+  readonly operation: "createEvent" | "voidEvent";
+  readonly input?: GameEventInput;
+  readonly eventId?: number;
+  readonly resultEventId?: number;
+}
 import {
   clearEarliestEligibleMinorOnGoal,
   clearPenaltyForVoidedEvent,
@@ -90,130 +111,313 @@ export async function listGameEventPlayers(gameId: number): Promise<GameEventPla
   }));
 }
 
-export async function createGameEvent(gameId: number, input: GameEventInput, userId: string) {
+export async function createGameEvent(
+  gameId: number,
+  input: GameEventInput,
+  userId: string,
+  actionId?: string,
+): Promise<GameEventMutationResult> {
   const connection = await pool.getConnection();
+  let homeScore = 0;
+  let awayScore = 0;
+  let resultEventId: number | null = null;
+  let replayed = false;
+
   try {
     await connection.beginTransaction();
+
     const [games] = await connection.execute<RowDataPacket[]>(
       `SELECT * FROM games WHERE id = ? FOR UPDATE`,
       [gameId],
     );
+
     const game = games[0];
     if (!game) throw new Error("Game not found");
 
-    const teamId = input.side === "home" ? game.home_team_id : game.away_team_id;
-    const ids =
-      input.type === "GOAL"
-        ? [input.playerId, input.assist1PlayerId, input.assist2PlayerId]
-        : [input.playerId];
+    homeScore = Number(game.home_score);
+    awayScore = Number(game.away_score);
 
-    for (const playerId of ids) {
-      if (playerId == null) continue;
-      if (teamId == null) throw new Error("External teams cannot use roster players");
-      const [valid] = await connection.execute<RowDataPacket[]>(
-        `SELECT r.id FROM team_rosters r
-         WHERE r.season_id = ? AND r.team_id = ? AND r.player_id = ?
-           AND r.active = TRUE LIMIT 1`,
-        [game.season_id, teamId, playerId],
+    if (actionId) {
+      const [requests] = await connection.execute<RowDataPacket[]>(
+        `SELECT action_payload
+         FROM game_action_requests
+         WHERE game_id = ? AND action_id = ?
+         LIMIT 1
+         FOR UPDATE`,
+        [gameId, actionId],
       );
-      if (!valid[0]) throw new Error("Selected player is not on the active roster");
+
+      const existing = requests[0];
+
+      if (existing) {
+        let payload: EventRequestLedgerPayload;
+
+        try {
+          payload = JSON.parse(String(existing.action_payload)) as EventRequestLedgerPayload;
+        } catch {
+          throw new GameEventIdempotencyConflictError(
+            "This actionId is already owned by another game operation",
+          );
+        }
+
+        if (
+          payload.operation !== "createEvent" ||
+          JSON.stringify(payload.input) !== JSON.stringify(input) ||
+          !Number.isInteger(payload.resultEventId)
+        ) {
+          throw new GameEventIdempotencyConflictError(
+            "This actionId was already used for a different game event action",
+          );
+        }
+
+        resultEventId = Number(payload.resultEventId);
+        replayed = true;
+        await connection.commit();
+      } else {
+        await connection.execute(
+          `INSERT INTO game_action_requests (game_id, action_id, action_payload)
+           VALUES (?, ?, ?)`,
+          [
+            gameId,
+            actionId,
+            JSON.stringify({
+              operation: "createEvent",
+              input,
+            } satisfies EventRequestLedgerPayload),
+          ],
+        );
+      }
     }
 
-    let homeScore = Number(game.home_score);
-    let awayScore = Number(game.away_score);
-    if (input.type === "GOAL") {
-      if (input.side === "home") homeScore += 1;
-      else awayScore += 1;
-      await connection.execute("UPDATE games SET home_score = ?, away_score = ? WHERE id = ?", [
-        homeScore,
-        awayScore,
-        gameId,
-      ]);
+    if (!replayed) {
+      const teamId = input.side === "home" ? game.home_team_id : game.away_team_id;
+      const ids =
+        input.type === "GOAL"
+          ? [input.playerId, input.assist1PlayerId, input.assist2PlayerId]
+          : [input.playerId];
+
+      for (const playerId of ids) {
+        if (playerId == null) continue;
+        if (teamId == null) throw new Error("External teams cannot use roster players");
+
+        const [valid] = await connection.execute<RowDataPacket[]>(
+          `SELECT r.id FROM team_rosters r
+           WHERE r.season_id = ? AND r.team_id = ? AND r.player_id = ?
+             AND r.active = TRUE LIMIT 1`,
+          [game.season_id, teamId, playerId],
+        );
+
+        if (!valid[0]) throw new Error("Selected player is not on the active roster");
+      }
+
+      if (input.type === "GOAL") {
+        if (input.side === "home") homeScore += 1;
+        else awayScore += 1;
+
+        await connection.execute("UPDATE games SET home_score = ?, away_score = ? WHERE id = ?", [
+          homeScore,
+          awayScore,
+          gameId,
+        ]);
+      }
+
+      let remaining = Number(game.clock_remaining_ms);
+
+      if (game.clock_running && game.clock_started_at) {
+        remaining = Math.max(
+          0,
+          remaining - (Date.now() - new Date(game.clock_started_at).getTime()),
+        );
+      }
+
+      const [result] = await connection.execute<mysql.ResultSetHeader>(
+        `INSERT INTO game_events (
+          game_id, organization_id, type, side, period, clock_remaining_ms,
+          player_id, assist1_player_id, assist2_player_id,
+          penalty_code, penalty_minutes, notes, created_by_user_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          gameId,
+          game.organization_id,
+          input.type,
+          input.side,
+          game.period,
+          remaining,
+          input.playerId,
+          input.type === "GOAL" ? input.assist1PlayerId : null,
+          input.type === "GOAL" ? input.assist2PlayerId : null,
+          input.type === "PENALTY" ? input.penaltyCode : null,
+          input.type === "PENALTY" ? input.penaltyMinutes : null,
+          input.notes,
+          Number(userId),
+        ],
+      );
+
+      resultEventId = result.insertId;
+
+      if (input.type === "PENALTY") {
+        await createPenaltyClock(connection, {
+          gameEventId: result.insertId,
+          gameId,
+          side: input.side,
+          durationMs: Math.round(input.penaltyMinutes * 60_000),
+          gameClockRunning: Boolean(game.clock_running),
+        });
+      }
+
+      if (input.type === "GOAL") {
+        await clearEarliestEligibleMinorOnGoal(connection, gameId, input.side);
+      }
+
+      if (actionId) {
+        await connection.execute(
+          `UPDATE game_action_requests
+           SET action_payload = ?
+           WHERE game_id = ? AND action_id = ?`,
+          [
+            JSON.stringify({
+              operation: "createEvent",
+              input,
+              resultEventId,
+            } satisfies EventRequestLedgerPayload),
+            gameId,
+            actionId,
+          ],
+        );
+      }
+
+      await connection.commit();
     }
-
-    let remaining = Number(game.clock_remaining_ms);
-    if (game.clock_running && game.clock_started_at) {
-      remaining = Math.max(0, remaining - (Date.now() - new Date(game.clock_started_at).getTime()));
-    }
-
-    const [result] = await connection.execute<mysql.ResultSetHeader>(
-      `INSERT INTO game_events (
-        game_id, organization_id, type, side, period, clock_remaining_ms,
-        player_id, assist1_player_id, assist2_player_id,
-        penalty_code, penalty_minutes, notes, created_by_user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        gameId,
-        game.organization_id,
-        input.type,
-        input.side,
-        game.period,
-        remaining,
-        input.playerId,
-        input.type === "GOAL" ? input.assist1PlayerId : null,
-        input.type === "GOAL" ? input.assist2PlayerId : null,
-        input.type === "PENALTY" ? input.penaltyCode : null,
-        input.type === "PENALTY" ? input.penaltyMinutes : null,
-        input.notes,
-        Number(userId),
-      ],
-    );
-    if (input.type === "PENALTY") {
-      await createPenaltyClock(connection, {
-        gameEventId: result.insertId,
-        gameId,
-        side: input.side,
-        durationMs: Math.round(input.penaltyMinutes * 60_000),
-        gameClockRunning: Boolean(game.clock_running),
-      });
-    }
-
-    if (input.type === "GOAL") {
-      await clearEarliestEligibleMinorOnGoal(connection, gameId, input.side);
-    }
-
-    await connection.commit();
-
-    const [rows] = await pool.execute<RowDataPacket[]>(`${SELECT_EVENT} WHERE ge.id = ? LIMIT 1`, [
-      result.insertId,
-    ]);
-    return { event: mapEvent(rows[0]!), homeScore, awayScore };
   } catch (error) {
     await connection.rollback();
     throw error;
   } finally {
     connection.release();
   }
+
+  if (resultEventId == null) {
+    throw new Error("Game event could not be read after creation");
+  }
+
+  const [rows] = await pool.execute<RowDataPacket[]>(`${SELECT_EVENT} WHERE ge.id = ? LIMIT 1`, [
+    resultEventId,
+  ]);
+
+  if (!rows[0]) throw new Error("Game event could not be read after creation");
+
+  return {
+    event: mapEvent(rows[0]),
+    homeScore,
+    awayScore,
+    replayed,
+  };
 }
 
-export async function voidGameEvent(gameId: number, eventId: number, userId: string) {
+export async function voidGameEvent(
+  gameId: number,
+  eventId: number,
+  userId: string,
+  actionId?: string,
+): Promise<GameEventMutationResult> {
   const connection = await pool.getConnection();
+
   try {
     await connection.beginTransaction();
+
     const [events] = await connection.execute<RowDataPacket[]>(
       "SELECT * FROM game_events WHERE id = ? AND game_id = ? FOR UPDATE",
       [eventId, gameId],
     );
+
     const event = events[0];
     if (!event) throw new Error("Game event not found");
-    if (event.voided_at) throw new Error("Game event already voided");
+
+    let replayed = Boolean(event.voided_at);
+
+    if (actionId) {
+      const requestPayload = {
+        operation: "voidEvent",
+        eventId,
+      } satisfies EventRequestLedgerPayload;
+
+      const [requests] = await connection.execute<RowDataPacket[]>(
+        `SELECT action_payload
+         FROM game_action_requests
+         WHERE game_id = ? AND action_id = ?
+         LIMIT 1
+         FOR UPDATE`,
+        [gameId, actionId],
+      );
+
+      const existing = requests[0];
+
+      if (existing) {
+        let payload: EventRequestLedgerPayload;
+
+        try {
+          payload = JSON.parse(String(existing.action_payload)) as EventRequestLedgerPayload;
+        } catch {
+          throw new GameEventIdempotencyConflictError(
+            "This actionId is already owned by another game operation",
+          );
+        }
+
+        if (payload.operation !== "voidEvent" || Number(payload.eventId) !== eventId) {
+          throw new GameEventIdempotencyConflictError(
+            "This actionId was already used for a different game event action",
+          );
+        }
+
+        replayed = true;
+      } else {
+        await connection.execute(
+          `INSERT INTO game_action_requests (game_id, action_id, action_payload)
+           VALUES (?, ?, ?)`,
+          [gameId, actionId, JSON.stringify(requestPayload)],
+        );
+      }
+    }
 
     const [games] = await connection.execute<RowDataPacket[]>(
       "SELECT home_score, away_score FROM games WHERE id = ? FOR UPDATE",
       [gameId],
     );
-    const game = games[0]!;
+
+    const game = games[0];
+    if (!game) throw new Error("Game not found");
+
     let homeScore = Number(game.home_score);
     let awayScore = Number(game.away_score);
+
+    if (replayed) {
+      await connection.commit();
+
+      const [rows] = await pool.execute<RowDataPacket[]>(
+        `${SELECT_EVENT} WHERE ge.id = ? LIMIT 1`,
+        [eventId],
+      );
+
+      if (!rows[0]) throw new Error("Game event not found");
+
+      return {
+        event: mapEvent(rows[0]),
+        homeScore,
+        awayScore,
+        replayed: true,
+      };
+    }
+
     if (event.type === "GOAL") {
       if (event.side === "home") homeScore = Math.max(0, homeScore - 1);
       else awayScore = Math.max(0, awayScore - 1);
+
       await connection.execute("UPDATE games SET home_score = ?, away_score = ? WHERE id = ?", [
         homeScore,
         awayScore,
         gameId,
       ]);
     }
+
     if (event.type === "PENALTY") {
       await clearPenaltyForVoidedEvent(connection, eventId);
     }
@@ -223,11 +427,21 @@ export async function voidGameEvent(gameId: number, eventId: number, userId: str
        voided_by_user_id = ? WHERE id = ?`,
       [Number(userId), eventId],
     );
+
     await connection.commit();
+
     const [rows] = await pool.execute<RowDataPacket[]>(`${SELECT_EVENT} WHERE ge.id = ? LIMIT 1`, [
       eventId,
     ]);
-    return { event: mapEvent(rows[0]!), homeScore, awayScore };
+
+    if (!rows[0]) throw new Error("Game event not found");
+
+    return {
+      event: mapEvent(rows[0]),
+      homeScore,
+      awayScore,
+      replayed: false,
+    };
   } catch (error) {
     await connection.rollback();
     throw error;
