@@ -9,7 +9,7 @@ import styles from "./scoreboard.module.css";
 type GameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
 type GamePhase = "PREGAME" | "REGULATION" | "INTERMISSION" | "OVERTIME" | "FINAL";
 type Side = "home" | "away";
-type SoundType = "GOAL" | "PENALTY" | "HORN";
+type SoundType = "GOAL" | "PENALTY" | "HORN" | "INTERMISSION_COMPLETE";
 
 type Penalty = {
   id: number;
@@ -166,6 +166,12 @@ function playSound(context: AudioContext, type: SoundType): void {
     return;
   }
 
+  if (type === "INTERMISSION_COMPLETE") {
+    playTone(context, 660, start, 0.2);
+    playTone(context, 880, start + 0.24, 0.28);
+    return;
+  }
+
   playTone(context, 190, start, 1.25);
   playTone(context, 145, start + 0.08, 1.35);
 }
@@ -282,6 +288,8 @@ export default function ScoreboardPage() {
 
     socket.on("game:scored", refreshForGame);
     socket.on("game:updated", refreshForGame);
+    socket.on("game:clock-expired", refreshForGame);
+    socket.on("game:intermission-expired", refreshForGame);
     socket.on("game:penalties-updated", refreshForGame);
     socket.on("game:event-created", refreshForGame);
     socket.on("game:event-voided", refreshForGame);

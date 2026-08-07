@@ -232,9 +232,14 @@ export default function GamesPage() {
   useEffect(() => {
     void load();
     const socket = io(API);
-    ["game:created", "game:updated", "game:deleted", "game:scored"].forEach((eventName) =>
-      socket.on(eventName, load),
-    );
+    [
+      "game:created",
+      "game:updated",
+      "game:deleted",
+      "game:scored",
+      "game:clock-expired",
+      "game:intermission-expired",
+    ].forEach((eventName) => socket.on(eventName, load));
     return () => {
       socket.disconnect();
     };

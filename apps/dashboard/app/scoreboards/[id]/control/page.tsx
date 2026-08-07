@@ -204,8 +204,8 @@ export default function ScoreboardControlPage() {
 
     const socket = io(API);
 
-    const refreshForGame = (payload: { id?: number; game?: { id?: number } }) => {
-      const changedGameId = payload.game?.id ?? payload.id;
+    const refreshForGame = (payload: { id?: number; gameId?: number; game?: { id?: number } }) => {
+      const changedGameId = payload.gameId ?? payload.game?.id ?? payload.id;
       if (!game?.id || changedGameId === game.id) void load();
     };
 
@@ -215,6 +215,8 @@ export default function ScoreboardControlPage() {
 
     socket.on("game:scored", refreshForGame);
     socket.on("game:updated", refreshForGame);
+    socket.on("game:clock-expired", refreshForGame);
+    socket.on("game:intermission-expired", refreshForGame);
     socket.on("game:deleted", refreshForGame);
     socket.on("game:event-created", () => {
       setEventRefreshToken((v) => v + 1);

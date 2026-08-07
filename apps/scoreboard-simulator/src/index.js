@@ -26,7 +26,6 @@ let activeEffectExpiresAt = 0;
 let previousHomeScore = null;
 let previousAwayScore = null;
 let previousPenaltyIds = new Set();
-let previousIntermissionMs = null;
 let hornSequence = 0;
 let hornReason = null;
 
@@ -89,8 +88,7 @@ function state() {
               ? effectiveIntermissionRemainingMs(game)
               : effectiveRemainingMs(game),
           ),
-          displayMode:
-            game.gamePhase === "INTERMISSION" ? "INTERMISSION" : "GAME",
+          displayMode: game.gamePhase === "INTERMISSION" ? "INTERMISSION" : "GAME",
         }
       : null,
   };

@@ -27,6 +27,7 @@ type Game = {
   homeScore: number;
   awayScore: number;
   period: number;
+  gamePhase: "PREGAME" | "REGULATION" | "INTERMISSION" | "OVERTIME" | "FINAL";
   clockRemainingMs: number;
   clockRunning: boolean;
   clockStartedAt: string | null;
@@ -100,6 +101,8 @@ export default function OverlayPage() {
     [
       "game:scored",
       "game:updated",
+      "game:clock-expired",
+      "game:intermission-expired",
       "game:event-created",
       "game:event-voided",
       "game:penalties-updated",
@@ -151,14 +154,14 @@ export default function OverlayPage() {
         </div>
         <div className={styles.center}>
           <span>
-            {game.intermissionRunning || game.intermissionRemainingMs > 0
+            {game.gamePhase === "INTERMISSION"
               ? "INT"
               : game.periodLabel === "OVERTIME"
                 ? "OT"
                 : `P${game.period}`}
           </span>
           <strong>
-            {game.intermissionRunning || game.intermissionRemainingMs > 0
+            {game.gamePhase === "INTERMISSION"
               ? formatClock(effectiveIntermissionMs(game, now))
               : formatClock(remaining(game, now))}
           </strong>
