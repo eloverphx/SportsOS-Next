@@ -51,7 +51,7 @@ export async function penaltyRoutes(app: FastifyInstance): Promise<void> {
       penaltyId: penaltyId.data,
     });
 
-    realtime().emit("game:penalties-updated", { gameId: id.data });
+    realtime().to(`game:${id.data}`).emit("game:penalties-updated", { gameId: id.data });
 
     return {
       success: true,

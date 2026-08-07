@@ -24,7 +24,10 @@ vi.mock("../src/infrastructure/database.js", () => ({
 }));
 
 vi.mock("../src/infrastructure/realtime.js", () => ({
-  realtime: () => ({ emit }),
+  realtime: () => ({
+    emit,
+    to: vi.fn(() => ({ emit })),
+  }),
 }));
 
 vi.mock("../src/modules/penalties/repository.js", () => ({

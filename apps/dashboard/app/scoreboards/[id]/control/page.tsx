@@ -206,6 +206,8 @@ export default function ScoreboardControlPage() {
     let connectedOnce = false;
 
     socket.on("connect", () => {
+      if (game?.id) socket.emit("game:join", { gameId: game.id });
+
       if (!connectedOnce) {
         connectedOnce = true;
         return;

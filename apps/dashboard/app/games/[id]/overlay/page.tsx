@@ -98,6 +98,8 @@ export default function OverlayPage() {
     let connectedOnce = false;
 
     socket.on("connect", () => {
+      socket.emit("game:join", { gameId });
+
       if (!connectedOnce) {
         connectedOnce = true;
         return;

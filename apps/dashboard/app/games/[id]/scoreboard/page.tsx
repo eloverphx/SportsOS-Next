@@ -192,10 +192,6 @@ export default function ScoreboardPage() {
   const previousPenaltyIds = useRef<Set<number> | null>(null);
   const audioContext = useRef<AudioContext | null>(null);
   const hasConnectedOnce = useRef(false);
-  const priorDisplayedClock = useRef<number | null>(null);
-  const periodHornPlayed = useRef(false);
-  const priorDisplayedIntermission = useRef<number | null>(null);
-  const intermissionHornPlayed = useRef(false);
 
   const playBroadcastSound = useCallback(
     (sound: BroadcastSound) => {
@@ -283,6 +279,8 @@ export default function ScoreboardPage() {
     const socket = io(API);
 
     socket.on("connect", () => {
+      socket.emit("game:join", { gameId });
+
       if (!hasConnectedOnce.current) {
         hasConnectedOnce.current = true;
         return;
@@ -349,53 +347,6 @@ export default function ScoreboardPage() {
     () => (game ? effectiveIntermissionMs(game, now) : 0),
     [game, now],
   );
-
-  useEffect(() => {
-    if (!game) return;
-
-    const previous = priorDisplayedClock.current;
-    if (displayedClockMs > 0) periodHornPlayed.current = false;
-
-    if (
-      soundEnabled &&
-      game.clockRunning &&
-      previous !== null &&
-      previous > 0 &&
-      displayedClockMs === 0 &&
-      !periodHornPlayed.current
-    ) {
-      periodHornPlayed.current = true;
-      const context = audioContext.current;
-      if (context) playSound(context, "HORN");
-    }
-
-    priorDisplayedClock.current = displayedClockMs;
-  }, [displayedClockMs, game, soundEnabled]);
-
-  useEffect(() => {
-    if (!game) return;
-
-    const previous = priorDisplayedIntermission.current;
-
-    if (displayedIntermissionMs > 0) {
-      intermissionHornPlayed.current = false;
-    }
-
-    if (
-      soundEnabled &&
-      game.intermissionRunning &&
-      previous !== null &&
-      previous > 0 &&
-      displayedIntermissionMs === 0 &&
-      !intermissionHornPlayed.current
-    ) {
-      intermissionHornPlayed.current = true;
-      const context = audioContext.current;
-      if (context) playSound(context, "HORN");
-    }
-
-    priorDisplayedIntermission.current = displayedIntermissionMs;
-  }, [displayedIntermissionMs, game, soundEnabled]);
 
   const clock = formatClock(displayedClockMs);
 

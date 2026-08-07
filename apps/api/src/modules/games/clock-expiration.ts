@@ -179,34 +179,43 @@ export async function processExpiredGameClocks(nowMs = Date.now()): Promise<numb
     if (!game) continue;
 
     if (result.gameClockExpired) {
-      realtime().emit("game:clock-expired", {
+      realtime().to(`game:${game.id}`).emit("game:clock-expired", {
         game,
         gameId: game.id,
         organizationId: game.organizationId,
       });
 
-      realtime().emit("scoreboard:sound", {
-        gameId: game.id,
-        soundId: `period-end-${game.id}-${game.period}-${Date.now()}`,
-        type: "HORN",
-      });
+      realtime()
+        .to(`game:${game.id}`)
+        .emit("scoreboard:sound", {
+          gameId: game.id,
+          soundId: `period-end-${game.id}-${game.period}-${Date.now()}`,
+          type: "HORN",
+        });
     }
 
     if (result.intermissionExpired) {
-      realtime().emit("game:intermission-expired", {
+      realtime().to(`game:${game.id}`).emit("game:intermission-expired", {
         game,
         gameId: game.id,
         organizationId: game.organizationId,
       });
 
-      realtime().emit("scoreboard:sound", {
-        gameId: game.id,
-        soundId: `intermission-complete-${game.id}-${game.period}-${Date.now()}`,
-        type: "INTERMISSION_COMPLETE",
-      });
+      realtime()
+        .to(`game:${game.id}`)
+        .emit("scoreboard:sound", {
+          gameId: game.id,
+          soundId: `intermission-complete-${game.id}-${game.period}-${Date.now()}`,
+          type: "INTERMISSION_COMPLETE",
+        });
     }
 
-    realtime().emit("game:updated", {
+    realtime().to(`game:${game.id}`).emit("game:updated", {
+      id: game.id,
+      organizationId: game.organizationId,
+    });
+    realtime().emit("games:changed", {
+      reason: result.gameClockExpired ? "clock-expired" : "intermission-expired",
       id: game.id,
       organizationId: game.organizationId,
     });

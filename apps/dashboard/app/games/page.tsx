@@ -242,15 +242,7 @@ export default function GamesPage() {
 
       void load();
     });
-
-    [
-      "game:created",
-      "game:updated",
-      "game:deleted",
-      "game:scored",
-      "game:clock-expired",
-      "game:intermission-expired",
-    ].forEach((eventName) => socket.on(eventName, load));
+    socket.on("games:changed", load);
     return () => {
       socket.disconnect();
     };

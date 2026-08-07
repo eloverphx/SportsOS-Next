@@ -169,7 +169,8 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       awayExternalName: game.awayExternalName,
     });
 
-    realtime().emit("game:created", {
+    realtime().emit("games:changed", {
+      reason: "created",
       id: game.id,
       organizationId: game.organizationId,
     });
@@ -226,7 +227,12 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       organizationId: game.organizationId,
     });
 
-    realtime().emit("game:updated", {
+    realtime().to(`game:${game.id}`).emit("game:updated", {
+      id: game.id,
+      organizationId: game.organizationId,
+    });
+    realtime().emit("games:changed", {
+      reason: "updated",
       id: game.id,
       organizationId: game.organizationId,
     });
@@ -303,8 +309,13 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     });
 
     const payload = { game, action: parsed.data.action, replayed: false };
-    realtime().emit("game:scored", payload);
-    realtime().emit("game:updated", {
+    realtime().to(`game:${game.id}`).emit("game:scored", payload);
+    realtime().to(`game:${game.id}`).emit("game:updated", {
+      id: game.id,
+      organizationId: game.organizationId,
+    });
+    realtime().emit("games:changed", {
+      reason: "scored",
       id: game.id,
       organizationId: game.organizationId,
     });
@@ -333,11 +344,13 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       organizationId: game.organizationId,
     });
 
-    realtime().emit("scoreboard:sound", {
-      gameId: game.id,
-      soundId: `manual-horn-${game.id}-${Date.now()}`,
-      type: "HORN",
-    });
+    realtime()
+      .to(`game:${game.id}`)
+      .emit("scoreboard:sound", {
+        gameId: game.id,
+        soundId: `manual-horn-${game.id}-${Date.now()}`,
+        type: "HORN",
+      });
 
     return { success: true };
   });
@@ -362,7 +375,12 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       organizationId: game.organizationId,
     });
 
-    realtime().emit("game:deleted", {
+    realtime().to(`game:${id.data}`).emit("game:deleted", {
+      id: id.data,
+      organizationId: game.organizationId,
+    });
+    realtime().emit("games:changed", {
+      reason: "deleted",
       id: id.data,
       organizationId: game.organizationId,
     });

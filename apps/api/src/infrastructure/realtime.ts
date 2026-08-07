@@ -13,6 +13,18 @@ export function initializeRealtime(server: HttpServer): SocketIOServer {
       message: "SportsOS realtime online",
       timestamp: new Date().toISOString(),
     });
+
+    socket.on("game:join", (payload: { gameId?: unknown }) => {
+      const gameId = Number(payload?.gameId);
+      if (!Number.isInteger(gameId) || gameId <= 0) return;
+      void socket.join(`game:${gameId}`);
+    });
+
+    socket.on("game:leave", (payload: { gameId?: unknown }) => {
+      const gameId = Number(payload?.gameId);
+      if (!Number.isInteger(gameId) || gameId <= 0) return;
+      void socket.leave(`game:${gameId}`);
+    });
   });
   return io;
 }

@@ -137,12 +137,8 @@ export default function ScoreboardsPage() {
 
       void load();
     });
-
+    socket.on("games:changed", load);
     [
-      "game:created",
-      "game:updated",
-      "game:deleted",
-      "game:scored",
       "scoreboard-device:created",
       "scoreboard-device:updated",
       "scoreboard-device:deleted",
