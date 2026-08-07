@@ -191,6 +191,7 @@ export default function ScoreboardPage() {
   const effectTimer = useRef<number | null>(null);
   const previousPenaltyIds = useRef<Set<number> | null>(null);
   const audioContext = useRef<AudioContext | null>(null);
+  const hasConnectedOnce = useRef(false);
   const priorDisplayedClock = useRef<number | null>(null);
   const periodHornPlayed = useRef(false);
   const priorDisplayedIntermission = useRef<number | null>(null);
@@ -280,6 +281,32 @@ export default function ScoreboardPage() {
   useEffect(() => {
     void load();
     const socket = io(API);
+
+    socket.on("connect", () => {
+      if (!hasConnectedOnce.current) {
+        hasConnectedOnce.current = true;
+        return;
+      }
+
+      previousPenaltyIds.current = null;
+      setEffect(null);
+
+      if (effectTimer.current !== null) {
+        window.clearTimeout(effectTimer.current);
+        effectTimer.current = null;
+      }
+
+      void load();
+    });
+
+    socket.on("disconnect", () => {
+      setEffect(null);
+
+      if (effectTimer.current !== null) {
+        window.clearTimeout(effectTimer.current);
+        effectTimer.current = null;
+      }
+    });
 
     const refreshForGame = (payload: { id?: number; game?: { id?: number }; gameId?: number }) => {
       const changedId = payload.gameId ?? payload.game?.id ?? payload.id;

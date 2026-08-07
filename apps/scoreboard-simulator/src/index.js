@@ -108,12 +108,22 @@ async function heartbeat() {
       throw new Error(body.error ?? `Heartbeat failed (${response.status})`);
     }
 
+    const recovered = !connected;
+
     connected = true;
     assignedGameId = typeof body.gameId === "number" ? body.gameId : null;
     lastHeartbeatAt = new Date().toISOString();
     lastError = null;
 
-    if (!assignedGameId) game = null;
+    if (!assignedGameId) {
+      game = null;
+    } else if (recovered) {
+      previousHomeScore = null;
+      previousAwayScore = null;
+      previousPenaltyIds = new Set();
+      activeEffect = null;
+      await fetchGame();
+    }
   } catch (error) {
     connected = false;
     lastError = error instanceof Error ? error.message : "Heartbeat failed";

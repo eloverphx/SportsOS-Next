@@ -95,6 +95,17 @@ export default function OverlayPage() {
   useEffect(() => {
     void load();
     const socket = io(API);
+    let connectedOnce = false;
+
+    socket.on("connect", () => {
+      if (!connectedOnce) {
+        connectedOnce = true;
+        return;
+      }
+
+      void load();
+    });
+
     const refresh = (payload: { id?: number; gameId?: number; game?: { id?: number } }) => {
       if ((payload.gameId ?? payload.game?.id ?? payload.id) === gameId) void load();
     };

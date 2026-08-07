@@ -127,6 +127,16 @@ export default function ScoreboardsPage() {
   useEffect(() => {
     void load();
     const socket = io(API);
+    let connectedOnce = false;
+
+    socket.on("connect", () => {
+      if (!connectedOnce) {
+        connectedOnce = true;
+        return;
+      }
+
+      void load();
+    });
 
     [
       "game:created",

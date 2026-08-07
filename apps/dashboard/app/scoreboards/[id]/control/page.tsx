@@ -203,6 +203,17 @@ export default function ScoreboardControlPage() {
     void load();
 
     const socket = io(API);
+    let connectedOnce = false;
+
+    socket.on("connect", () => {
+      if (!connectedOnce) {
+        connectedOnce = true;
+        return;
+      }
+
+      setEventRefreshToken((value) => value + 1);
+      void load();
+    });
 
     const refreshForGame = (payload: { id?: number; gameId?: number; game?: { id?: number } }) => {
       const changedGameId = payload.gameId ?? payload.game?.id ?? payload.id;
