@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
 
 type Side = "home" | "away";
@@ -60,6 +60,12 @@ export function GameEventsPanel(props: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  const pendingCreate = useRef<{
+    actionId: string;
+    payloadJson: string;
+  } | null>(null);
+  const pendingUndo = useRef(new Map<number, string>());
+
   const teamId = side === "home" ? props.homeTeamId : props.awayTeamId;
   const options = useMemo(
     () => players.filter((player) => player.teamId === teamId),
@@ -90,37 +96,51 @@ export function GameEventsPanel(props: Props) {
   async function submit(event: React.FormEvent): Promise<void> {
     event.preventDefault();
     if (!props.canScore || busy) return;
+
+    const payload =
+      type === "GOAL"
+        ? {
+            type,
+            side,
+            playerId: playerId || null,
+            assist1PlayerId: assist1 || null,
+            assist2PlayerId: assist2 || null,
+            notes: notes || null,
+          }
+        : {
+            type,
+            side,
+            playerId: playerId || null,
+            penaltyCode,
+            penaltyMinutes: Number(penaltyMinutes),
+            notes: notes || null,
+          };
+
+    const payloadJson = JSON.stringify(payload);
+    const existing = pendingCreate.current;
+    const actionId =
+      existing?.payloadJson === payloadJson ? existing.actionId : crypto.randomUUID();
+
+    pendingCreate.current = { actionId, payloadJson };
+
     setBusy(true);
     setError("");
+
     try {
       await api(`/games/${props.gameId}/events`, {
         method: "POST",
-        body: JSON.stringify(
-          type === "GOAL"
-            ? {
-                type,
-                side,
-                playerId: playerId || null,
-                assist1PlayerId: assist1 || null,
-                assist2PlayerId: assist2 || null,
-                notes: notes || null,
-              }
-            : {
-                type,
-                side,
-                playerId: playerId || null,
-                penaltyCode,
-                penaltyMinutes: Number(penaltyMinutes),
-                notes: notes || null,
-              },
-        ),
+        body: JSON.stringify({ ...payload, actionId }),
       });
+
+      pendingCreate.current = null;
       setPlayerId("");
       setAssist1("");
       setAssist2("");
       setNotes("");
       await Promise.all([load(), props.onScoreChanged()]);
     } catch (cause) {
+      // Keep pendingCreate so an ambiguous network failure can be retried
+      // with the exact same actionId instead of creating a duplicate event.
       setError(cause instanceof Error ? cause.message : "Could not save event");
     } finally {
       setBusy(false);
@@ -129,11 +149,25 @@ export function GameEventsPanel(props: Props) {
 
   async function undo(id: number): Promise<void> {
     if (!window.confirm("Undo this event?")) return;
+
+    const actionId = pendingUndo.current.get(id) ?? crypto.randomUUID();
+    pendingUndo.current.set(id, actionId);
+
     setBusy(true);
+    setError("");
+
     try {
-      await api(`/games/${props.gameId}/events/${id}`, { method: "DELETE" });
+      await api(`/games/${props.gameId}/events/${id}`, {
+        method: "DELETE",
+        headers: {
+          "x-action-id": actionId,
+        },
+      });
+
+      pendingUndo.current.delete(id);
       await Promise.all([load(), props.onScoreChanged()]);
     } catch (cause) {
+      // Keep the actionId for this event so a retry is a safe replay.
       setError(cause instanceof Error ? cause.message : "Could not undo event");
     } finally {
       setBusy(false);
