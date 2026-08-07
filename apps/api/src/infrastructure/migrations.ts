@@ -291,6 +291,18 @@ export async function runMigrations(): Promise<void> {
        MODIFY COLUMN away_team_id BIGINT UNSIGNED NULL`,
   );
 
+  await pool.execute(`CREATE TABLE IF NOT EXISTS game_action_requests (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    game_id BIGINT UNSIGNED NOT NULL,
+    action_id VARCHAR(80) NOT NULL,
+    action_payload TEXT NOT NULL,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    UNIQUE KEY uq_game_action_request (game_id, action_id),
+    INDEX idx_game_action_requests_created (created_at),
+    CONSTRAINT fk_game_action_requests_game
+      FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB`);
+
   await pool.execute(`CREATE TABLE IF NOT EXISTS game_events (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     game_id BIGINT UNSIGNED NOT NULL,

@@ -391,10 +391,12 @@ export default function GamesPage() {
     setScoringBusy(true);
     setScoringError("");
 
+    const actionId = crypto.randomUUID();
+
     try {
       const response = await api<{ game: Game }>(`/games/${gameId}/scoring`, {
         method: "POST",
-        body: JSON.stringify(action),
+        body: JSON.stringify({ ...action, actionId }),
       });
 
       setGames((current) =>

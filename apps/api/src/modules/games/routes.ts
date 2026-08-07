@@ -13,6 +13,7 @@ import {
   updateGame,
   validateGameRelationships,
   GamePhaseError,
+  IdempotencyConflictError,
 } from "./repository.js";
 import {
   gameIdSchema,
@@ -236,8 +237,14 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
   app.post("/games/:id/scoring", async (request, reply) => {
     const id = gameIdSchema.safeParse((request.params as { id: string }).id);
     const parsed = scoreActionSchema.safeParse(request.body);
+    const rawBody =
+      request.body && typeof request.body === "object"
+        ? (request.body as Record<string, unknown>)
+        : {};
+    const actionId = typeof rawBody.actionId === "string" ? rawBody.actionId : undefined;
+    const validActionId = actionId === undefined || /^[A-Za-z0-9._:-]{8,80}$/.test(actionId);
 
-    if (!id.success || !parsed.success) {
+    if (!id.success || !parsed.success || !validActionId) {
       return reply.code(400).send({
         error: "Invalid scoring action",
         details: parsed.success ? undefined : parsed.error.flatten(),
@@ -252,11 +259,15 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       organizationId: existing.organizationId,
     });
 
-    let game;
+    let result;
 
     try {
-      game = await applyGameScoringAction(id.data, parsed.data);
+      result = await applyGameScoringAction(id.data, parsed.data, actionId);
     } catch (error) {
+      if (error instanceof IdempotencyConflictError) {
+        return reply.code(409).send({ error: error.message });
+      }
+
       if (error instanceof GamePhaseError) {
         return reply.code(400).send({ error: error.message });
       }
@@ -264,12 +275,25 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       throw error;
     }
 
-    if (!game) return reply.code(404).send({ error: "Game not found" });
+    if (!result) {
+      // A replay is detected while the game row is locked. Reload the
+      // authoritative committed state without applying or emitting again.
+      if (actionId) {
+        const game = await findGameById(id.data);
+        if (!game) return reply.code(404).send({ error: "Game not found" });
+        return { game, action: parsed.data.action, replayed: true };
+      }
+
+      return reply.code(404).send({ error: "Game not found" });
+    }
+
+    const { game } = result;
 
     await audit(identity.sub, "game.scored", {
       gameId: game.id,
       organizationId: game.organizationId,
       action: parsed.data.action,
+      actionId,
       homeScore: game.homeScore,
       awayScore: game.awayScore,
       period: game.period,
@@ -278,7 +302,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       status: game.status,
     });
 
-    const payload = { game, action: parsed.data.action };
+    const payload = { game, action: parsed.data.action, replayed: false };
     realtime().emit("game:scored", payload);
     realtime().emit("game:updated", {
       id: game.id,

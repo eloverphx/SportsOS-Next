@@ -594,3 +594,87 @@ describe("completed intermission handoff", () => {
     );
   });
 });
+
+describe("scoring action idempotency", () => {
+  it("records a new actionId in the same transaction as the game mutation", async () => {
+    connectionExecute.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM games") && sql.includes("FOR UPDATE")) {
+        return [[lockedRow()]];
+      }
+
+      if (sql.includes("FROM game_action_requests")) {
+        return [[]];
+      }
+
+      return [{ affectedRows: 1 }];
+    });
+
+    poolExecute.mockResolvedValue([[]]);
+
+    await applyGameScoringAction(
+      77,
+      { action: "adjustScore", side: "home", amount: 1 },
+      "action-test-0001",
+    );
+
+    expect(
+      connectionExecute.mock.calls.some(([sql]) =>
+        String(sql).includes("INSERT INTO game_action_requests"),
+      ),
+    ).toBe(true);
+
+    expect(
+      connectionExecute.mock.calls.some(([sql]) => String(sql).includes("UPDATE games SET")),
+    ).toBe(true);
+
+    expect(commit).toHaveBeenCalled();
+  });
+
+  it("does not apply a duplicate actionId twice", async () => {
+    const action = { action: "adjustScore", side: "home", amount: 1 } as const;
+
+    connectionExecute.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM games") && sql.includes("FOR UPDATE")) {
+        return [[lockedRow()]];
+      }
+
+      if (sql.includes("FROM game_action_requests")) {
+        return [[{ action_payload: JSON.stringify(action) }]];
+      }
+
+      return [{ affectedRows: 1 }];
+    });
+
+    poolExecute.mockResolvedValue([[]]);
+
+    await applyGameScoringAction(77, action, "action-test-0002");
+
+    expect(
+      connectionExecute.mock.calls.some(([sql]) => String(sql).includes("UPDATE games SET")),
+    ).toBe(false);
+
+    expect(adjustActivePenaltyClocks).not.toHaveBeenCalled();
+    expect(setPenaltyClockRunning).not.toHaveBeenCalled();
+    expect(commit).toHaveBeenCalled();
+  });
+
+  it("rejects reuse of an actionId for a different action", async () => {
+    connectionExecute.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM games") && sql.includes("FOR UPDATE")) {
+        return [[lockedRow()]];
+      }
+
+      if (sql.includes("FROM game_action_requests")) {
+        return [[{ action_payload: JSON.stringify({ action: "pauseClock" }) }]];
+      }
+
+      return [{ affectedRows: 1 }];
+    });
+
+    await expect(
+      applyGameScoringAction(77, { action: "startClock" }, "action-test-0003"),
+    ).rejects.toThrow("already used for a different scoring action");
+
+    expect(rollback).toHaveBeenCalled();
+  });
+});

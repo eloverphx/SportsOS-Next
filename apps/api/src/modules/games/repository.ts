@@ -412,6 +412,18 @@ export class GamePhaseError extends Error {
   }
 }
 
+export class IdempotencyConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "IdempotencyConflictError";
+  }
+}
+
+export interface ScoringActionApplication {
+  readonly game: Game;
+  readonly applied: boolean;
+}
+
 interface LockedScoringRow extends RowDataPacket {
   id: number;
   home_score: number;
@@ -474,8 +486,10 @@ async function lockGame(connection: PoolConnection, id: number): Promise<LockedS
 export async function applyGameScoringAction(
   id: number,
   action: ScoreAction,
-): Promise<Game | null> {
+  actionId?: string,
+): Promise<ScoringActionApplication | null> {
   const connection = await pool.getConnection();
+  let applied = true;
 
   try {
     await connection.beginTransaction();
@@ -483,6 +497,43 @@ export async function applyGameScoringAction(
     const row = await lockGame(connection, id);
     if (!row) {
       await connection.rollback();
+      return null;
+    }
+
+    if (actionId) {
+      const actionPayload = JSON.stringify(action);
+      const [requests] = await connection.execute<RowDataPacket[]>(
+        `SELECT action_payload
+         FROM game_action_requests
+         WHERE game_id = ? AND action_id = ?
+         LIMIT 1
+         FOR UPDATE`,
+        [id, actionId],
+      );
+
+      const existingRequest = requests[0];
+
+      if (existingRequest) {
+        if (String(existingRequest.action_payload) !== actionPayload) {
+          throw new IdempotencyConflictError(
+            "This actionId was already used for a different scoring action",
+          );
+        }
+
+        applied = false;
+        await connection.commit();
+      } else {
+        await connection.execute(
+          `INSERT INTO game_action_requests (game_id, action_id, action_payload)
+           VALUES (?, ?, ?)`,
+          [id, actionId, actionPayload],
+        );
+      }
+    }
+
+    if (!applied) {
+      // The game row was locked before the request ledger was checked, so a
+      // replay always observes the previously committed authoritative state.
       return null;
     }
 
@@ -764,5 +815,6 @@ export async function applyGameScoringAction(
     connection.release();
   }
 
-  return findGameById(id);
+  const game = await findGameById(id);
+  return game ? { game, applied } : null;
 }

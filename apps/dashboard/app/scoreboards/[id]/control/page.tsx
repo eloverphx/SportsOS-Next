@@ -278,6 +278,7 @@ export default function ScoreboardControlPage() {
     }
 
     const gameId = game.id;
+    const actionId = crypto.randomUUID();
 
     pendingActions.current += 1;
     setBusy(true);
@@ -286,7 +287,7 @@ export default function ScoreboardControlPage() {
     const request = actionQueue.current.then(async () => {
       const response = await api<{ game: Game }>(`/games/${gameId}/scoring`, {
         method: "POST",
-        body: JSON.stringify(action),
+        body: JSON.stringify({ ...action, actionId }),
       });
 
       setGame(response.game);
