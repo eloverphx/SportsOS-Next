@@ -244,19 +244,6 @@ export async function processExpiredGameClocks(nowMs = Date.now()): Promise<numb
   return processed;
 }
 
-/**
- * Reconcile persisted timers before the API becomes ready.
- *
- * Expired clocks are materialized transactionally. Clocks that still have time
- * remaining stay persisted with their original started_at timestamp, allowing
- * every reader to reconstruct the authoritative remaining time after restart.
- */
-export async function recoverGameClocksOnStartup(
-  nowMs = Date.now(),
-): Promise<number> {
-  return processExpiredGameClocks(nowMs);
-}
-
 export function startClockExpirationService(
   options: {
     intervalMs?: number;

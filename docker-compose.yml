@@ -76,8 +76,8 @@ services:
     environment:
       PORT: 4001
       HOST: 0.0.0.0
-      DASHBOARD_ORIGIN: http://${SPORTSOS_HOST}:4000
-      PUBLIC_API_URL: http://${SPORTSOS_HOST}:4001
+      DASHBOARD_ORIGIN: ${SPORTSOS_DASHBOARD_URL}
+      PUBLIC_API_URL: ${SPORTSOS_API_URL}
       MYSQL_HOST: mysql
       MYSQL_PORT: 3306
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -114,7 +114,7 @@ services:
       context: .
       dockerfile: apps/dashboard/Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://${SPORTSOS_HOST}:4001
+        NEXT_PUBLIC_API_URL: ${SPORTSOS_API_URL}
     container_name: sportsos_dashboard
     restart: unless-stopped
     environment:
@@ -124,6 +124,35 @@ services:
       - "4000:4000"
     depends_on:
       api: { condition: service_healthy }
+
+  scoreboard-simulator:
+    build:
+      context: .
+      dockerfile: apps/scoreboard-simulator/Dockerfile
+    container_name: sportsos_scoreboard_simulator
+    restart: unless-stopped
+    environment:
+      API_URL: http://api:4001
+      SCOREBOARD_DEVICE_ID: ${SCOREBOARD_DEVICE_ID:-0}
+      SCOREBOARD_DEVICE_KEY: ${SCOREBOARD_DEVICE_KEY:-}
+      PORT: 4020
+      HEARTBEAT_INTERVAL_MS: 30000
+      GAME_POLL_INTERVAL_MS: 2000
+    ports:
+      - "4020:4020"
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:4020/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 volumes:
   sportsos_mysql:

@@ -41,3 +41,8 @@ test-results/
 # Local runtime data
 .tmp/
 tmp/
+# Local engineering scratch artifacts
+*.bak-*
+*-inventory.txt
+scoring-console-debug.txt
+

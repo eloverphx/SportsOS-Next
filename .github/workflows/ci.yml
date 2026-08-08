@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - feature/**
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      NODE_ENV: test
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:4001
+
+      PORT: "4001"
+      HOST: 127.0.0.1
+      DASHBOARD_ORIGIN: http://127.0.0.1:4000
+      PUBLIC_API_URL: http://127.0.0.1:4001
+
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: "3306"
+      MYSQL_DATABASE: sportsos
+      MYSQL_USER: sportsos
+      MYSQL_PASSWORD: sportsos-ci-password
+
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "6379"
+
+      MQTT_HOST: 127.0.0.1
+      MQTT_PORT: "1883"
+
+      MINIO_ENDPOINT: 127.0.0.1
+      MINIO_PORT: "9000"
+      MINIO_USE_SSL: "false"
+      MINIO_ROOT_USER: sportsos
+      MINIO_ROOT_PASSWORD: sportsos-ci-password
+
+      JWT_SECRET: sportsos-ci-jwt-secret-at-least-32-characters-long
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      # Dashboard and API consume @sportsos/core through its package exports,
+      # which resolve to dist/. Build shared packages before workspace typecheck.
+      - name: Build shared packages
+        run: npm run ci:prepare
+
+      - name: Formatting
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit and contract tests
+        run: npm run test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser smoke tests
+        run: npm run test:e2e

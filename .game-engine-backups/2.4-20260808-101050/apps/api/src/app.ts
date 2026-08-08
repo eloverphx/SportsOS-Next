@@ -23,7 +23,6 @@ import {
   startClockExpirationService,
 } from "./modules/games/clock-expiration.js";
 import { startGameRuntimeSupervisor } from "./modules/games/runtime-supervisor.js";
-import { gameEngineTelemetryRoutes } from "./modules/games/telemetry-routes.js";
 import type { IdentityTokenPayload } from "./modules/auth/index.js";
 import { startRealtimeOutboxDispatcher } from "./infrastructure/realtime-outbox.js";
 
@@ -97,7 +96,6 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(rosterRoutes);
   await app.register(mediaRoutes);
   await app.register(systemRoutes);
-  await app.register(gameEngineTelemetryRoutes);
 
   return app;
 }

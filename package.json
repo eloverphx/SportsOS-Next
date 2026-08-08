@@ -23,9 +23,16 @@
     "lint": "prettier --check .",
     "format": "prettier --write .",
     "test": "npm run test --workspaces --if-present",
-    "clean": "node scripts/clean.mjs"
+    "clean": "node scripts/clean.mjs",
+    "ci:prepare": "npm run build --workspace=@sportsos/core && npm run build --workspace=@sportsos/config",
+    "ci:verify": "npm run ci:prepare && npm run lint && npm run typecheck && npm run test && npm run build",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:docker": "./scripts/test-e2e-docker.sh"
   },
   "devDependencies": {
+    "@playwright/test": "1.55.0",
     "prettier": "3.6.2"
   }
 }

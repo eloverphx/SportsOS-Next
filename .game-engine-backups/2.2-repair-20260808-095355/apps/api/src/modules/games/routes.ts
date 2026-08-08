@@ -21,11 +21,6 @@ import {
   gameListQuerySchema,
   scoreActionSchema,
 } from "./schemas.js";
-import {
-  GameLifecycleError,
-  gameLifecycleCommandSchema,
-  resolveLifecycleAction,
-} from "./lifecycle.js";
 
 function relationshipErrorMessage(
   error: "organization" | "season" | "homeTeam" | "awayTeam",
@@ -314,87 +309,6 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     });
 
     return { game, action: parsed.data.action, replayed: false };
-  });
-
-  app.post("/games/:id/lifecycle", async (request, reply) => {
-    const id = gameIdSchema.safeParse((request.params as { id: string }).id);
-    const parsed = gameLifecycleCommandSchema.safeParse(request.body);
-
-    if (!id.success || !parsed.success) {
-      return reply.code(400).send({
-        error: "Invalid lifecycle command",
-        details: parsed.success ? undefined : parsed.error.flatten(),
-      });
-    }
-
-    const existing = await findGameById(id.data);
-    if (!existing) return reply.code(404).send({ error: "Game not found" });
-
-    const identity = await requirePermission(request, {
-      permission: PERMISSIONS.GAME_SCORE,
-      organizationId: existing.organizationId,
-    });
-
-    let action;
-    try {
-      action = resolveLifecycleAction(existing, parsed.data.command);
-    } catch (error) {
-      if (error instanceof GameLifecycleError) {
-        return reply.code(400).send({ error: error.message });
-      }
-      throw error;
-    }
-
-    let result;
-    try {
-      result = await applyGameScoringAction(
-        id.data,
-        action,
-        parsed.data.commandId,
-      );
-    } catch (error) {
-      if (error instanceof IdempotencyConflictError) {
-        return reply.code(409).send({ error: error.message });
-      }
-      if (error instanceof GamePhaseError) {
-        return reply.code(400).send({ error: error.message });
-      }
-      throw error;
-    }
-
-    if (!result) {
-      if (parsed.data.commandId) {
-        const game = await findGameById(id.data);
-        if (!game) return reply.code(404).send({ error: "Game not found" });
-
-        return {
-          game,
-          command: parsed.data.command,
-          replayed: true,
-        };
-      }
-
-      return reply.code(404).send({ error: "Game not found" });
-    }
-
-    const { game } = result;
-
-    await audit(identity.sub, "game.lifecycle", {
-      gameId: game.id,
-      organizationId: game.organizationId,
-      command: parsed.data.command,
-      commandId: parsed.data.commandId,
-      gamePhase: game.gamePhase,
-      period: game.period,
-      status: game.status,
-      clockRemainingMs: game.clockRemainingMs,
-    });
-
-    return {
-      game,
-      command: parsed.data.command,
-      replayed: false,
-    };
   });
 
   app.post("/games/:id/broadcast", async (request, reply) => {

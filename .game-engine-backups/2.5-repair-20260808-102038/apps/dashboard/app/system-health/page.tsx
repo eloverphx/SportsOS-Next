@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { AuthGate } from "../../components/AuthGate";
 import { AppShell } from "../../components/AppShell";
-import { GameEnginePanel } from "../../components/system-health/GameEnginePanel";
 import { API } from "../../lib/api";
 
 interface HealthResponse {
@@ -191,8 +190,6 @@ export default function SystemHealthPage() {
             })}
           </div>
         </section>
-
-        <GameEnginePanel />
 
         <section className="panel">
           <h2>Platform details</h2>

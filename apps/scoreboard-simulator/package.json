@@ -1,0 +1,14 @@
+{
+  "name": "@sportsos/scoreboard-simulator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "typecheck": "node --check src/index.js",
+    "build": "node --check src/index.js"
+  }
+}

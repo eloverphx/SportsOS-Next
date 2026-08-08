@@ -229,7 +229,6 @@ describe("intermission and penalty clock flow", () => {
       lockedRow({
         period: 1,
         period_length_ms: 720_000,
-        regulation_period_length_ms: 720_000,
         intermission_remaining_ms: 0,
       }),
     );
