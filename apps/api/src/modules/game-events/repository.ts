@@ -1,5 +1,6 @@
 import mysql, { type RowDataPacket } from "mysql2/promise";
 import { pool } from "../../infrastructure/database.js";
+import { enqueueRealtimeEvent } from "../../infrastructure/realtime-outbox.js";
 import type { GameEventInput } from "./schemas.js";
 import type { GameEvent, GameEventPlayerOption } from "./types.js";
 
@@ -286,6 +287,61 @@ export async function createGameEvent(
         );
       }
 
+      const [createdRows] = await connection.execute<RowDataPacket[]>(
+        `${SELECT_EVENT} WHERE ge.id = ? LIMIT 1`,
+        [resultEventId],
+      );
+      if (!createdRows[0]) {
+        throw new Error("Game event could not be read before commit");
+      }
+
+      const createdEvent = mapEvent(createdRows[0]);
+      const room = `game:${gameId}`;
+      const organizationId = Number(game.organization_id);
+
+      await enqueueRealtimeEvent(connection, {
+        room,
+        event: "game:event-created",
+        payload: { gameId, event: createdEvent },
+      });
+
+      await enqueueRealtimeEvent(connection, {
+        room,
+        event: "scoreboard:effect",
+        payload: {
+          gameId,
+          effectId: `game-event-${createdEvent.id}`,
+          type: createdEvent.type === "GOAL" ? "GOAL" : "PENALTY",
+          side: createdEvent.side,
+          playerName: createdEvent.playerName,
+          jerseyNumber: createdEvent.playerJerseyNumber,
+          infraction: createdEvent.penaltyCode,
+          penaltyMinutes: createdEvent.penaltyMinutes,
+          createdAt: createdEvent.createdAt,
+        },
+      });
+
+      await enqueueRealtimeEvent(connection, {
+        room,
+        event: "scoreboard:sound",
+        payload: {
+          gameId,
+          soundId: `game-event-sound-${createdEvent.id}`,
+          type: createdEvent.type === "GOAL" ? "GOAL" : "PENALTY",
+        },
+      });
+
+      await enqueueRealtimeEvent(connection, {
+        room,
+        event: "game:updated",
+        payload: { id: gameId, gameId, organizationId },
+      });
+
+      await enqueueRealtimeEvent(connection, {
+        event: "games:changed",
+        payload: { reason: "event", id: gameId, organizationId },
+      });
+
       await connection.commit();
     }
   } catch (error) {
@@ -428,16 +484,37 @@ export async function voidGameEvent(
       [Number(userId), eventId],
     );
 
+    const [voidedRows] = await connection.execute<RowDataPacket[]>(
+      `${SELECT_EVENT} WHERE ge.id = ? LIMIT 1`,
+      [eventId],
+    );
+    if (!voidedRows[0]) throw new Error("Game event not found");
+
+    const voidedEvent = mapEvent(voidedRows[0]);
+    const room = `game:${gameId}`;
+    const organizationId = Number(event.organization_id);
+
+    await enqueueRealtimeEvent(connection, {
+      room,
+      event: "game:event-voided",
+      payload: { gameId, event: voidedEvent },
+    });
+
+    await enqueueRealtimeEvent(connection, {
+      room,
+      event: "game:updated",
+      payload: { id: gameId, gameId, organizationId },
+    });
+
+    await enqueueRealtimeEvent(connection, {
+      event: "games:changed",
+      payload: { reason: "event", id: gameId, organizationId },
+    });
+
     await connection.commit();
 
-    const [rows] = await pool.execute<RowDataPacket[]>(`${SELECT_EVENT} WHERE ge.id = ? LIMIT 1`, [
-      eventId,
-    ]);
-
-    if (!rows[0]) throw new Error("Game event not found");
-
     return {
-      event: mapEvent(rows[0]),
+      event: voidedEvent,
       homeScore,
       awayScore,
       replayed: false,

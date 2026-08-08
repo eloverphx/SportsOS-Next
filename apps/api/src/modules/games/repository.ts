@@ -1,5 +1,6 @@
 import mysql, { type PoolConnection, type RowDataPacket } from "mysql2/promise";
 import { pool } from "../../infrastructure/database.js";
+import { enqueueRealtimeEvent } from "../../infrastructure/realtime-outbox.js";
 import { logoUrl } from "../../lib/media.js";
 import type { GameInput, ScoreAction } from "./schemas.js";
 import type { Game, GamePhase, GameStatus, GameTeamOption } from "./types.js";
@@ -426,6 +427,7 @@ export interface ScoringActionApplication {
 
 interface LockedScoringRow extends RowDataPacket {
   id: number;
+  organization_id: number;
   home_score: number;
   away_score: number;
   status: GameStatus;
@@ -457,6 +459,7 @@ async function lockGame(connection: PoolConnection, id: number): Promise<LockedS
   const [rows] = await connection.execute<LockedScoringRow[]>(
     `SELECT
        id,
+       organization_id,
        home_score,
        away_score,
        status,
@@ -806,6 +809,47 @@ export async function applyGameScoringAction(
       id,
       clockRunning && status === "LIVE" && !intermissionRunning,
     );
+
+    const organizationId = Number(row.organization_id);
+    const room = `game:${id}`;
+
+    await enqueueRealtimeEvent(connection, {
+      room,
+      event: "game:scored",
+      payload: {
+        id,
+        gameId: id,
+        organizationId,
+        action,
+        replayed: false,
+        homeScore,
+        awayScore,
+        period,
+        clockRemainingMs,
+        clockRunning,
+        status,
+        gamePhase,
+      },
+    });
+
+    await enqueueRealtimeEvent(connection, {
+      room,
+      event: "game:updated",
+      payload: {
+        id,
+        gameId: id,
+        organizationId,
+      },
+    });
+
+    await enqueueRealtimeEvent(connection, {
+      event: "games:changed",
+      payload: {
+        reason: "scored",
+        id,
+        organizationId,
+      },
+    });
 
     await connection.commit();
   } catch (error) {

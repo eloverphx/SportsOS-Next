@@ -308,19 +308,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       status: game.status,
     });
 
-    const payload = { game, action: parsed.data.action, replayed: false };
-    realtime().to(`game:${game.id}`).emit("game:scored", payload);
-    realtime().to(`game:${game.id}`).emit("game:updated", {
-      id: game.id,
-      organizationId: game.organizationId,
-    });
-    realtime().emit("games:changed", {
-      reason: "scored",
-      id: game.id,
-      organizationId: game.organizationId,
-    });
-
-    return payload;
+    return { game, action: parsed.data.action, replayed: false };
   });
 
   app.post("/games/:id/broadcast", async (request, reply) => {

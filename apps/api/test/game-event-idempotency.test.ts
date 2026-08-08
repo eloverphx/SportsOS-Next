@@ -1,3 +1,9 @@
+const enqueueRealtimeEvent = vi.fn();
+
+vi.mock("../src/infrastructure/realtime-outbox.js", () => ({
+  enqueueRealtimeEvent,
+}));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const poolExecute = vi.fn();
@@ -100,6 +106,9 @@ describe("game event idempotency", () => {
       }
       if (sql.includes("FROM game_action_requests")) return [[]];
       if (sql.includes("INSERT INTO game_events")) return [{ insertId: 101 }];
+      if (sql.includes("FROM game_events ge") && sql.includes("WHERE ge.id = ? LIMIT 1")) {
+        return [[eventRow]];
+      }
       return [{ affectedRows: 1 }];
     });
 

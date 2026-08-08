@@ -1,5 +1,4 @@
 import type { FastifyInstance } from "fastify";
-import { realtime } from "../../infrastructure/realtime.js";
 import { audit } from "../../lib/audit.js";
 import { PERMISSIONS, requirePermission } from "../auth/index.js";
 import { findGameById } from "../games/repository.js";
@@ -72,37 +71,6 @@ export async function gameEventRoutes(app: FastifyInstance): Promise<void> {
         eventId: result.event.id,
         type: result.event.type,
       });
-      realtime()
-        .to(`game:${id.data}`)
-        .emit("game:event-created", { gameId: id.data, event: result.event });
-      realtime()
-        .to(`game:${id.data}`)
-        .emit("scoreboard:effect", {
-          gameId: id.data,
-          effectId: `game-event-${result.event.id}`,
-          type: result.event.type === "GOAL" ? "GOAL" : "PENALTY",
-          side: result.event.side,
-          playerName: result.event.playerName,
-          jerseyNumber: result.event.playerJerseyNumber,
-          infraction: result.event.penaltyCode,
-          penaltyMinutes: result.event.penaltyMinutes,
-          createdAt: result.event.createdAt,
-        });
-      realtime()
-        .to(`game:${id.data}`)
-        .emit("scoreboard:sound", {
-          gameId: id.data,
-          soundId: `game-event-sound-${result.event.id}`,
-          type: result.event.type === "GOAL" ? "GOAL" : "PENALTY",
-        });
-      realtime()
-        .to(`game:${id.data}`)
-        .emit("game:updated", { id: id.data, organizationId: game.organizationId });
-      realtime().emit("games:changed", {
-        reason: "event",
-        id: id.data,
-        organizationId: game.organizationId,
-      });
       return reply.code(201).send(result);
     } catch (cause) {
       if (cause instanceof GameEventIdempotencyConflictError) {
@@ -143,17 +111,6 @@ export async function gameEventRoutes(app: FastifyInstance): Promise<void> {
         gameId: id.data,
         eventId: eventId.data,
         type: result.event.type,
-      });
-      realtime()
-        .to(`game:${id.data}`)
-        .emit("game:event-voided", { gameId: id.data, event: result.event });
-      realtime()
-        .to(`game:${id.data}`)
-        .emit("game:updated", { id: id.data, organizationId: game.organizationId });
-      realtime().emit("games:changed", {
-        reason: "event",
-        id: id.data,
-        organizationId: game.organizationId,
       });
       return result;
     } catch (cause) {
