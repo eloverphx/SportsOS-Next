@@ -24,6 +24,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN test -n "$NEXT_PUBLIC_API_URL"
 RUN echo "Building dashboard for API: $NEXT_PUBLIC_API_URL"
 
+# Build shared workspace packages first so dashboard TypeScript can resolve
+# @sportsos/core and @sportsos/config exactly like the root production build.
+RUN npm run build --workspace=@sportsos/core
+RUN npm run build --workspace=@sportsos/config
+
 RUN npm run typecheck
 RUN npm run build
 

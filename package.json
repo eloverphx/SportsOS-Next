@@ -29,7 +29,14 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:docker": "./scripts/test-e2e-docker.sh"
+    "test:e2e:docker": "./scripts/test-e2e-docker.sh",
+    "test:game-engine:stress": "./scripts/test-game-engine-stress.sh",
+    "test:tournament-simulation": "./scripts/test-tournament-simulation.sh",
+    "test:tournament-runner": "./scripts/test-tournament-runner.sh",
+    "test:simulation-adapter": "./scripts/test-sportsos-simulation-adapter.sh",
+    "test:simulation-provisioner": "./scripts/test-simulation-provisioner.sh",
+    "test:simulation-qualification": "./scripts/test-simulation-qualification.sh",
+    "test:e2e:game-day": "playwright test e2e/game-day-scorekeeper.spec.ts --project=chromium"
   },
   "devDependencies": {
     "@playwright/test": "1.55.0",

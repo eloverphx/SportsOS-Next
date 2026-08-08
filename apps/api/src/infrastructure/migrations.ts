@@ -303,6 +303,41 @@ export async function runMigrations(): Promise<void> {
       FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
   ) ENGINE=InnoDB`);
 
+  await pool.execute(`CREATE TABLE IF NOT EXISTS simulation_runs (
+    id VARCHAR(64) NOT NULL PRIMARY KEY,
+    organization_id BIGINT UNSIGNED NOT NULL,
+    season_id BIGINT UNSIGNED NOT NULL,
+    seed BIGINT NOT NULL,
+    config_json LONGTEXT NOT NULL,
+    status ENUM('PROVISIONED','RUNNING','COMPLETED','FAILED','CLEANED') NOT NULL DEFAULT 'PROVISIONED',
+    created_by BIGINT UNSIGNED NULL,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    started_at DATETIME(3) NULL,
+    completed_at DATETIME(3) NULL,
+    cleaned_at DATETIME(3) NULL,
+    INDEX idx_simulation_runs_org_created (organization_id, created_at),
+    CONSTRAINT fk_simulation_runs_org
+      FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    CONSTRAINT fk_simulation_runs_season
+      FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB`);
+
+  await pool.execute(`CREATE TABLE IF NOT EXISTS simulation_game_bindings (
+    run_id VARCHAR(64) NOT NULL,
+    simulated_game_id INT UNSIGNED NOT NULL,
+    game_id BIGINT UNSIGNED NOT NULL,
+    organization_id BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY (run_id, simulated_game_id),
+    UNIQUE KEY uq_simulation_binding_game (game_id),
+    INDEX idx_simulation_bindings_org (organization_id),
+    CONSTRAINT fk_simulation_bindings_run
+      FOREIGN KEY (run_id) REFERENCES simulation_runs(id) ON DELETE CASCADE,
+    CONSTRAINT fk_simulation_bindings_game
+      FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+    CONSTRAINT fk_simulation_bindings_org
+      FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB`);
+
   await pool.execute(`CREATE TABLE IF NOT EXISTS realtime_outbox (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     event_name VARCHAR(120) NOT NULL,

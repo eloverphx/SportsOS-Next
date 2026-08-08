@@ -26,6 +26,7 @@ import {
   gameLifecycleCommandSchema,
   resolveLifecycleAction,
 } from "./lifecycle.js";
+import { recordEngineTransition } from "./telemetry.js";
 
 function relationshipErrorMessage(
   error: "organization" | "season" | "homeTeam" | "awayTeam",
@@ -367,6 +368,15 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
         const game = await findGameById(id.data);
         if (!game) return reply.code(404).send({ error: "Game not found" });
 
+        recordEngineTransition({
+          source: "operator",
+          gameId: game.id,
+          action: parsed.data.command,
+          outcome: "replayed",
+          actorUserId: Number(identity.sub),
+          actorRole: identity.role,
+        });
+
         return {
           game,
           command: parsed.data.command,
@@ -388,6 +398,15 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       period: game.period,
       status: game.status,
       clockRemainingMs: game.clockRemainingMs,
+    });
+
+    recordEngineTransition({
+      source: "operator",
+      gameId: game.id,
+      action: parsed.data.command,
+      outcome: "applied",
+      actorUserId: Number(identity.sub),
+      actorRole: identity.role,
     });
 
     return {

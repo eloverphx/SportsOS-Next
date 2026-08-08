@@ -26,6 +26,7 @@ interface GameEngineResponse {
     readonly clockRunning: boolean;
     readonly intermissionRemainingMs: number;
     readonly intermissionRunning: boolean;
+    readonly overtimeEnabled: boolean;
     readonly actionRequired: string | null;
     readonly warnings: ReadonlyArray<{
       readonly code: string;
@@ -34,11 +35,13 @@ interface GameEngineResponse {
   }>;
   readonly recentTransitions: ReadonlyArray<{
     readonly timestamp: string;
-    readonly source: "runtime-supervisor" | "system";
+    readonly source: "runtime-supervisor" | "system" | "operator";
     readonly gameId: number;
     readonly action: string;
     readonly outcome: "applied" | "replayed" | "failed";
     readonly detail?: string;
+    readonly actorUserId?: number;
+    readonly actorRole?: string;
   }>;
 }
 
@@ -66,6 +69,8 @@ export function GameEnginePanel() {
   const [telemetry, setTelemetry] = useState<GameEngineResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [actionError, setActionError] = useState("");
+  const [actingGameId, setActingGameId] = useState<number | null>(null);
 
   const load = useCallback(async (): Promise<void> => {
     setError("");
@@ -83,6 +88,34 @@ export function GameEnginePanel() {
       setLoading(false);
     }
   }, []);
+
+  async function runLifecycleCommand(
+    gameId: number,
+    command: "startOvertime" | "finishGame",
+  ): Promise<void> {
+    setActionError("");
+    setActingGameId(gameId);
+
+    try {
+      await authenticatedFetch(`/games/${gameId}/lifecycle`, {
+        method: "POST",
+        body: JSON.stringify({
+          command,
+          commandId: crypto.randomUUID(),
+        }),
+      });
+
+      await load();
+    } catch (caughtError) {
+      setActionError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Could not update game lifecycle",
+      );
+    } finally {
+      setActingGameId(null);
+    }
+  }
 
   useEffect(() => {
     void load();
@@ -110,6 +143,9 @@ export function GameEnginePanel() {
           <p className="muted">
             Authoritative lifecycle state, automatic transitions, and operator warnings.
           </p>
+          <p className="muted">
+            Operator actions are recorded in the engine transition history.
+          </p>
         </div>
 
         <button className="secondary" disabled={loading} onClick={() => void load()}>
@@ -118,6 +154,7 @@ export function GameEnginePanel() {
       </div>
 
       {error ? <p className="error">{error}</p> : null}
+      {actionError ? <p className="error">{actionError}</p> : null}
 
       {telemetry ? (
         <div className="cards" style={{ marginTop: 16 }}>
@@ -225,6 +262,38 @@ export function GameEnginePanel() {
               </p>
             ) : null}
 
+            {game.state === "OPERATOR_REQUIRED" ? (
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  marginTop: 14,
+                }}
+              >
+                {game.gamePhase === "REGULATION" ? (
+                  <button
+                    disabled={!game.overtimeEnabled || actingGameId === game.gameId}
+                    onClick={() => void runLifecycleCommand(game.gameId, "startOvertime")}
+                  >
+                    {actingGameId === game.gameId ? "Working…" : "Start overtime"}
+                  </button>
+                ) : null}
+
+                <button
+                  className="secondary"
+                  disabled={actingGameId === game.gameId}
+                  onClick={() => void runLifecycleCommand(game.gameId, "finishGame")}
+                >
+                  {actingGameId === game.gameId ? "Working…" : "Finish game"}
+                </button>
+
+                {game.gamePhase === "REGULATION" && !game.overtimeEnabled ? (
+                  <span className="muted">Overtime is disabled for this game.</span>
+                ) : null}
+              </div>
+            ) : null}
+
             {game.warnings.length > 0 ? (
               <div style={{ marginTop: 14 }}>
                 {game.warnings.map((warning) => (
@@ -266,7 +335,8 @@ export function GameEnginePanel() {
                 Game #{transition.gameId} — {transition.action}
               </b>
               <span>
-                {transition.outcome} · {new Date(transition.timestamp).toLocaleTimeString()}
+                {transition.source} · {transition.outcome} ·{" "}
+                {new Date(transition.timestamp).toLocaleTimeString()}
               </span>
             </div>
           ))}

@@ -27,6 +27,7 @@ export interface EngineTelemetryRow {
   intermissionRemainingMs: number;
   intermissionRunning: boolean;
   intermissionStartedAt: Date | string | null;
+  overtimeEnabled: boolean;
 }
 
 export interface EngineGameTelemetry {
@@ -42,17 +43,20 @@ export interface EngineGameTelemetry {
   clockRunning: boolean;
   intermissionRemainingMs: number;
   intermissionRunning: boolean;
+  overtimeEnabled: boolean;
   actionRequired: string | null;
   warnings: EngineWarning[];
 }
 
 export interface EngineTransitionHistoryItem {
   timestamp: string;
-  source: "runtime-supervisor" | "system";
+  source: "runtime-supervisor" | "system" | "operator";
   gameId: number;
   action: string;
   outcome: "applied" | "replayed" | "failed";
   detail?: string;
+  actorUserId?: number;
+  actorRole?: string;
 }
 
 const MAX_HISTORY = 100;
@@ -197,6 +201,7 @@ export function classifyEngineGame(
     clockRunning: row.clockRunning && clockRemainingMs > 0,
     intermissionRemainingMs,
     intermissionRunning: row.intermissionRunning && intermissionRemainingMs > 0,
+    overtimeEnabled: row.overtimeEnabled,
     actionRequired,
     warnings,
   };
@@ -217,6 +222,7 @@ interface RawGameEngineRow extends RowDataPacket {
   intermission_remaining_ms: number;
   intermission_running: number;
   intermission_started_at: Date | null;
+  overtime_enabled: number;
 }
 
 export async function getGameEngineTelemetry(
@@ -255,7 +261,8 @@ export async function getGameEngineTelemetry(
        g.clock_started_at,
        g.intermission_remaining_ms,
        g.intermission_running,
-       g.intermission_started_at
+       g.intermission_started_at,
+       g.overtime_enabled
      FROM games g
      LEFT JOIN teams home ON home.id = g.home_team_id
      LEFT JOIN teams away ON away.id = g.away_team_id
@@ -285,6 +292,7 @@ export async function getGameEngineTelemetry(
         intermissionRemainingMs: Number(row.intermission_remaining_ms),
         intermissionRunning: Boolean(row.intermission_running),
         intermissionStartedAt: row.intermission_started_at,
+        overtimeEnabled: Boolean(row.overtime_enabled),
       },
       nowMs,
     ),
