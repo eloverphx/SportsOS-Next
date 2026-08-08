@@ -46,3 +46,9 @@ tmp/
 *-inventory.txt
 scoring-console-debug.txt
 
+
+# SportsOS Game Engine development artifacts
+.game-engine-backups/
+game-engine-*-unraid.sh
+game-engine-*-repair-unraid.sh
+*.bak-game-engine-*
