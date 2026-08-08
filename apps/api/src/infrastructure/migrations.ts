@@ -310,11 +310,34 @@ export async function runMigrations(): Promise<void> {
     payload_json LONGTEXT NOT NULL,
     attempts INT UNSIGNED NOT NULL DEFAULT 0,
     available_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    claimed_at DATETIME(3) NULL,
+    claimed_by VARCHAR(80) NULL,
     delivered_at DATETIME(3) NULL,
     last_error TEXT NULL,
     created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     INDEX idx_realtime_outbox_pending (delivered_at, available_at, id)
   ) ENGINE=InnoDB`);
+
+  const [outboxColumns] = await pool.query<RowDataPacket[]>(
+    `SELECT COLUMN_NAME
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'realtime_outbox'`,
+    [config.database.name],
+  );
+
+  const presentOutboxColumns = new Set(outboxColumns.map((row) => String(row.COLUMN_NAME)));
+
+  if (!presentOutboxColumns.has("claimed_at")) {
+    await pool.execute(
+      "ALTER TABLE realtime_outbox ADD COLUMN claimed_at DATETIME(3) NULL AFTER available_at",
+    );
+  }
+
+  if (!presentOutboxColumns.has("claimed_by")) {
+    await pool.execute(
+      "ALTER TABLE realtime_outbox ADD COLUMN claimed_by VARCHAR(80) NULL AFTER claimed_at",
+    );
+  }
 
   await pool.execute(`CREATE TABLE IF NOT EXISTS game_events (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

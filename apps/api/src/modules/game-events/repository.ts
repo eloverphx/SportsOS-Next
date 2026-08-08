@@ -380,6 +380,14 @@ export async function voidGameEvent(
   try {
     await connection.beginTransaction();
 
+    const [games] = await connection.execute<RowDataPacket[]>(
+      "SELECT home_score, away_score FROM games WHERE id = ? FOR UPDATE",
+      [gameId],
+    );
+
+    const game = games[0];
+    if (!game) throw new Error("Game not found");
+
     const [events] = await connection.execute<RowDataPacket[]>(
       "SELECT * FROM game_events WHERE id = ? AND game_id = ? FOR UPDATE",
       [eventId, gameId],
@@ -433,14 +441,6 @@ export async function voidGameEvent(
         );
       }
     }
-
-    const [games] = await connection.execute<RowDataPacket[]>(
-      "SELECT home_score, away_score FROM games WHERE id = ? FOR UPDATE",
-      [gameId],
-    );
-
-    const game = games[0];
-    if (!game) throw new Error("Game not found");
 
     let homeScore = Number(game.home_score);
     let awayScore = Number(game.away_score);
