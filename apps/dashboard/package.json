@@ -12,6 +12,7 @@
     "start": "next start -p 4000"
   },
   "dependencies": {
+    "@sportsos/core": "*",
     "next": "15.5.9",
     "react": "19.2.0",
     "react-dom": "19.2.0",
