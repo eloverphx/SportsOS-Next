@@ -1,65 +1,16 @@
 "use client";
 
+import type { BroadcastSoundType, PublicScoreboardGame, ScoreboardPenalty } from "@sportsos/core";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { io } from "socket.io-client";
+import { createRealtimeSocket } from "../../../../lib/realtime";
 import { API } from "../../../../lib/api";
 import styles from "./scoreboard.module.css";
 
-type GameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
-type GamePhase = "PREGAME" | "REGULATION" | "INTERMISSION" | "OVERTIME" | "FINAL";
 type Side = "home" | "away";
-type SoundType = "GOAL" | "PENALTY" | "HORN" | "INTERMISSION_COMPLETE";
-
-type Penalty = {
-  id: number;
-  side: Side;
-  playerName: string | null;
-  infraction: string;
-  remainingMs: number;
-  running: boolean;
-  startedAt: string | null;
-};
-
-type ScoreboardGame = {
-  id: number;
-  organizationName: string;
-  organizationLogoUrl: string | null;
-  organizationPrimaryColor: string;
-  organizationSecondaryColor: string;
-  seasonName: string;
-  homeTeamName: string;
-  homeTeamLogoUrl: string | null;
-  homeTeamPrimaryColor: string;
-  homeTeamSecondaryColor: string;
-  awayTeamName: string;
-  awayTeamLogoUrl: string | null;
-  awayTeamPrimaryColor: string;
-  awayTeamSecondaryColor: string;
-  scheduledStart: string;
-  timezone: string;
-  venue: string | null;
-  status: GameStatus;
-  gamePhase: GamePhase;
-  homeScore: number;
-  awayScore: number;
-  period: number;
-  periodLengthMs: number;
-  clockRemainingMs: number;
-  clockRunning: boolean;
-  clockStartedAt: string | null;
-  intermissionRemainingMs: number;
-  intermissionRunning: boolean;
-  intermissionStartedAt: string | null;
-  regulationPeriods: number;
-  regulationPeriodLengthMs: number;
-  intermissionLengthMs: number;
-  overtimeEnabled: boolean;
-  overtimeLengthMs: number;
-  periodLabel: string;
-  canAdvancePeriod: boolean;
-  penalties: Penalty[];
-};
+type SoundType = BroadcastSoundType;
+type Penalty = ScoreboardPenalty;
+type ScoreboardGame = PublicScoreboardGame;
 
 type BroadcastEffect = {
   effectId: string;
@@ -276,7 +227,7 @@ export default function ScoreboardPage() {
 
   useEffect(() => {
     void load();
-    const socket = io(API);
+    const socket = createRealtimeSocket(API);
 
     socket.on("connect", () => {
       socket.emit("public-game:subscribe", { gameId });

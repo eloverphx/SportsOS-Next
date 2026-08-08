@@ -1,8 +1,10 @@
 "use client";
 
+import type { Game, GameStatus, ScoreboardDevice } from "@sportsos/core";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { io } from "socket.io-client";
+import { createRealtimeSocket } from "../../lib/realtime";
 import { AuthGate } from "../../components/AuthGate";
 import { AppShell } from "../../components/AppShell";
 import { API, api } from "../../lib/api";
@@ -14,38 +16,7 @@ import {
 } from "../../lib/auth";
 
 type Organization = { id: number; name: string };
-type GameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
-
-type Game = {
-  id: number;
-  organizationId: number;
-  organizationName: string;
-  seasonName: string;
-  homeTeamName: string;
-  awayTeamName: string;
-  scheduledStart: string;
-  venue: string | null;
-  status: GameStatus;
-  homeScore: number;
-  awayScore: number;
-  period: number;
-  clockRemainingMs: number;
-  clockRunning: boolean;
-  clockStartedAt: string | null;
-};
-
-type Device = {
-  id: number;
-  organizationId: number;
-  organizationName: string;
-  gameId: number | null;
-  gameLabel: string | null;
-  name: string;
-  location: string | null;
-  deviceKey: string;
-  status: "ONLINE" | "OFFLINE";
-  lastSeenAt: string | null;
-};
+type Device = ScoreboardDevice;
 
 type DeviceForm = {
   organizationId: number;
@@ -126,7 +97,7 @@ export default function ScoreboardsPage() {
 
   useEffect(() => {
     void load();
-    const socket = io(API);
+    const socket = createRealtimeSocket(API);
     let connectedOnce = false;
 
     socket.on("connect", () => {

@@ -1,7 +1,9 @@
 "use client";
 
+import type { Game, GamePhase, GameStatus, GameTeamOption } from "@sportsos/core";
+
 import Link from "next/link";
-import { io } from "socket.io-client";
+import { createRealtimeSocket } from "../../lib/realtime";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AuthGate } from "../../components/AuthGate";
 import { AppShell } from "../../components/AppShell";
@@ -17,54 +19,7 @@ import { AMERICAS_TIME_ZONES } from "../../lib/timezones";
 
 type Organization = { id: number; name: string };
 type Season = { id: number; organizationId: number; name: string };
-type TeamOption = {
-  id: number;
-  organizationId: number;
-  organizationName: string;
-  name: string;
-};
-type GameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
-type GamePhase = "PREGAME" | "REGULATION" | "INTERMISSION" | "OVERTIME" | "FINAL";
-
-type Game = {
-  id: number;
-  organizationId: number;
-  organizationName: string;
-  seasonId: number;
-  seasonName: string;
-  homeTeamId: number | null;
-  homeTeamName: string;
-  homeTeamOrganizationName: string | null;
-  homeExternalName: string | null;
-  awayTeamId: number | null;
-  awayTeamName: string;
-  awayTeamOrganizationName: string | null;
-  awayExternalName: string | null;
-  scheduledStart: string;
-  timezone: string;
-  venue: string | null;
-  status: GameStatus;
-  gamePhase: GamePhase;
-  homeScore: number;
-  awayScore: number;
-  period: number;
-  periodLengthMs: number;
-  clockRemainingMs: number;
-  clockRunning: boolean;
-  clockStartedAt: string | null;
-  regulationPeriods: number;
-  regulationPeriodLengthMs: number;
-  intermissionLengthMs: number;
-  intermissionRemainingMs: number;
-  intermissionRunning: boolean;
-  intermissionStartedAt: string | null;
-  intermissionReady: boolean;
-  overtimeEnabled: boolean;
-  overtimeLengthMs: number;
-  periodLabel: string;
-  canAdvancePeriod: boolean;
-  notes: string | null;
-};
+type TeamOption = GameTeamOption;
 
 type Form = {
   organizationId: number;
@@ -231,7 +186,7 @@ export default function GamesPage() {
 
   useEffect(() => {
     void load();
-    const socket = io(API);
+    const socket = createRealtimeSocket(API);
     let connectedOnce = false;
 
     socket.on("connect", () => {

@@ -63,3 +63,55 @@ export interface GameTeamOption {
   organizationName: string;
   name: string;
 }
+
+export interface ScoreboardPenalty {
+  id: number;
+  side: "home" | "away";
+  playerName: string | null;
+  infraction: string;
+  remainingMs: number;
+  running: boolean;
+  startedAt: string | null;
+}
+
+export type PublicScoreboardGame = Pick<
+  Game,
+  | "id"
+  | "organizationName"
+  | "organizationLogoUrl"
+  | "organizationPrimaryColor"
+  | "organizationSecondaryColor"
+  | "seasonName"
+  | "homeTeamName"
+  | "homeTeamLogoUrl"
+  | "homeTeamPrimaryColor"
+  | "homeTeamSecondaryColor"
+  | "awayTeamName"
+  | "awayTeamLogoUrl"
+  | "awayTeamPrimaryColor"
+  | "awayTeamSecondaryColor"
+  | "scheduledStart"
+  | "timezone"
+  | "venue"
+  | "status"
+  | "gamePhase"
+  | "homeScore"
+  | "awayScore"
+  | "period"
+  | "periodLengthMs"
+  | "clockRemainingMs"
+  | "clockRunning"
+  | "clockStartedAt"
+  | "intermissionRemainingMs"
+  | "intermissionRunning"
+  | "intermissionStartedAt"
+  | "regulationPeriods"
+  | "regulationPeriodLengthMs"
+  | "intermissionLengthMs"
+  | "overtimeEnabled"
+  | "overtimeLengthMs"
+  | "periodLabel"
+  | "canAdvancePeriod"
+> & {
+  penalties: ScoreboardPenalty[];
+};

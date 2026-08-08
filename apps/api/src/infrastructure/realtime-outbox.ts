@@ -1,13 +1,8 @@
 import { randomUUID } from "node:crypto";
+import type { RealtimeOutboxEvent } from "@sportsos/core";
 import type { PoolConnection, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { pool } from "./database.js";
 import { realtime } from "./realtime.js";
-
-export interface RealtimeOutboxEvent {
-  readonly event: string;
-  readonly room?: string | null;
-  readonly payload: unknown;
-}
 
 interface OutboxRow extends RowDataPacket {
   id: number;

@@ -1,42 +1,15 @@
 "use client";
 
+import type { PublicScoreboardGame, ScoreboardPenalty } from "@sportsos/core";
+
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { io } from "socket.io-client";
+import { createRealtimeSocket } from "../../../../lib/realtime";
 import { API } from "../../../../lib/api";
 import styles from "./overlay.module.css";
 
-type Penalty = {
-  id: number;
-  side: "home" | "away";
-  remainingMs: number;
-  running: boolean;
-  startedAt: string | null;
-};
-
-type Game = {
-  id: number;
-  organizationName: string;
-  organizationLogoUrl: string | null;
-  homeTeamName: string;
-  homeTeamLogoUrl: string | null;
-  homeTeamPrimaryColor: string;
-  awayTeamName: string;
-  awayTeamLogoUrl: string | null;
-  awayTeamPrimaryColor: string;
-  homeScore: number;
-  awayScore: number;
-  period: number;
-  gamePhase: "PREGAME" | "REGULATION" | "INTERMISSION" | "OVERTIME" | "FINAL";
-  clockRemainingMs: number;
-  clockRunning: boolean;
-  clockStartedAt: string | null;
-  intermissionRemainingMs: number;
-  intermissionRunning: boolean;
-  intermissionStartedAt: string | null;
-  periodLabel: string;
-  penalties: Penalty[];
-};
+type Penalty = ScoreboardPenalty;
+type Game = PublicScoreboardGame;
 
 function remaining(game: Game, now: number): number {
   if (!game.clockRunning || !game.clockStartedAt) return Math.max(0, game.clockRemainingMs);
@@ -94,7 +67,7 @@ export default function OverlayPage() {
 
   useEffect(() => {
     void load();
-    const socket = io(API);
+    const socket = createRealtimeSocket(API);
     let connectedOnce = false;
 
     socket.on("connect", () => {
@@ -111,15 +84,13 @@ export default function OverlayPage() {
     const refresh = (payload: { id?: number; gameId?: number; game?: { id?: number } }) => {
       if ((payload.gameId ?? payload.game?.id ?? payload.id) === gameId) void load();
     };
-    [
-      "game:scored",
-      "game:updated",
-      "game:clock-expired",
-      "game:intermission-expired",
-      "game:event-created",
-      "game:event-voided",
-      "game:penalties-updated",
-    ].forEach((eventName) => socket.on(eventName, refresh));
+    socket.on("game:scored", refresh);
+    socket.on("game:updated", refresh);
+    socket.on("game:clock-expired", refresh);
+    socket.on("game:intermission-expired", refresh);
+    socket.on("game:event-created", refresh);
+    socket.on("game:event-voided", refresh);
+    socket.on("game:penalties-updated", refresh);
     return () => {
       socket.disconnect();
     };

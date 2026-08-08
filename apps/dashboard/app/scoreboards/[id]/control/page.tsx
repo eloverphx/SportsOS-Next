@@ -1,9 +1,11 @@
 "use client";
 
+import type { Game, GameStatus, ScoreboardDevice } from "@sportsos/core";
+
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { io } from "socket.io-client";
+import { createRealtimeSocket } from "../../../../lib/realtime";
 import { AuthGate } from "../../../../components/AuthGate";
 import { API, api } from "../../../../lib/api";
 import {
@@ -19,54 +21,7 @@ import { ActivePenaltiesPanel } from "../../../../components/penalties/ActivePen
 import "../../../../components/penalties/penalties.css";
 import styles from "./control.module.css";
 
-type GameStatus = "SCHEDULED" | "LIVE" | "FINAL" | "POSTPONED" | "CANCELED";
-type GamePhase = "PREGAME" | "REGULATION" | "INTERMISSION" | "OVERTIME" | "FINAL";
-
-type Device = {
-  id: number;
-  organizationId: number;
-  organizationName: string;
-  gameId: number | null;
-  gameLabel: string | null;
-  name: string;
-  location: string | null;
-  status: "ONLINE" | "OFFLINE";
-  lastSeenAt: string | null;
-};
-
-type Game = {
-  id: number;
-  organizationId: number;
-  organizationName: string;
-  seasonId: number;
-  seasonName: string;
-  homeTeamId: number | null;
-  awayTeamId: number | null;
-  homeTeamName: string;
-  awayTeamName: string;
-  scheduledStart: string;
-  venue: string | null;
-  status: GameStatus;
-  gamePhase: GamePhase;
-  homeScore: number;
-  awayScore: number;
-  period: number;
-  periodLengthMs: number;
-  clockRemainingMs: number;
-  clockRunning: boolean;
-  clockStartedAt: string | null;
-  regulationPeriods: number;
-  regulationPeriodLengthMs: number;
-  intermissionLengthMs: number;
-  intermissionRemainingMs: number;
-  intermissionRunning: boolean;
-  intermissionStartedAt: string | null;
-  intermissionReady: boolean;
-  overtimeEnabled: boolean;
-  overtimeLengthMs: number;
-  periodLabel: string;
-  canAdvancePeriod: boolean;
-};
+type Device = ScoreboardDevice;
 
 type ScoringAction =
   | { action: "adjustScore"; side: "home" | "away"; amount: number }
@@ -203,7 +158,7 @@ export default function ScoreboardControlPage() {
   useEffect(() => {
     void load();
 
-    const socket = io(API, {
+    const socket = createRealtimeSocket(API, {
       auth: {
         token: getStoredToken() ?? "",
       },
