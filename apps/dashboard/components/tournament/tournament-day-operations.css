@@ -1,0 +1,131 @@
+.tournamentOpsPanel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.tournamentOpsHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tournamentOpsHeader h2 {
+  margin: 4px 0 6px;
+}
+
+.tournamentOpsHeader p {
+  margin: 0;
+  max-width: 760px;
+  opacity: 0.72;
+}
+
+.tournamentOpsEyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.64;
+}
+
+.tournamentOpsCounts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tournamentOpsCounts span {
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: rgba(30, 41, 59, 0.8);
+  font-size: 0.75rem;
+}
+
+.tournamentOpsCounts .critical {
+  background: rgba(127, 29, 29, 0.28);
+}
+
+.tournamentOpsCounts .warning {
+  background: rgba(124, 45, 18, 0.28);
+}
+
+.tournamentOpsClear {
+  border-radius: 10px;
+  padding: 14px;
+  background: rgba(20, 83, 45, 0.18);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+}
+
+.tournamentOpsList {
+  display: grid;
+  gap: 8px;
+}
+
+.tournamentOpsIssue {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  border-radius: 11px;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.25);
+}
+
+.tournamentOpsIssue > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.tournamentOpsIssue p {
+  margin: 0;
+  opacity: 0.8;
+}
+
+.tournamentOpsIssue small {
+  opacity: 0.6;
+}
+
+.tournamentOpsIssue.critical {
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(127, 29, 29, 0.18);
+}
+
+.tournamentOpsIssue.warning {
+  border-color: rgba(251, 146, 60, 0.35);
+  background: rgba(124, 45, 18, 0.15);
+}
+
+.tournamentOpsIssueTone {
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+.tournamentOpsActions {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tournamentOpsActions a {
+  white-space: nowrap;
+  text-decoration: none;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+@media (max-width: 700px) {
+  .tournamentOpsHeader {
+    align-items: stretch;
+  }
+
+  .tournamentOpsIssue {
+    flex-direction: column;
+  }
+}

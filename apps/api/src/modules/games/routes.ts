@@ -27,6 +27,10 @@ import {
   resolveLifecycleAction,
 } from "./lifecycle.js";
 import { recordEngineTransition } from "./telemetry.js";
+import {
+  evaluateGameInputSchedule,
+  evaluateSchedulePreview,
+} from "./schedule-enforcement.js";
 
 function relationshipErrorMessage(
   error: "organization" | "season" | "homeTeam" | "awayTeam",
@@ -224,6 +228,44 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
+    const rawBody =
+      request.body && typeof request.body === "object"
+        ? (request.body as Record<string, unknown>)
+        : {};
+    const scheduleConflictOverride = rawBody.scheduleConflictOverride === true;
+
+    const scheduleChanged =
+      existing.scheduledStart !== parsed.data.scheduledStart ||
+      (existing.venue ?? null) !== (parsed.data.venue ?? null) ||
+      existing.homeTeamId !== parsed.data.homeTeamId ||
+      existing.awayTeamId !== parsed.data.awayTeamId ||
+      existing.status !== parsed.data.status ||
+      existing.regulationPeriods !== parsed.data.regulationPeriods ||
+      existing.regulationPeriodLengthMs !== parsed.data.regulationPeriodLengthMs ||
+      existing.intermissionLengthMs !== parsed.data.intermissionLengthMs ||
+      existing.overtimeEnabled !== parsed.data.overtimeEnabled ||
+      existing.overtimeLengthMs !== parsed.data.overtimeLengthMs;
+
+    const scheduleEvaluation = scheduleChanged
+      ? await evaluateGameInputSchedule(existing.id, parsed.data)
+      : { conflicts: [], hardConflict: false };
+
+    if (scheduleEvaluation.hardConflict && !scheduleConflictOverride) {
+      await audit(identity.sub, "game.schedule_conflict_blocked", {
+        gameId: existing.id,
+        organizationId: parsed.data.organizationId,
+        requestedScheduledStart: parsed.data.scheduledStart,
+        requestedVenue: parsed.data.venue,
+        conflicts: scheduleEvaluation.conflicts,
+      });
+
+      return reply.code(409).send({
+        error: "Schedule change creates a hard tournament conflict",
+        code: "SCHEDULE_CONFLICT",
+        conflicts: scheduleEvaluation.conflicts,
+      });
+    }
+
     const game = await updateGame(id.data, parsed.data);
     if (!game) return reply.code(404).send({ error: "Game not found" });
 
@@ -231,7 +273,28 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       gameId: game.id,
       previousOrganizationId: existing.organizationId,
       organizationId: game.organizationId,
+      scheduleChanged,
+      scheduleConflictOverride,
+      scheduleConflicts: scheduleEvaluation.conflicts,
+      previousScheduledStart: existing.scheduledStart,
+      scheduledStart: game.scheduledStart,
+      previousVenue: existing.venue,
+      venue: game.venue,
     });
+
+    if (
+      scheduleChanged &&
+      scheduleConflictOverride &&
+      scheduleEvaluation.hardConflict
+    ) {
+      await audit(identity.sub, "game.schedule_conflict_overridden", {
+        gameId: game.id,
+        organizationId: game.organizationId,
+        scheduledStart: game.scheduledStart,
+        venue: game.venue,
+        conflicts: scheduleEvaluation.conflicts,
+      });
+    }
 
     realtime().to(`game:${game.id}`).emit("game:updated", {
       id: game.id,
@@ -244,6 +307,66 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     });
 
     return { game };
+  });
+
+  app.post("/games/:id/schedule-preview", async (request, reply) => {
+    const id = gameIdSchema.safeParse((request.params as { id: string }).id);
+    if (!id.success) {
+      return reply.code(400).send({ error: "Invalid game id" });
+    }
+
+    const body =
+      request.body && typeof request.body === "object"
+        ? (request.body as Record<string, unknown>)
+        : {};
+
+    if (
+      typeof body.scheduledStart !== "string" ||
+      !Number.isFinite(new Date(body.scheduledStart).getTime()) ||
+      !(
+        body.venue === null ||
+        body.venue === undefined ||
+        (typeof body.venue === "string" && body.venue.trim().length <= 160)
+      )
+    ) {
+      return reply.code(400).send({
+        error: "Invalid schedule preview",
+      });
+    }
+
+    const game = await findGameById(id.data);
+    if (!game) {
+      return reply.code(404).send({ error: "Game not found" });
+    }
+
+    await requirePermission(request, {
+      permission: PERMISSIONS.GAME_MANAGE,
+      organizationId: game.organizationId,
+    });
+
+    if (game.status !== "SCHEDULED") {
+      return reply.code(409).send({
+        error: "Only scheduled games can be previewed for schedule changes",
+        code: "GAME_NOT_SCHEDULED",
+      });
+    }
+
+    const scheduledStart = new Date(body.scheduledStart).toISOString();
+    const venue =
+      typeof body.venue === "string" ? body.venue.trim() || null : null;
+
+    const evaluation = await evaluateSchedulePreview(game, {
+      scheduledStart,
+      venue,
+    });
+
+    return {
+      gameId: game.id,
+      scheduledStart,
+      venue,
+      hardConflict: evaluation.hardConflict,
+      conflicts: evaluation.conflicts,
+    };
   });
 
   app.post("/games/:id/scoring", async (request, reply) => {

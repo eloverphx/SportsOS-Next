@@ -1,0 +1,330 @@
+.page {
+  display: grid;
+  gap: 20px;
+}
+
+.header,
+.headerActions,
+.filters,
+.cardTop,
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header {
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.header h1 {
+  margin: 4px 0 6px;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+}
+
+.header p {
+  margin: 0;
+  opacity: 0.72;
+  max-width: 760px;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  opacity: 0.68;
+}
+
+.headerActions {
+  flex-wrap: wrap;
+}
+
+.online,
+.offline,
+.status,
+.devices span {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.online,
+.deviceOnline,
+.good {
+  color: #86efac;
+}
+
+.offline,
+.deviceOffline,
+.bad {
+  color: #fca5a5;
+}
+
+.neutral {
+  color: #cbd5e1;
+}
+
+.error,
+.operatorAlert {
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.error {
+  background: rgba(127, 29, 29, 0.35);
+  color: #fecaca;
+}
+
+.operatorAlert {
+  background: rgba(154, 52, 18, 0.28);
+  border: 1px solid rgba(251, 146, 60, 0.35);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.metrics article {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.metrics span,
+.healthGrid span {
+  display: block;
+  opacity: 0.65;
+  font-size: 0.8rem;
+}
+
+.metrics strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.8rem;
+}
+
+.filters {
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.filters label {
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.search {
+  flex: 1;
+}
+
+.filters select,
+.filters input {
+  width: 100%;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 16px;
+}
+
+.gameCard {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.attentionCard {
+  border-color: rgba(251, 146, 60, 0.55);
+}
+
+.cardTop {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.cardTop > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.cardTop small {
+  opacity: 0.6;
+}
+
+.status {
+  width: fit-content;
+  background: rgba(30, 41, 59, 0.8);
+}
+
+.clockBlock {
+  text-align: right;
+}
+
+.clockBlock strong {
+  display: block;
+  font-size: 1.55rem;
+}
+
+.clockBlock span {
+  opacity: 0.65;
+  font-size: 0.8rem;
+}
+
+.matchup {
+  display: grid;
+  gap: 8px;
+}
+
+.matchup > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 1.05rem;
+}
+
+.matchup strong {
+  font-size: 2rem;
+}
+
+.healthGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.healthGrid > div {
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.38);
+  padding: 10px;
+}
+
+.warningList,
+.penalties,
+.devices {
+  display: grid;
+  gap: 6px;
+}
+
+.warningList > div {
+  display: grid;
+  gap: 2px;
+  font-size: 0.85rem;
+}
+
+.warningList span,
+.penalties span {
+  opacity: 0.8;
+}
+
+.devices span {
+  width: fit-content;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.actions {
+  flex-wrap: wrap;
+}
+
+.actions a {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 9px;
+  padding: 8px 10px;
+  text-decoration: none;
+  font-size: 0.82rem;
+}
+
+.empty {
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+  border-radius: 14px;
+  padding: 20px;
+  opacity: 0.72;
+}
+
+@media (max-width: 1000px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(130px, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .metrics,
+  .healthGrid,
+  .board {
+    grid-template-columns: 1fr;
+  }
+
+  .headerActions,
+  .filters,
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filters label {
+    width: 100%;
+  }
+}
+
+.rinkBoard {
+  display: grid;
+  gap: 22px;
+}
+
+.rinkGroup {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  padding-top: 16px;
+}
+
+.rinkHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.rinkHeading h2 {
+  margin: 3px 0 0;
+}
+
+.badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.urgency {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.urgencyLate {
+  background: rgba(127, 29, 29, 0.42);
+  color: #fecaca;
+}
+
+.urgencySoon {
+  background: rgba(154, 52, 18, 0.34);
+  color: #fed7aa;
+}
+
+.urgencyUpcoming {
+  background: rgba(30, 64, 175, 0.25);
+  color: #bfdbfe;
+}
+

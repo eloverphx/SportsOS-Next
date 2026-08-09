@@ -1,0 +1,189 @@
+.scheduleEditorPanel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.scheduleEditorHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.scheduleEditorHeader h2 {
+  margin: 4px 0 6px;
+}
+
+.scheduleEditorHeader p {
+  margin: 0;
+  opacity: 0.72;
+  max-width: 720px;
+}
+
+.scheduleEditorEyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.64;
+}
+
+.scheduleEditorReadOnly {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  padding: 7px 10px;
+}
+
+.scheduleEditorError,
+.scheduleEditorSuccess,
+.schedulePreviewClean {
+  border-radius: 10px;
+  padding: 11px 12px;
+}
+
+.scheduleEditorError {
+  background: rgba(127, 29, 29, 0.25);
+  color: #fecaca;
+}
+
+.scheduleEditorSuccess,
+.schedulePreviewClean {
+  background: rgba(22, 101, 52, 0.2);
+  color: #86efac;
+}
+
+.scheduleEditorMuted {
+  opacity: 0.68;
+}
+
+.scheduleGamePicker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+}
+
+.scheduleGamePicker button {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.scheduleGamePicker button.active {
+  border-color: rgba(96, 165, 250, 0.65);
+}
+
+.scheduleGamePicker span,
+.scheduleGamePicker small {
+  opacity: 0.76;
+}
+
+.scheduleEditorWorkspace {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  padding-top: 14px;
+}
+
+.scheduleEditorFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.scheduleEditorFields label {
+  display: grid;
+  gap: 6px;
+}
+
+.scheduleEditorFields input {
+  width: 100%;
+}
+
+.schedulePreview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.schedulePreview > div {
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.38);
+  padding: 10px;
+}
+
+.schedulePreview span {
+  display: block;
+  opacity: 0.65;
+  font-size: 0.8rem;
+}
+
+.schedulePreview strong {
+  font-size: 1.4rem;
+}
+
+.schedulePreview .bad {
+  color: #fca5a5;
+}
+
+.schedulePreview .good {
+  color: #86efac;
+}
+
+.schedulePreviewConflicts {
+  display: grid;
+  gap: 6px;
+}
+
+.schedulePreviewConflicts > div {
+  display: grid;
+  gap: 3px;
+  border-radius: 9px;
+  padding: 9px 10px;
+}
+
+.schedulePreviewError {
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(127, 29, 29, 0.2);
+}
+
+.schedulePreviewWarning {
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  background: rgba(124, 45, 18, 0.18);
+}
+
+.scheduleOverride {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  border-radius: 10px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  padding: 10px;
+}
+
+.scheduleOverride input {
+  margin-top: 3px;
+}
+
+.scheduleEditorActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 700px) {
+  .scheduleEditorFields,
+  .schedulePreview {
+    grid-template-columns: 1fr;
+  }
+
+  .scheduleEditorActions {
+    flex-direction: column;
+  }
+}

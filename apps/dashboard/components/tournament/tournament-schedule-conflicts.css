@@ -1,0 +1,126 @@
+.scheduleConflictPanel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.scheduleConflictHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.scheduleConflictHeader h2 {
+  margin: 4px 0 6px;
+}
+
+.scheduleConflictHeader p {
+  margin: 0;
+  max-width: 760px;
+  opacity: 0.72;
+}
+
+.scheduleConflictEyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.64;
+}
+
+.scheduleConflictMetrics {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.scheduleConflictMetrics > span {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 999px;
+  padding: 7px 10px;
+}
+
+.scheduleConflictMetrics strong {
+  margin-left: 5px;
+}
+
+.scheduleErrorCount {
+  color: #fca5a5;
+}
+
+.scheduleWarningCount {
+  color: #fdba74;
+}
+
+.scheduleRuleSummary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.84rem;
+  opacity: 0.72;
+}
+
+.scheduleClean {
+  border-radius: 10px;
+  background: rgba(22, 101, 52, 0.2);
+  color: #86efac;
+  padding: 12px;
+}
+
+.scheduleConflictList {
+  display: grid;
+  gap: 8px;
+}
+
+.scheduleConflict {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  border-radius: 10px;
+  padding: 11px 12px;
+}
+
+.scheduleConflict > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.scheduleConflict span {
+  opacity: 0.82;
+}
+
+.scheduleConflictError {
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(127, 29, 29, 0.2);
+}
+
+.scheduleConflictWarning {
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  background: rgba(124, 45, 18, 0.18);
+}
+
+.scheduleConflictActions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.scheduleConflictActions a {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 8px;
+  padding: 6px 8px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .scheduleConflict,
+  .scheduleConflictHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

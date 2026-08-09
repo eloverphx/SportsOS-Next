@@ -26,6 +26,11 @@ const links: readonly NavigationLink[] = [
   { label: "Players", href: "/players", permission: PERMISSIONS.PLAYER_READ },
   { label: "Rosters", href: "/rosters", permission: PERMISSIONS.TEAM_ROSTER_MANAGE },
   { label: "Games", href: "/games", permission: PERMISSIONS.GAME_READ },
+  {
+    label: "Tournament Director",
+    href: "/tournament-director",
+    permission: PERMISSIONS.GAME_READ,
+  },
   { label: "Streaming", href: "#", permission: PERMISSIONS.STREAM_READ },
   { label: "Scoreboards", href: "/scoreboards", permission: PERMISSIONS.SCOREBOARD_READ },
   { label: "Users", href: "/users", permission: PERMISSIONS.ORGANIZATION_MEMBERS_MANAGE },

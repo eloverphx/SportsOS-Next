@@ -1,0 +1,155 @@
+.tournamentFocusPanel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.tournamentFocusHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tournamentFocusHeader h2 {
+  margin: 4px 0 6px;
+}
+
+.tournamentFocusHeader p {
+  margin: 0;
+  max-width: 760px;
+  opacity: 0.72;
+}
+
+.tournamentFocusEyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.64;
+}
+
+.tournamentFocusCount {
+  display: grid;
+  justify-items: end;
+}
+
+.tournamentFocusCount strong {
+  font-size: 1.6rem;
+}
+
+.tournamentFocusCount span {
+  opacity: 0.62;
+  font-size: 0.75rem;
+}
+
+.tournamentFocusFilters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.tournamentFocusFilters label {
+  display: grid;
+  gap: 5px;
+  font-size: 0.78rem;
+}
+
+.tournamentFocusFilters button {
+  min-height: 38px;
+}
+
+.tournamentFocusEmpty {
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.28);
+  opacity: 0.72;
+}
+
+.tournamentFocusGames {
+  display: grid;
+  gap: 8px;
+}
+
+.tournamentFocusGame {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 11px;
+  padding: 11px 12px;
+  background: rgba(15, 23, 42, 0.25);
+}
+
+.tournamentFocusGame.urgency-late {
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(127, 29, 29, 0.16);
+}
+
+.tournamentFocusGame.urgency-starting_soon {
+  border-color: rgba(251, 146, 60, 0.4);
+  background: rgba(124, 45, 18, 0.14);
+}
+
+.tournamentFocusGame.urgency-live {
+  border-color: rgba(74, 222, 128, 0.4);
+  background: rgba(20, 83, 45, 0.14);
+}
+
+.tournamentFocusGameMain {
+  display: grid;
+  gap: 3px;
+}
+
+.tournamentFocusGameMain > span:last-child {
+  opacity: 0.7;
+  font-size: 0.8rem;
+}
+
+.tournamentFocusUrgency {
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.tournamentFocusActions {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.tournamentFocusActions a {
+  white-space: nowrap;
+  text-decoration: none;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+@media (max-width: 950px) {
+  .tournamentFocusFilters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .tournamentFocusHeader {
+    align-items: stretch;
+  }
+
+  .tournamentFocusCount {
+    justify-items: start;
+  }
+
+  .tournamentFocusFilters {
+    grid-template-columns: 1fr;
+  }
+
+  .tournamentFocusGame {
+    flex-direction: column;
+  }
+}
