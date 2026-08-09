@@ -8,10 +8,55 @@ import {
   type ServerScheduleConflict,
 } from "./schedule-conflicts.js";
 
+export const MAX_SCHEDULE_OVERRIDE_REASON_LENGTH = 500;
+
 export type ScheduleEvaluation = {
   readonly conflicts: readonly ServerScheduleConflict[];
   readonly hardConflict: boolean;
 };
+
+export type ScheduleOverride = {
+  readonly override: boolean;
+  readonly reason: string | null;
+  readonly reasonTooLong: boolean;
+};
+
+export function parseScheduleOverride(body: unknown): ScheduleOverride {
+  const record =
+    body && typeof body === "object"
+      ? (body as Record<string, unknown>)
+      : {};
+
+  const override = record.scheduleConflictOverride === true;
+  const rawReason =
+    typeof record.scheduleConflictOverrideReason === "string"
+      ? record.scheduleConflictOverrideReason.trim()
+      : "";
+
+  return {
+    override,
+    reason: rawReason.length > 0 ? rawReason : null,
+    reasonTooLong: rawReason.length > MAX_SCHEDULE_OVERRIDE_REASON_LENGTH,
+  };
+}
+
+export function scheduleRelevantFieldsChanged(
+  existing: Game,
+  input: GameInput,
+): boolean {
+  return (
+    existing.scheduledStart !== input.scheduledStart ||
+    (existing.venue ?? null) !== (input.venue ?? null) ||
+    existing.homeTeamId !== input.homeTeamId ||
+    existing.awayTeamId !== input.awayTeamId ||
+    existing.status !== input.status ||
+    existing.regulationPeriods !== input.regulationPeriods ||
+    existing.regulationPeriodLengthMs !== input.regulationPeriodLengthMs ||
+    existing.intermissionLengthMs !== input.intermissionLengthMs ||
+    existing.overtimeEnabled !== input.overtimeEnabled ||
+    existing.overtimeLengthMs !== input.overtimeLengthMs
+  );
+}
 
 async function resolveTeamNames(input: {
   readonly homeTeamId: number | null;
@@ -75,6 +120,12 @@ export async function evaluateGameInputSchedule(
     overtimeEnabled: input.overtimeEnabled,
     overtimeLengthMs: input.overtimeLengthMs,
   });
+}
+
+export async function evaluateNewGameSchedule(
+  input: GameInput,
+): Promise<ScheduleEvaluation> {
+  return evaluateGameInputSchedule(0, input);
 }
 
 export async function evaluateSchedulePreview(

@@ -29,7 +29,10 @@ import {
 import { recordEngineTransition } from "./telemetry.js";
 import {
   evaluateGameInputSchedule,
+  evaluateNewGameSchedule,
   evaluateSchedulePreview,
+  parseScheduleOverride,
+  scheduleRelevantFieldsChanged,
 } from "./schedule-enforcement.js";
 
 function relationshipErrorMessage(
@@ -167,6 +170,43 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
+    const scheduleOverride = parseScheduleOverride(request.body);
+
+    if (scheduleOverride.override && scheduleOverride.reasonTooLong) {
+      return reply.code(400).send({
+        error: "Schedule override reason must be 500 characters or fewer",
+        code: "SCHEDULE_OVERRIDE_REASON_TOO_LONG",
+      });
+    }
+
+    const scheduleEvaluation = await evaluateNewGameSchedule(parsed.data);
+
+    if (scheduleEvaluation.hardConflict && !scheduleOverride.override) {
+      await audit(identity.sub, "game.schedule_create_conflict_blocked", {
+        organizationId: parsed.data.organizationId,
+        requestedScheduledStart: parsed.data.scheduledStart,
+        requestedVenue: parsed.data.venue,
+        conflicts: scheduleEvaluation.conflicts,
+      });
+
+      return reply.code(409).send({
+        error: "Game creation creates a hard tournament conflict",
+        code: "SCHEDULE_CONFLICT",
+        conflicts: scheduleEvaluation.conflicts,
+      });
+    }
+
+    if (
+      scheduleEvaluation.hardConflict &&
+      scheduleOverride.override &&
+      !scheduleOverride.reason
+    ) {
+      return reply.code(400).send({
+        error: "A reason is required to override a hard schedule conflict",
+        code: "SCHEDULE_OVERRIDE_REASON_REQUIRED",
+      });
+    }
+
     const game = await createGame(parsed.data);
 
     await audit(identity.sub, "game.created", {
@@ -177,7 +217,21 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       homeExternalName: game.homeExternalName,
       awayTeamId: game.awayTeamId,
       awayExternalName: game.awayExternalName,
+      scheduleConflicts: scheduleEvaluation.conflicts,
+      scheduleConflictOverride: scheduleOverride.override,
+      scheduleConflictOverrideReason: scheduleOverride.reason,
     });
+
+    if (scheduleEvaluation.hardConflict && scheduleOverride.override) {
+      await audit(identity.sub, "game.schedule_create_conflict_overridden", {
+        gameId: game.id,
+        organizationId: game.organizationId,
+        scheduledStart: game.scheduledStart,
+        venue: game.venue,
+        reason: scheduleOverride.reason,
+        conflicts: scheduleEvaluation.conflicts,
+      });
+    }
 
     realtime().emit("games:changed", {
       reason: "created",
@@ -228,29 +282,22 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    const rawBody =
-      request.body && typeof request.body === "object"
-        ? (request.body as Record<string, unknown>)
-        : {};
-    const scheduleConflictOverride = rawBody.scheduleConflictOverride === true;
+    const scheduleOverride = parseScheduleOverride(request.body);
 
-    const scheduleChanged =
-      existing.scheduledStart !== parsed.data.scheduledStart ||
-      (existing.venue ?? null) !== (parsed.data.venue ?? null) ||
-      existing.homeTeamId !== parsed.data.homeTeamId ||
-      existing.awayTeamId !== parsed.data.awayTeamId ||
-      existing.status !== parsed.data.status ||
-      existing.regulationPeriods !== parsed.data.regulationPeriods ||
-      existing.regulationPeriodLengthMs !== parsed.data.regulationPeriodLengthMs ||
-      existing.intermissionLengthMs !== parsed.data.intermissionLengthMs ||
-      existing.overtimeEnabled !== parsed.data.overtimeEnabled ||
-      existing.overtimeLengthMs !== parsed.data.overtimeLengthMs;
+    if (scheduleOverride.override && scheduleOverride.reasonTooLong) {
+      return reply.code(400).send({
+        error: "Schedule override reason must be 500 characters or fewer",
+        code: "SCHEDULE_OVERRIDE_REASON_TOO_LONG",
+      });
+    }
+
+    const scheduleChanged = scheduleRelevantFieldsChanged(existing, parsed.data);
 
     const scheduleEvaluation = scheduleChanged
       ? await evaluateGameInputSchedule(existing.id, parsed.data)
       : { conflicts: [], hardConflict: false };
 
-    if (scheduleEvaluation.hardConflict && !scheduleConflictOverride) {
+    if (scheduleEvaluation.hardConflict && !scheduleOverride.override) {
       await audit(identity.sub, "game.schedule_conflict_blocked", {
         gameId: existing.id,
         organizationId: parsed.data.organizationId,
@@ -266,6 +313,17 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
+    if (
+      scheduleEvaluation.hardConflict &&
+      scheduleOverride.override &&
+      !scheduleOverride.reason
+    ) {
+      return reply.code(400).send({
+        error: "A reason is required to override a hard schedule conflict",
+        code: "SCHEDULE_OVERRIDE_REASON_REQUIRED",
+      });
+    }
+
     const game = await updateGame(id.data, parsed.data);
     if (!game) return reply.code(404).send({ error: "Game not found" });
 
@@ -274,7 +332,8 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       previousOrganizationId: existing.organizationId,
       organizationId: game.organizationId,
       scheduleChanged,
-      scheduleConflictOverride,
+      scheduleConflictOverride: scheduleOverride.override,
+      scheduleConflictOverrideReason: scheduleOverride.reason,
       scheduleConflicts: scheduleEvaluation.conflicts,
       previousScheduledStart: existing.scheduledStart,
       scheduledStart: game.scheduledStart,
@@ -284,12 +343,13 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
 
     if (
       scheduleChanged &&
-      scheduleConflictOverride &&
+      scheduleOverride.override &&
       scheduleEvaluation.hardConflict
     ) {
       await audit(identity.sub, "game.schedule_conflict_overridden", {
         gameId: game.id,
         organizationId: game.organizationId,
+        reason: scheduleOverride.reason,
         scheduledStart: game.scheduledStart,
         venue: game.venue,
         conflicts: scheduleEvaluation.conflicts,

@@ -79,6 +79,7 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
   const [previewBusy, setPreviewBusy] = useState(false);
   const [previewError, setPreviewError] = useState("");
   const [overrideHardConflicts, setOverrideHardConflicts] = useState(false);
+  const [scheduleOverrideReason, setScheduleOverrideReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -115,6 +116,7 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
           if (cancelled) return;
           setPreview(response);
           setOverrideHardConflicts(false);
+          setScheduleOverrideReason("");
         })
         .catch((caughtError) => {
           if (cancelled) return;
@@ -147,6 +149,7 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
     setPreview(null);
     setPreviewError("");
     setOverrideHardConflicts(false);
+    setScheduleOverrideReason("");
     setError("");
     setSuccess("");
   }
@@ -166,6 +169,15 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
 
     if (preview.hardConflict && !overrideHardConflicts) {
       setError("Hard schedule conflicts must be resolved or explicitly overridden.");
+      return;
+    }
+
+    if (
+      preview.hardConflict &&
+      overrideHardConflicts &&
+      scheduleOverrideReason.trim().length === 0
+    ) {
+      setError("Enter a reason for overriding the hard schedule conflict.");
       return;
     }
 
@@ -214,6 +226,8 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
           overtimeLengthMs: game.overtimeLengthMs,
           notes: game.notes,
           scheduleConflictOverride: overrideHardConflicts,
+          scheduleConflictOverrideReason:
+            scheduleOverrideReason.trim() || null,
         }),
       });
 
@@ -222,6 +236,7 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
       setPreview(null);
       setPreviewError("");
       setOverrideHardConflicts(false);
+      setScheduleOverrideReason("");
       await onSaved();
     } catch (caughtError) {
       setError(
@@ -367,17 +382,41 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
               ) : null}
 
               {preview?.hardConflict ? (
-                <label className="scheduleOverride">
-                  <input
-                    type="checkbox"
-                    checked={overrideHardConflicts}
-                    onChange={(event) =>
-                      setOverrideHardConflicts(event.target.checked)
-                    }
-                  />
-                  I understand this change creates a hard tournament conflict and
-                  want to override the block.
-                </label>
+                <>
+                  <label className="scheduleOverride">
+                    <input
+                      type="checkbox"
+                      checked={overrideHardConflicts}
+                      onChange={(event) => {
+                        const checked = event.target.checked;
+                        setOverrideHardConflicts(checked);
+                        if (!checked) setScheduleOverrideReason("");
+                      }}
+                    />
+                    I understand this change creates a hard tournament conflict and
+                    want to override the block.
+                  </label>
+
+                  {overrideHardConflicts ? (
+                    <label className="scheduleOverrideReason">
+                      <span>Override reason</span>
+                      <textarea
+                        value={scheduleOverrideReason}
+                        onChange={(event) =>
+                          setScheduleOverrideReason(event.target.value)
+                        }
+                        maxLength={500}
+                        rows={3}
+                        required
+                        placeholder="Explain why this hard conflict is being intentionally accepted."
+                      />
+                      <small>
+                        Required for hard-conflict overrides. This reason is stored
+                        in the audit trail.
+                      </small>
+                    </label>
+                  ) : null}
+                </>
               ) : null}
 
               <div className="scheduleEditorActions">
@@ -390,6 +429,7 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
                     setPreview(null);
                     setPreviewError("");
                     setOverrideHardConflicts(false);
+                    setScheduleOverrideReason("");
                     setError("");
                   }}
                 >

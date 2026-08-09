@@ -187,3 +187,29 @@
     flex-direction: column;
   }
 }
+
+/* Milestone 6.11: audited hard-conflict override reason */
+.scheduleOverrideReason {
+  display: grid;
+  gap: 6px;
+}
+
+.scheduleOverrideReason span {
+  font-weight: 700;
+}
+
+.scheduleOverrideReason textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 82px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.36);
+  color: inherit;
+  font: inherit;
+}
+
+.scheduleOverrideReason small {
+  opacity: 0.68;
+}
