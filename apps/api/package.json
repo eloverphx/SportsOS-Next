@@ -12,7 +12,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "qualify:schedule-concurrency": "node --input-type=module -e \"import('./dist/modules/games/schedule-concurrency-qualification.js').then(async m => { const r = await m.runScheduleConcurrencyQualification(); console.log(JSON.stringify(r, null, 2)); process.exit(r.passed ? 0 : 1); }).catch(e => { console.error(e); process.exit(1); })\""
   },
   "dependencies": {
     "@fastify/compress": "^9.1.0",
