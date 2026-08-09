@@ -5,12 +5,10 @@ import { PERMISSIONS, ROLES, requirePermission } from "../auth/index.js";
 import { listActivePenalties } from "../penalties/repository.js";
 import {
   applyGameScoringAction,
-  createGame,
   deleteGame,
   findGameById,
   listGames,
   listGameTeamOptions,
-  updateGame,
   validateGameRelationships,
   GamePhaseError,
   IdempotencyConflictError,
@@ -28,12 +26,13 @@ import {
 } from "./lifecycle.js";
 import { recordEngineTransition } from "./telemetry.js";
 import {
-  evaluateGameInputSchedule,
-  evaluateNewGameSchedule,
   evaluateSchedulePreview,
   parseScheduleOverride,
-  scheduleRelevantFieldsChanged,
 } from "./schedule-enforcement.js";
+import {
+  createGameWithScheduleTransaction,
+  updateGameWithScheduleTransaction,
+} from "./schedule-mutations.js";
 
 function relationshipErrorMessage(
   error: "organization" | "season" | "homeTeam" | "awayTeam",
@@ -179,9 +178,13 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    const scheduleEvaluation = await evaluateNewGameSchedule(parsed.data);
+    const mutation = await createGameWithScheduleTransaction(
+      parsed.data,
+      scheduleOverride.override,
+    );
+    const scheduleEvaluation = mutation.evaluation;
 
-    if (scheduleEvaluation.hardConflict && !scheduleOverride.override) {
+    if (mutation.outcome === "blocked") {
       await audit(identity.sub, "game.schedule_create_conflict_blocked", {
         organizationId: parsed.data.organizationId,
         requestedScheduledStart: parsed.data.scheduledStart,
@@ -196,18 +199,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    if (
-      scheduleEvaluation.hardConflict &&
-      scheduleOverride.override &&
-      !scheduleOverride.reason
-    ) {
-      return reply.code(400).send({
-        error: "A reason is required to override a hard schedule conflict",
-        code: "SCHEDULE_OVERRIDE_REASON_REQUIRED",
-      });
-    }
-
-    const game = await createGame(parsed.data);
+    const game = mutation.game;
 
     await audit(identity.sub, "game.created", {
       gameId: game.id,
@@ -291,13 +283,15 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    const scheduleChanged = scheduleRelevantFieldsChanged(existing, parsed.data);
+    const mutation = await updateGameWithScheduleTransaction(
+      existing,
+      parsed.data,
+      scheduleOverride.override,
+    );
+    const scheduleChanged = mutation.scheduleChanged;
+    const scheduleEvaluation = mutation.evaluation;
 
-    const scheduleEvaluation = scheduleChanged
-      ? await evaluateGameInputSchedule(existing.id, parsed.data)
-      : { conflicts: [], hardConflict: false };
-
-    if (scheduleEvaluation.hardConflict && !scheduleOverride.override) {
+    if (mutation.outcome === "blocked") {
       await audit(identity.sub, "game.schedule_conflict_blocked", {
         gameId: existing.id,
         organizationId: parsed.data.organizationId,
@@ -313,19 +307,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    if (
-      scheduleEvaluation.hardConflict &&
-      scheduleOverride.override &&
-      !scheduleOverride.reason
-    ) {
-      return reply.code(400).send({
-        error: "A reason is required to override a hard schedule conflict",
-        code: "SCHEDULE_OVERRIDE_REASON_REQUIRED",
-      });
-    }
-
-    const game = await updateGame(id.data, parsed.data);
-    if (!game) return reply.code(404).send({ error: "Game not found" });
+    const game = mutation.game;
 
     await audit(identity.sub, "game.updated", {
       gameId: game.id,

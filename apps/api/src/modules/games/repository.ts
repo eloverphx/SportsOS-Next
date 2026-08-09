@@ -188,8 +188,10 @@ export interface GameFilters {
   search?: string;
 }
 
-export async function listGameTeamOptions(): Promise<GameTeamOption[]> {
-  const [rows] = await pool.execute<RowDataPacket[]>(
+export async function listGameTeamOptionsUsingConnection(
+  connection: PoolConnection,
+): Promise<GameTeamOption[]> {
+  const [rows] = await connection.execute<RowDataPacket[]>(
     `SELECT
        t.id,
        t.organization_id,
@@ -207,6 +209,15 @@ export async function listGameTeamOptions(): Promise<GameTeamOption[]> {
     organizationName: String(row.organization_name),
     name: String(row.name),
   }));
+}
+
+export async function listGameTeamOptions(): Promise<GameTeamOption[]> {
+  const connection = await pool.getConnection();
+  try {
+    return await listGameTeamOptionsUsingConnection(connection);
+  } finally {
+    connection.release();
+  }
 }
 
 export async function listGames(filters: GameFilters): Promise<Game[]> {
@@ -258,6 +269,19 @@ export async function listGames(filters: GameFilters): Promise<Game[]> {
   return rows.map(mapGame);
 }
 
+export async function listGamesByOrganizationUsingConnection(
+  connection: PoolConnection,
+  organizationId: number,
+): Promise<Game[]> {
+  const [rows] = await connection.execute<RowDataPacket[]>(
+    `${SELECT_GAME} WHERE g.organization_id = ?
+     ORDER BY g.scheduled_start DESC, g.id DESC`,
+    [organizationId],
+  );
+
+  return rows.map(mapGame);
+}
+
 export async function findGameById(id: number): Promise<Game | null> {
   const [rows] = await pool.execute<RowDataPacket[]>(`${SELECT_GAME} WHERE g.id = ? LIMIT 1`, [id]);
 
@@ -299,6 +323,61 @@ export async function validateGameRelationships(
   }
 
   return null;
+}
+
+export async function createGameUsingConnection(
+  connection: PoolConnection,
+  input: GameInput,
+): Promise<number> {
+  const [result] = await connection.execute<mysql.ResultSetHeader>(
+    `INSERT INTO games (
+       organization_id,
+       season_id,
+       home_team_id,
+       home_external_name,
+       away_team_id,
+       away_external_name,
+       scheduled_start,
+       timezone,
+       venue,
+       status,
+       home_score,
+       away_score,
+       period_length_ms,
+       clock_remaining_ms,
+       regulation_periods,
+       regulation_period_length_ms,
+       intermission_length_ms,
+       overtime_enabled,
+       overtime_length_ms,
+       notes
+     )
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      input.organizationId,
+      input.seasonId,
+      input.homeTeamId,
+      input.homeTeamId ? null : input.homeExternalName,
+      input.awayTeamId,
+      input.awayTeamId ? null : input.awayExternalName,
+      new Date(input.scheduledStart),
+      input.timezone,
+      input.venue,
+      input.status,
+      input.homeScore,
+      input.awayScore,
+      input.regulationPeriodLengthMs,
+      input.regulationPeriodLengthMs,
+      input.regulationPeriods,
+      input.regulationPeriodLengthMs,
+      input.intermissionLengthMs,
+      input.overtimeEnabled,
+      input.overtimeLengthMs,
+      input.notes,
+    ],
+  );
+
+  return result.insertId;
 }
 
 export async function createGame(input: GameInput): Promise<Game> {
@@ -353,6 +432,58 @@ export async function createGame(input: GameInput): Promise<Game> {
   const game = await findGameById(result.insertId);
   if (!game) throw new Error("Game could not be read after creation");
   return game;
+}
+
+export async function updateGameUsingConnection(
+  connection: PoolConnection,
+  id: number,
+  input: GameInput,
+): Promise<boolean> {
+  const [result] = await connection.execute<mysql.ResultSetHeader>(
+    `UPDATE games SET
+       organization_id = ?,
+       season_id = ?,
+       home_team_id = ?,
+       home_external_name = ?,
+       away_team_id = ?,
+       away_external_name = ?,
+       scheduled_start = ?,
+       timezone = ?,
+       venue = ?,
+       status = ?,
+       home_score = ?,
+       away_score = ?,
+       regulation_periods = ?,
+       regulation_period_length_ms = ?,
+       intermission_length_ms = ?,
+       overtime_enabled = ?,
+       overtime_length_ms = ?,
+       notes = ?
+     WHERE id = ?`,
+    [
+      input.organizationId,
+      input.seasonId,
+      input.homeTeamId,
+      input.homeTeamId ? null : input.homeExternalName,
+      input.awayTeamId,
+      input.awayTeamId ? null : input.awayExternalName,
+      new Date(input.scheduledStart),
+      input.timezone,
+      input.venue,
+      input.status,
+      input.homeScore,
+      input.awayScore,
+      input.regulationPeriods,
+      input.regulationPeriodLengthMs,
+      input.intermissionLengthMs,
+      input.overtimeEnabled,
+      input.overtimeLengthMs,
+      input.notes,
+      id,
+    ],
+  );
+
+  return result.affectedRows > 0;
 }
 
 export async function updateGame(id: number, input: GameInput): Promise<Game | null> {

@@ -1,5 +1,5 @@
 import type { GameInput } from "./schemas.js";
-import type { Game } from "./types.js";
+import type { Game, GameTeamOption } from "./types.js";
 import { listGames, listGameTeamOptions } from "./repository.js";
 import {
   detectServerScheduleConflicts,
@@ -45,6 +45,7 @@ export function scheduleRelevantFieldsChanged(
   input: GameInput,
 ): boolean {
   return (
+    existing.organizationId !== input.organizationId ||
     existing.scheduledStart !== input.scheduledStart ||
     (existing.venue ?? null) !== (input.venue ?? null) ||
     existing.homeTeamId !== input.homeTeamId ||
@@ -58,17 +59,18 @@ export function scheduleRelevantFieldsChanged(
   );
 }
 
-async function resolveTeamNames(input: {
-  readonly homeTeamId: number | null;
-  readonly awayTeamId: number | null;
-  readonly homeExternalName: string | null;
-  readonly awayExternalName: string | null;
-}): Promise<{
+function resolveTeamNamesFromOptions(
+  input: {
+    readonly homeTeamId: number | null;
+    readonly awayTeamId: number | null;
+    readonly homeExternalName: string | null;
+    readonly awayExternalName: string | null;
+  },
+  teams: readonly GameTeamOption[],
+): {
   readonly homeTeamName: string;
   readonly awayTeamName: string;
-}> {
-  const teams = await listGameTeamOptions();
-
+} {
   const homeTeamName =
     input.homeTeamId === null
       ? input.homeExternalName
@@ -84,6 +86,18 @@ async function resolveTeamNames(input: {
   }
 
   return { homeTeamName, awayTeamName };
+}
+
+async function resolveTeamNames(input: {
+  readonly homeTeamId: number | null;
+  readonly awayTeamId: number | null;
+  readonly homeExternalName: string | null;
+  readonly awayExternalName: string | null;
+}): Promise<{
+  readonly homeTeamName: string;
+  readonly awayTeamName: string;
+}> {
+  return resolveTeamNamesFromOptions(input, await listGameTeamOptions());
 }
 
 async function evaluate(
@@ -126,6 +140,38 @@ export async function evaluateNewGameSchedule(
   input: GameInput,
 ): Promise<ScheduleEvaluation> {
   return evaluateGameInputSchedule(0, input);
+}
+
+export function evaluateGameInputScheduleAgainstExisting(
+  gameId: number,
+  input: GameInput,
+  existingGames: readonly Game[],
+  teamOptions: readonly GameTeamOption[],
+): ScheduleEvaluation {
+  const names = resolveTeamNamesFromOptions(input, teamOptions);
+
+  const proposed: ProposedScheduleGame = {
+    id: gameId,
+    homeTeamId: input.homeTeamId,
+    awayTeamId: input.awayTeamId,
+    homeTeamName: names.homeTeamName,
+    awayTeamName: names.awayTeamName,
+    scheduledStart: input.scheduledStart,
+    venue: input.venue,
+    status: input.status,
+    regulationPeriods: input.regulationPeriods,
+    regulationPeriodLengthMs: input.regulationPeriodLengthMs,
+    intermissionLengthMs: input.intermissionLengthMs,
+    overtimeEnabled: input.overtimeEnabled,
+    overtimeLengthMs: input.overtimeLengthMs,
+  };
+
+  const conflicts = detectServerScheduleConflicts(proposed, existingGames);
+
+  return {
+    conflicts,
+    hardConflict: hasHardScheduleConflicts(conflicts),
+  };
 }
 
 export async function evaluateSchedulePreview(
