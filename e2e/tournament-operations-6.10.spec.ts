@@ -12,6 +12,7 @@ const director = {
   permissions: [
     "game.read",
     "game.manage",
+        "game.schedule.override",
     "game.score",
     "scoreboard.read",
     "scoreboard.manage",

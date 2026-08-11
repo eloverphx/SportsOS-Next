@@ -22,6 +22,7 @@ export const PERMISSIONS = {
 
   GAME_READ: "game.read",
   GAME_MANAGE: "game.manage",
+  GAME_SCHEDULE_OVERRIDE: "game.schedule.override",
   GAME_SCORE: "game.score",
 
   STREAM_READ: "stream.read",

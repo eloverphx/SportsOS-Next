@@ -33,6 +33,7 @@ import {
   createGameWithScheduleTransaction,
   updateGameWithScheduleTransaction,
 } from "./schedule-mutations.js";
+import { queryScheduleAuditEvents } from "./schedule-audit.js";
 
 function relationshipErrorMessage(
   error: "organization" | "season" | "homeTeam" | "awayTeam",
@@ -79,6 +80,64 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       ),
     };
   });
+
+  app.get("/games/schedule-audit/recent", async (request, reply) => {
+  const identity = await requirePermission(request, {
+    permission: PERMISSIONS.GAME_READ,
+  });
+
+  const query = request.query as {
+    decision?: "ALL" | "BLOCKED" | "OVERRIDDEN";
+    gameId?: string;
+    venue?: string;
+    actorUserId?: string;
+    organizationId?: string;
+    limit?: string;
+    offset?: string;
+  };
+
+  const gameId = query.gameId ? Number(query.gameId) : null;
+  const actorUserId = query.actorUserId ? Number(query.actorUserId) : null;
+  const requestedOrganizationId = query.organizationId
+    ? Number(query.organizationId)
+    : null;
+  const limit = query.limit ? Number(query.limit) : undefined;
+  const offset = query.offset ? Number(query.offset) : undefined;
+
+  if (
+    identity.role !== ROLES.SYSTEM_ADMIN &&
+    Number.isSafeInteger(requestedOrganizationId) &&
+    (requestedOrganizationId as number) > 0 &&
+    requestedOrganizationId !== identity.organizationId
+  ) {
+    return reply.code(403).send({
+      error: "Cannot read schedule audit events for another organization",
+      code: "AUDIT_ORGANIZATION_FORBIDDEN",
+    });
+  }
+
+  return queryScheduleAuditEvents({
+    organizationId:
+      identity.role === ROLES.SYSTEM_ADMIN
+        ? Number.isSafeInteger(requestedOrganizationId) &&
+          (requestedOrganizationId as number) > 0
+          ? (requestedOrganizationId as number)
+          : null
+        : identity.organizationId,
+    decision: query.decision,
+    gameId:
+      Number.isSafeInteger(gameId) && (gameId as number) > 0
+        ? (gameId as number)
+        : null,
+    venue: query.venue?.trim() || null,
+    actorUserId:
+      Number.isSafeInteger(actorUserId) && (actorUserId as number) > 0
+        ? (actorUserId as number)
+        : null,
+    limit,
+    offset,
+  });
+});
 
   app.get("/games/:id", async (request, reply) => {
     const id = gameIdSchema.safeParse((request.params as { id: string }).id);
@@ -175,6 +234,13 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(400).send({
         error: "Schedule override reason must be 500 characters or fewer",
         code: "SCHEDULE_OVERRIDE_REASON_TOO_LONG",
+      });
+    }
+
+    if (scheduleOverride.override) {
+      await requirePermission(request, {
+        permission: PERMISSIONS.GAME_SCHEDULE_OVERRIDE,
+        organizationId: parsed.data.organizationId,
       });
     }
 
@@ -280,6 +346,13 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(400).send({
         error: "Schedule override reason must be 500 characters or fewer",
         code: "SCHEDULE_OVERRIDE_REASON_TOO_LONG",
+      });
+    }
+
+    if (scheduleOverride.override) {
+      await requirePermission(request, {
+        permission: PERMISSIONS.GAME_SCHEDULE_OVERRIDE,
+        organizationId: parsed.data.organizationId,
       });
     }
 

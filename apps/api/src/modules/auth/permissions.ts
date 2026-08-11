@@ -21,6 +21,7 @@ export const PERMISSIONS = {
 
   GAME_READ: "game.read",
   GAME_MANAGE: "game.manage",
+  GAME_SCHEDULE_OVERRIDE: "game.schedule.override",
   GAME_SCORE: "game.score",
 
   STREAM_READ: "stream.read",
@@ -55,6 +56,7 @@ export const ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {
     PERMISSIONS.SEASON_MANAGE,
     PERMISSIONS.GAME_READ,
     PERMISSIONS.GAME_MANAGE,
+    PERMISSIONS.GAME_SCHEDULE_OVERRIDE,
     PERMISSIONS.GAME_SCORE,
     PERMISSIONS.STREAM_READ,
     PERMISSIONS.STREAM_MANAGE,

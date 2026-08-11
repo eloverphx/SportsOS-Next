@@ -77,6 +77,14 @@ function ceilToHalfHour(ms: number): number {
   return floored === ms ? ms : floored + MINUTES_PER_TICK * 60_000;
 }
 
+function timelineGameIdFromHash(hash: string): number | null {
+  const match = /^#director-timeline-game-(\d+)$/.exec(hash);
+  if (!match?.[1]) return null;
+
+  const gameId = Number(match[1]);
+  return Number.isSafeInteger(gameId) && gameId > 0 ? gameId : null;
+}
+
 function conflictForGame(
   gameId: number,
   conflicts: readonly ScheduleConflict[],
@@ -121,6 +129,7 @@ export function TournamentScheduleTimeline({ games }: Props) {
     return availableDays[0] ?? todayKey;
   });
   const [now, setNow] = useState(() => Date.now());
+  const [targetGameId, setTargetGameId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!availableDays.length) return;
@@ -133,6 +142,30 @@ export function TournamentScheduleTimeline({ games }: Props) {
   }, [availableDays, selectedDay, todayKey]);
 
   useEffect(() => {
+    function syncHashTarget(): void {
+      const gameId = timelineGameIdFromHash(window.location.hash);
+      setTargetGameId(gameId);
+
+      if (!gameId) return;
+
+      const game = activeGames.find((entry) => entry.id === gameId);
+      if (!game) return;
+
+      const targetDay = dayKey(game.scheduledStart);
+      if (targetDay !== selectedDay) {
+        setSelectedDay(targetDay);
+      }
+    }
+
+    syncHashTarget();
+    window.addEventListener("hashchange", syncHashTarget);
+
+    return () => {
+      window.removeEventListener("hashchange", syncHashTarget);
+    };
+  }, [activeGames, selectedDay]);
+
+  useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
@@ -141,6 +174,27 @@ export function TournamentScheduleTimeline({ games }: Props) {
     () => activeGames.filter((game) => dayKey(game.scheduledStart) === selectedDay),
     [activeGames, selectedDay],
   );
+
+  useEffect(() => {
+    if (!targetGameId) return;
+
+    const targetGame = activeGames.find((game) => game.id === targetGameId);
+    if (!targetGame || dayKey(targetGame.scheduledStart) !== selectedDay) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const element = document.getElementById(
+        `director-timeline-game-${targetGameId}`,
+      );
+
+      element?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeGames, selectedDay, targetGameId]);
 
   const conflicts = useMemo(
     () => detectScheduleConflicts(dayGames),
@@ -343,12 +397,15 @@ export function TournamentScheduleTimeline({ games }: Props) {
 
                       return (
                         <Link
+                          id={`director-timeline-game-${game.id}`}
+                          data-game-id={game.id}
                           key={game.id}
                           href={`/games/${game.id}/control`}
                           className={[
                             "tournamentTimelineGame",
                             `status-${game.status.toLowerCase()}`,
                             severity ? `conflict-${severity.toLowerCase()}` : "",
+                            targetGameId === game.id ? "audit-target" : "",
                           ]
                             .filter(Boolean)
                             .join(" ")}

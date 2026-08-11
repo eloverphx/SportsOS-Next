@@ -68,6 +68,10 @@ function toLocalDateTime(value: string): string {
 export function TournamentScheduleEditor({ games, onSaved }: Props) {
   const user = getStoredUser();
   const canManage = userHasPermission(user, PERMISSIONS.GAME_MANAGE);
+  const canOverrideHardConflicts = userHasPermission(
+    user,
+    PERMISSIONS.GAME_SCHEDULE_OVERRIDE,
+  );
 
   const scheduledGames = useMemo(
     () => games.filter((game) => game.status === "SCHEDULED"),
@@ -164,6 +168,13 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
 
     if (!preview || previewBusy || previewError) {
       setError("Wait for server schedule validation before saving.");
+      return;
+    }
+
+    if (preview.hardConflict && !canOverrideHardConflicts) {
+      setError(
+        "This hard schedule conflict requires elevated override permission.",
+      );
       return;
     }
 
@@ -382,41 +393,49 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
               ) : null}
 
               {preview?.hardConflict ? (
-                <>
-                  <label className="scheduleOverride">
-                    <input
-                      type="checkbox"
-                      checked={overrideHardConflicts}
-                      onChange={(event) => {
-                        const checked = event.target.checked;
-                        setOverrideHardConflicts(checked);
-                        if (!checked) setScheduleOverrideReason("");
-                      }}
-                    />
-                    I understand this change creates a hard tournament conflict and
-                    want to override the block.
-                  </label>
-
-                  {overrideHardConflicts ? (
-                    <label className="scheduleOverrideReason">
-                      <span>Override reason</span>
-                      <textarea
-                        value={scheduleOverrideReason}
-                        onChange={(event) =>
-                          setScheduleOverrideReason(event.target.value)
-                        }
-                        maxLength={500}
-                        rows={3}
-                        required
-                        placeholder="Explain why this hard conflict is being intentionally accepted."
+                canOverrideHardConflicts ? (
+                  <>
+                    <label className="scheduleOverride">
+                      <input
+                        type="checkbox"
+                        checked={overrideHardConflicts}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setOverrideHardConflicts(checked);
+                          if (!checked) setScheduleOverrideReason("");
+                        }}
                       />
-                      <small>
-                        Required for hard-conflict overrides. This reason is stored
-                        in the audit trail.
-                      </small>
+                      I understand this change creates a hard tournament conflict and
+                      want to override the block.
                     </label>
-                  ) : null}
-                </>
+
+                    {overrideHardConflicts ? (
+                      <label className="scheduleOverrideReason">
+                        <span>Override reason</span>
+                        <textarea
+                          value={scheduleOverrideReason}
+                          onChange={(event) =>
+                            setScheduleOverrideReason(event.target.value)
+                          }
+                          maxLength={500}
+                          rows={3}
+                          required
+                          placeholder="Explain why this hard conflict is being intentionally accepted."
+                        />
+                        <small>
+                          Required for hard-conflict overrides. This reason is stored
+                          in the audit trail.
+                        </small>
+                      </label>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="schedulePreviewError">
+                    Hard schedule conflicts cannot be overridden by your account.
+                    An organization owner or system administrator must approve this
+                    schedule exception.
+                  </div>
+                )
               ) : null}
 
               <div className="scheduleEditorActions">

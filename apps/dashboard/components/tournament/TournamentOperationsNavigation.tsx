@@ -60,6 +60,7 @@ export function TournamentOperationsNavigation() {
           </a>
         ))}
       </div>
-    </nav>
+      <a href="#director-audit" data-testid="workflow-link-audit">History</a>
+</nav>
   );
 }

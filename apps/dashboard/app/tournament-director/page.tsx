@@ -7,6 +7,7 @@ import { AuthGate } from "../../components/AuthGate";
 import { AppShell } from "../../components/AppShell";
 import { TournamentScheduleConflicts } from "../../components/tournament/TournamentScheduleConflicts";
 import { TournamentScheduleEditor } from "../../components/tournament/TournamentScheduleEditor";
+import { TournamentScheduleAudit } from "../../components/tournament/TournamentScheduleAudit";
 import { TournamentScheduleTimeline } from "../../components/tournament/TournamentScheduleTimeline";
 import { TournamentDayOperations } from "../../components/tournament/TournamentDayOperations";
 import { TournamentFocusPanel } from "../../components/tournament/TournamentFocusPanel";
@@ -359,6 +360,8 @@ export default function TournamentDirectorPage() {
           </section>
 
           <TournamentScheduleConflicts games={games} />
+
+          <TournamentScheduleAudit games={games} />
 
           <TournamentScheduleEditor games={games} onSaved={load} />
 

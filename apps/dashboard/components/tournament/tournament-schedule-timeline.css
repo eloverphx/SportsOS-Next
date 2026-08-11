@@ -258,3 +258,27 @@
     width: 100%;
   }
 }
+
+.tournamentTimelineGame.audit-target {
+  outline: 3px solid currentColor;
+  outline-offset: 3px;
+  z-index: 4;
+  animation: tournamentTimelineAuditTargetPulse 1.2s ease-in-out 2;
+}
+
+@keyframes tournamentTimelineAuditTargetPulse {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tournamentTimelineGame.audit-target {
+    animation: none;
+  }
+}
