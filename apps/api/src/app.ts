@@ -31,6 +31,11 @@ import { startRealtimeOutboxDispatcher } from "./infrastructure/realtime-outbox.
 export interface BuildAppOptions {
   readonly logger?: boolean;
   readonly realtime?: boolean;
+  /**
+   * Limits route registration for focused HTTP contract tests.
+   * Production/default behavior remains "all".
+   */
+  readonly routeScope?: "all" | "platform";
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
@@ -84,22 +89,25 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   }
 
   await app.register(platformRoutes);
-  await app.register(setupRoutes);
-  await app.register(authRoutes);
-  await app.register(organizationRoutes);
-  await app.register(organizationMemberRoutes);
-  await app.register(teamRoutes);
-  await app.register(playerRoutes);
-  await app.register(seasonRoutes);
-  await app.register(gameRoutes);
-  await app.register(gameEventRoutes);
-  await app.register(penaltyRoutes);
-  await app.register(scoreboardDeviceRoutes);
-  await app.register(rosterRoutes);
-  await app.register(mediaRoutes);
-  await app.register(systemRoutes);
-  await app.register(gameEngineTelemetryRoutes);
-  await app.register(simulationRoutes);
+
+  if ((options.routeScope ?? "all") === "all") {
+    await app.register(setupRoutes);
+    await app.register(authRoutes);
+    await app.register(organizationRoutes);
+    await app.register(organizationMemberRoutes);
+    await app.register(teamRoutes);
+    await app.register(playerRoutes);
+    await app.register(seasonRoutes);
+    await app.register(gameRoutes);
+    await app.register(gameEventRoutes);
+    await app.register(penaltyRoutes);
+    await app.register(scoreboardDeviceRoutes);
+    await app.register(rosterRoutes);
+    await app.register(mediaRoutes);
+    await app.register(systemRoutes);
+    await app.register(gameEngineTelemetryRoutes);
+    await app.register(simulationRoutes);
+  }
 
   return app;
 }

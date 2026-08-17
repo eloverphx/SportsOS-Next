@@ -12,6 +12,7 @@ describe("platform HTTP API", () => {
     app = await buildApp({
       logger: false,
       realtime: false,
+      routeScope: "platform",
     });
 
     app.get("/test/forbidden", async () => {
@@ -19,6 +20,7 @@ describe("platform HTTP API", () => {
     });
 
     await app.ready();
+
   }, 30_000);
 
   afterAll(async () => {
