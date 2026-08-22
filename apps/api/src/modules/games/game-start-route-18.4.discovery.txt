@@ -1,0 +1,94 @@
+184-        timezone: game.timezone,
+185-        venue: game.venue,
+186-        status: game.status,
+187-        gamePhase: game.gamePhase,
+188-        homeScore: game.homeScore,
+189-        awayScore: game.awayScore,
+190-        period: game.period,
+191-        periodLengthMs: game.periodLengthMs,
+192:        clockRemainingMs: game.clockRemainingMs,
+193:        clockRunning: game.clockRunning,
+194:        clockStartedAt: game.clockStartedAt,
+195-        regulationPeriods: game.regulationPeriods,
+196-        regulationPeriodLengthMs: game.regulationPeriodLengthMs,
+197-        intermissionLengthMs: game.intermissionLengthMs,
+198-        intermissionRemainingMs: game.intermissionRemainingMs,
+199-        intermissionRunning: game.intermissionRunning,
+200-        intermissionStartedAt: game.intermissionStartedAt,
+201-        intermissionReady: game.intermissionReady,
+202-        overtimeEnabled: game.overtimeEnabled,
+--
+543-    await audit(identity.sub, "game.scored", {
+544-      gameId: game.id,
+545-      organizationId: game.organizationId,
+546-      action: parsed.data.action,
+547-      actionId,
+548-      homeScore: game.homeScore,
+549-      awayScore: game.awayScore,
+550-      period: game.period,
+551:      clockRemainingMs: game.clockRemainingMs,
+552:      clockRunning: game.clockRunning,
+553-      status: game.status,
+554-    });
+555-
+556-    return { game, action: parsed.data.action, replayed: false };
+557-  });
+558-
+559-  app.post("/games/:id/lifecycle", async (request, reply) => {
+560-    const id = gameIdSchema.safeParse((request.params as { id: string }).id);
+--
+602-      throw error;
+603-    }
+604-
+605-    if (!result) {
+606-      if (parsed.data.commandId) {
+607-        const game = await findGameById(id.data);
+608-
+609-    // PREGAME_SCOREBOARD_READINESS_GATE_16_9
+610:    // Enforce only the explicit startGame lifecycle command. Other
+611:    // startClock operations (period resume, recovery, etc.) remain unchanged.
+612:    if (parsed.data.command === "startGame") {
+613-      const assignmentsResponse = await app.inject({
+614-        method: "GET",
+615-        url: "/scoreboard-devices/assignments",
+616-      });
+617-
+618-      let assignedDeviceId: string | null = null;
+619-
+620-      if (
+--
+655-          gameId: String(id.data),
+656-          deviceId: assignedDeviceId,
+657-        });
+658-
+659-      if (!readinessGate.allowed) {
+660-        return reply.code(409).send({
+661-          error:
+662-            readinessGate.reason ??
+663:            "Pregame scoreboard readiness gate blocked game start.",
+664-          code: "PREGAME_SCOREBOARD_READINESS_BLOCKED",
+665-          readinessGate,
+666-        });
+667-      }
+668-    }
+669-
+670-        if (!game) return reply.code(404).send({ error: "Game not found" });
+671-
+--
+693-    await audit(identity.sub, "game.lifecycle", {
+694-      gameId: game.id,
+695-      organizationId: game.organizationId,
+696-      command: parsed.data.command,
+697-      commandId: parsed.data.commandId,
+698-      gamePhase: game.gamePhase,
+699-      period: game.period,
+700-      status: game.status,
+701:      clockRemainingMs: game.clockRemainingMs,
+702-    });
+703-
+704-    recordEngineTransition({
+705-      source: "operator",
+706-      gameId: game.id,
+707-      action: parsed.data.command,
+708-      outcome: "applied",
+709-      actorUserId: Number(identity.sub),

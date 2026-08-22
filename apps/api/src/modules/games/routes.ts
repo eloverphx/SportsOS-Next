@@ -34,6 +34,9 @@ import {
   updateGameWithScheduleTransaction,
 } from "./schedule-mutations.js";
 import { queryScheduleAuditEvents } from "./schedule-audit.js";
+import { evaluatePregameReadinessGate } from "../../services/scoreboardPregameReadinessGate.js";
+import { evaluateGameStartPreflight } from "../../services/gameStartPreflightGuard.js";
+import { getActiveGameStartPreflightOverride } from "../../services/gameStartPreflightOverride.js";
 
 function relationshipErrorMessage(
   error: "organization" | "season" | "homeTeam" | "awayTeam",
@@ -604,6 +607,106 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     if (!result) {
       if (parsed.data.commandId) {
         const game = await findGameById(id.data);
+
+    // PREGAME_SCOREBOARD_READINESS_GATE_16_9
+    // Enforce only the explicit startGame lifecycle command. Other
+    // startClock operations (period resume, recovery, etc.) remain unchanged.
+    if (parsed.data.command === "startGame") {
+
+      // GAME_START_PREFLIGHT_ENFORCEMENT_18_4
+      const gameStartPreflight =
+        evaluateGameStartPreflight(
+          String(id.data),
+        );
+
+      if (
+        !gameStartPreflight.allowed
+      ) {
+        // GAME_START_PREFLIGHT_OVERRIDE_18_6
+        const activeEmergencyOverride =
+          getActiveGameStartPreflightOverride(
+            String(id.data),
+            gameStartPreflight.deviceId ??
+              "",
+          );
+
+        if (
+          !activeEmergencyOverride
+        ) {
+
+        return reply.code(409).send({
+          success: false,
+          error: {
+            code:
+              gameStartPreflight.code,
+            message:
+              gameStartPreflight.message,
+          },
+          data: {
+            preflight:
+              gameStartPreflight,
+          },
+        });
+        }
+      }
+
+      const assignmentsResponse = await app.inject({
+        method: "GET",
+        url: "/scoreboard-devices/assignments",
+      });
+
+      let assignedDeviceId: string | null = null;
+
+      if (
+        assignmentsResponse.statusCode >= 200 &&
+        assignmentsResponse.statusCode < 300
+      ) {
+        try {
+          const assignmentBody = assignmentsResponse.json() as {
+            data?: {
+              assignments?: Array<{
+                gameId: string;
+                deviceId: string;
+              }>;
+            };
+            assignments?: Array<{
+              gameId: string;
+              deviceId: string;
+            }>;
+          };
+
+          const assignments =
+            assignmentBody.data?.assignments ??
+            assignmentBody.assignments ??
+            [];
+
+          assignedDeviceId =
+            assignments.find(
+              (item) =>
+                String(item.gameId) === String(id.data),
+            )?.deviceId ?? null;
+        } catch {
+          assignedDeviceId = null;
+        }
+      }
+
+      const readinessGate =
+        evaluatePregameReadinessGate({
+          gameId: String(id.data),
+          deviceId: assignedDeviceId,
+        });
+
+      if (!readinessGate.allowed) {
+        return reply.code(409).send({
+          error:
+            readinessGate.reason ??
+            "Pregame scoreboard readiness gate blocked game start.",
+          code: "PREGAME_SCOREBOARD_READINESS_BLOCKED",
+          readinessGate,
+        });
+      }
+    }
+
         if (!game) return reply.code(404).send({ error: "Game not found" });
 
         recordEngineTransition({

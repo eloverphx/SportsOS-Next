@@ -27,6 +27,18 @@ import { gameEngineTelemetryRoutes } from "./modules/games/telemetry-routes.js";
 import { simulationRoutes } from "./modules/simulation/routes.js";
 import type { IdentityTokenPayload } from "./modules/auth/index.js";
 import { startRealtimeOutboxDispatcher } from "./infrastructure/realtime-outbox.js";
+import { registerScoreboardDeviceEnrollmentRoutes } from "./routes/scoreboardDeviceEnrollment.js";
+import { registerScoreboardFirmwareReleaseRoutes } from "./routes/scoreboardFirmwareReleases.js";
+import { registerScoreboardFirmwareArtifactRoutes } from "./routes/scoreboardFirmwareArtifacts.js";
+import { registerScoreboardFirmwareDeploymentStatusRoutes } from "./routes/scoreboardFirmwareDeploymentStatus.js";
+import { registerScoreboardFirmwareRolloutRoutes } from "./routes/scoreboardFirmwareRollouts.js";
+import { registerScoreboardControlAuditRoutes } from "./routes/scoreboardControlAudit.js";
+import { registerScoreboardControlPolicyRoutes } from "./routes/scoreboardControlPolicy.js";
+import { startScoreboardReadinessIncidentMonitor } from "./services/scoreboardReadinessIncidentMonitor.js";
+import { registerScoreboardDeviceCommissioningRoutes } from "./routes/scoreboardDeviceCommissioning.js";
+import { registerGameDayHardwarePreflightRoutes } from "./routes/gameDayHardwarePreflight.js";
+
+import { scoreboardDevicesRoutes } from "./routes/scoreboardDevices.js";
 
 export interface BuildAppOptions {
   readonly logger?: boolean;
@@ -48,6 +60,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
   await registerPlatformPlugins(app);
 
+  await app.register(scoreboardDevicesRoutes);
   await app.register(jwt, {
     secret: config.auth.jwtSecret,
   });
@@ -107,7 +120,31 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     await app.register(systemRoutes);
     await app.register(gameEngineTelemetryRoutes);
     await app.register(simulationRoutes);
+  await app.register(registerScoreboardDeviceCommissioningRoutes);
+  await app.register(registerGameDayHardwarePreflightRoutes);
   }
 
-  return app;
+  await registerScoreboardDeviceEnrollmentRoutes(app);
+  await registerScoreboardFirmwareReleaseRoutes(app);
+  await registerScoreboardFirmwareArtifactRoutes(app);
+  await registerScoreboardFirmwareDeploymentStatusRoutes(app);
+  await registerScoreboardFirmwareRolloutRoutes(app);
+
+    await registerScoreboardControlAuditRoutes(app);
+
+  await registerScoreboardControlPolicyRoutes(app);
+
+  const stopScoreboardReadinessIncidentMonitor =
+    startScoreboardReadinessIncidentMonitor(
+      app,
+    );
+
+  app.addHook(
+    "onClose",
+    async () => {
+      stopScoreboardReadinessIncidentMonitor();
+    },
+  );
+
+return app;
 }

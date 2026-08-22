@@ -1,0 +1,158 @@
+[
+  {
+    "file": "apps/api/src/modules/games/engine.ts",
+    "hits": [
+      "SCHEDULED",
+      "LIVE",
+      "FINAL",
+      "finishGame",
+      "status"
+    ],
+    "exports": [
+      "applyGameEngineAction",
+      "GamePhaseError"
+    ]
+  },
+  {
+    "file": "apps/api/src/modules/games/lifecycle.ts",
+    "hits": [
+      "FINAL",
+      "startGame",
+      "finishGame",
+      "status"
+    ],
+    "exports": [
+      "resolveLifecycleAction",
+      "GameLifecycleError",
+      "gameLifecycleCommands",
+      "gameLifecycleCommandSchema"
+    ]
+  },
+  {
+    "file": "apps/api/src/modules/games/repository.ts",
+    "hits": [
+      "LIVE",
+      "FINAL",
+      "status"
+    ],
+    "exports": [
+      "listGameTeamOptionsUsingConnection",
+      "listGameTeamOptions",
+      "listGames",
+      "listGamesByOrganizationUsingConnection",
+      "findGameById",
+      "validateGameRelationships",
+      "createGameUsingConnection",
+      "createGame",
+      "updateGameUsingConnection",
+      "updateGame",
+      "deleteGame",
+      "applyGameScoringAction",
+      "IdempotencyConflictError"
+    ]
+  },
+  {
+    "file": "apps/api/src/modules/games/routes.ts",
+    "hits": [
+      "SCHEDULED",
+      "lifecycle",
+      "status"
+    ],
+    "exports": [
+      "gameRoutes"
+    ]
+  },
+  {
+    "file": "apps/api/src/modules/games/runtime-supervisor.ts",
+    "hits": [
+      "LIVE",
+      "startGame",
+      "status"
+    ],
+    "exports": [
+      "processAutomaticLifecycleTransitions",
+      "startGameRuntimeSupervisor"
+    ]
+  },
+  {
+    "file": "apps/api/src/modules/games/schedule-concurrency-qualification.ts",
+    "hits": [
+      "SCHEDULED",
+      "status"
+    ],
+    "exports": [
+      "runScheduleConcurrencyQualification"
+    ]
+  },
+  {
+    "file": "apps/api/src/modules/games/schedule-conflicts.ts",
+    "hits": [
+      "FINAL",
+      "status"
+    ],
+    "exports": [
+      "detectServerScheduleConflicts",
+      "hasHardScheduleConflicts"
+    ]
+  },
+  {
+    "file": "apps/api/src/modules/games/schemas.ts",
+    "hits": [
+      "SCHEDULED",
+      "finishGame",
+      "status"
+    ],
+    "exports": [
+      "gameInputSchema",
+      "gameListQuerySchema",
+      "scoreActionSchema",
+      "gameIdSchema"
+    ]
+  },
+  {
+    "file": "apps/api/src/modules/games/telemetry.ts",
+    "hits": [
+      "SCHEDULED",
+      "LIVE",
+      "FINAL",
+      "status"
+    ],
+    "exports": [
+      "recordEngineTransition",
+      "getEngineTransitionHistory",
+      "clearEngineTransitionHistoryForTests",
+      "classifyEngineGame",
+      "getGameEngineTelemetry"
+    ]
+  },
+  {
+    "file": "apps/api/src/services/scoreboardControlLifecyclePolicy.ts",
+    "hits": [
+      "LIVE",
+      "IN_PROGRESS",
+      "FINAL",
+      "COMPLETED",
+      "CANCELLED",
+      "POSTPONED",
+      "lifecycle",
+      "status"
+    ],
+    "exports": [
+      "evaluateGameLifecyclePhysicalControlPolicy"
+    ]
+  },
+  {
+    "file": "apps/api/src/services/scoreboardFirmwareRollouts.ts",
+    "hits": [
+      "COMPLETED",
+      "CANCELLED"
+    ],
+    "exports": [
+      "createFirmwareRollout",
+      "listFirmwareRollouts",
+      "getFirmwareRollout",
+      "updateFirmwareRolloutState",
+      "findActiveRolloutForDevice"
+    ]
+  }
+]

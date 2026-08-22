@@ -1,0 +1,68 @@
+[
+  {
+    "file": "apps/api/src/services/scoreboardDeviceRecovery.ts",
+    "score": 15,
+    "exports": [
+      "ScoreboardDeviceRecoveryService"
+    ],
+    "symbols": [
+      "AuthoritativeGameSnapshot",
+      "gameScoreboardSync",
+      "gameId",
+      "latestSnapshots",
+      "rememberAuthoritativeSnapshot",
+      "snapshot",
+      "getRememberedSnapshot",
+      "handleAuthoritativeSnapshot"
+    ]
+  },
+  {
+    "file": "apps/api/src/services/gameScoreboardEventBinding.ts",
+    "score": 13,
+    "exports": [
+      "bindAutomaticGameScoreboardSync",
+      "bindScoreboardDeviceRecovery",
+      "normalizeAuthoritativeGameUpdate",
+      "notifyAutomaticScoreboardGameUpdate"
+    ],
+    "symbols": [
+      "AuthoritativeGameSnapshot",
+      "gameScoreboardSync",
+      "game",
+      "gameId",
+      "snapshot",
+      "rememberAuthoritativeSnapshot",
+      "handleAuthoritativeSnapshot"
+    ]
+  },
+  {
+    "file": "apps/api/src/services/automaticGameScoreboardSync.ts",
+    "score": 10,
+    "exports": [
+      "AutomaticGameScoreboardSync"
+    ],
+    "symbols": [
+      "AuthoritativeGameSnapshot",
+      "gameScoreboardSync",
+      "gameId",
+      "snapshotFingerprint",
+      "snapshot",
+      "handleAuthoritativeSnapshot"
+    ]
+  },
+  {
+    "file": "apps/api/src/routes/scoreboardDevices.ts",
+    "score": 9,
+    "exports": [
+      "scoreboardDevicesRoutes"
+    ],
+    "symbols": [
+      "AuthoritativeGameSnapshot",
+      "gameScoreboardSync",
+      "gameScoreboardEventBinding",
+      "game",
+      "gameId",
+      "handleAuthoritativeSnapshot"
+    ]
+  }
+]

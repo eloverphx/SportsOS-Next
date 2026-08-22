@@ -1,0 +1,83 @@
+apps/api/src/app.ts:25:import { startGameRuntimeSupervisor } from "./modules/games/runtime-supervisor.js";
+apps/api/src/app.ts:89:      stopGameRuntimeSupervisor = startGameRuntimeSupervisor({
+apps/api/src/infrastructure/migrations.ts:134:    status ENUM('SCHEDULED','LIVE','FINAL','POSTPONED','CANCELED') NOT NULL DEFAULT 'SCHEDULED',
+apps/api/src/infrastructure/migrations.ts:259:        WHEN status = 'LIVE' THEN 'REGULATION'
+apps/api/src/infrastructure/migrations.ts.bak-power-play:134:    status ENUM('SCHEDULED','LIVE','FINAL','POSTPONED','CANCELED') NOT NULL DEFAULT 'SCHEDULED',
+apps/api/src/infrastructure/migrations.ts.bak-persistent-game-phase:134:    status ENUM('SCHEDULED','LIVE','FINAL','POSTPONED','CANCELED') NOT NULL DEFAULT 'SCHEDULED',
+apps/api/src/infrastructure/migrations.ts.bak-realtime-outbox-foundation:134:    status ENUM('SCHEDULED','LIVE','FINAL','POSTPONED','CANCELED') NOT NULL DEFAULT 'SCHEDULED',
+apps/api/src/infrastructure/migrations.ts.bak-realtime-outbox-foundation:259:        WHEN status = 'LIVE' THEN 'REGULATION'
+apps/api/src/infrastructure/migrations.ts.bak-concurrency-outbox-hardening:134:    status ENUM('SCHEDULED','LIVE','FINAL','POSTPONED','CANCELED') NOT NULL DEFAULT 'SCHEDULED',
+apps/api/src/infrastructure/migrations.ts.bak-concurrency-outbox-hardening:259:        WHEN status = 'LIVE' THEN 'REGULATION'
+apps/api/src/modules/games/repository.ts:771:      clockRunning && status === "LIVE" && !intermissionRunning,
+apps/api/src/modules/games/repository.ts.bak-clock-sync:384:          if (status === "SCHEDULED") status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-clock-sync:414:        if (status !== "LIVE") {
+apps/api/src/modules/games/repository.ts.bak-period-reset-clock:384:          if (status === "SCHEDULED") status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-period-reset-clock:414:        if (status !== "LIVE") {
+apps/api/src/modules/games/repository.ts.bak-power-play:384:          if (status === "SCHEDULED") status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-power-play:414:        if (status !== "LIVE") {
+apps/api/src/modules/games/types.ts.bak-scoreboard-branding:1:export const gameStatuses = ["SCHEDULED", "LIVE", "FINAL", "POSTPONED", "CANCELED"] as const;
+apps/api/src/modules/games/repository.ts.bak-scoreboard-branding:392:          if (status === "SCHEDULED") status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-scoreboard-branding:422:        if (status !== "LIVE") {
+apps/api/src/modules/games/repository.ts.bak-scoreboard-branding:467:    await setPenaltyClockRunning(connection, id, clockRunning && status === "LIVE");
+apps/api/src/modules/games/repository.ts.bak-game-rules:467:          if (status === "SCHEDULED") status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-game-rules:512:        status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-game-rules:546:        if (status !== "LIVE") {
+apps/api/src/modules/games/repository.ts.bak-game-rules:591:    await setPenaltyClockRunning(connection, id, clockRunning && status === "LIVE");
+apps/api/src/modules/games/repository.ts.bak-simulator-intermission:510:          if (status === "SCHEDULED") status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-simulator-intermission:581:        status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-simulator-intermission:618:        if (status !== "LIVE") {
+apps/api/src/modules/games/repository.ts.bak-simulator-intermission:672:      clockRunning && status === "LIVE" && !intermissionRunning,
+apps/api/src/modules/games/repository.ts.bak-game-flow-tests:511:          if (status === "SCHEDULED") status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-game-flow-tests:588:        status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-game-flow-tests:625:        if (status !== "LIVE") {
+apps/api/src/modules/games/repository.ts.bak-game-flow-tests:679:      clockRunning && status === "LIVE" && !intermissionRunning,
+apps/api/src/modules/games/types.ts.bak-persistent-game-phase:1:export const gameStatuses = ["SCHEDULED", "LIVE", "FINAL", "POSTPONED", "CANCELED"] as const;
+apps/api/src/modules/games/repository.ts.bak-persistent-game-phase:530:          if (status === "SCHEDULED") status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-persistent-game-phase:630:        status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-persistent-game-phase:673:        if (status !== "LIVE") {
+apps/api/src/modules/games/repository.ts.bak-persistent-game-phase:735:      clockRunning && status === "LIVE" && !intermissionRunning,
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-085834:591:          if (status === "SCHEDULED") status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-085834:695:        status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-085834:741:        if (status !== "LIVE") {
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-085834:753:        } else if (status === "LIVE" && gamePhase === "PREGAME") {
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-085834:810:      clockRunning && status === "LIVE" && !intermissionRunning,
+apps/api/src/modules/games/engine.ts:81:        if (state.status === "SCHEDULED") state.status = "LIVE";
+apps/api/src/modules/games/engine.ts:195:      state.status = "LIVE";
+apps/api/src/modules/games/engine.ts:250:      if (state.status !== "LIVE") {
+apps/api/src/modules/games/engine.ts:263:      } else if (state.status === "LIVE" && state.gamePhase === "PREGAME") {
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-090449:591:          if (status === "SCHEDULED") status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-090449:695:        status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-090449:741:        if (status !== "LIVE") {
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-090449:753:        } else if (status === "LIVE" && gamePhase === "PREGAME") {
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-090449:810:      clockRunning && status === "LIVE" && !intermissionRunning,
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-091129:591:          if (status === "SCHEDULED") status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-091129:695:        status = "LIVE";
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-091129:741:        if (status !== "LIVE") {
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-091129:753:        } else if (status === "LIVE" && gamePhase === "PREGAME") {
+apps/api/src/modules/games/repository.ts.bak-game-engine-2.1-20260808-091129:810:      clockRunning && status === "LIVE" && !intermissionRunning,
+apps/api/src/modules/games/lifecycle.ts:6:  "startGame",
+apps/api/src/modules/games/lifecycle.ts:41:    case "startGame":
+apps/api/src/modules/games/runtime-supervisor.ts:25:     WHERE status = 'LIVE'
+apps/api/src/modules/games/runtime-supervisor.ts:64:     WHERE status = 'LIVE'
+apps/api/src/modules/games/runtime-supervisor.ts:106:export function startGameRuntimeSupervisor(
+apps/api/src/modules/games/telemetry.ts:120:      code: "CLOCK_STARTED_AT_MISSING",
+apps/api/src/modules/games/telemetry.ts:127:      code: "INTERMISSION_STARTED_AT_MISSING",
+apps/api/src/modules/games/telemetry.ts:163:  if (!warnings.length && row.status === "LIVE") {
+apps/api/src/modules/games/telemetry.ts:269:     WHERE g.status IN ('SCHEDULED', 'LIVE')
+apps/api/src/modules/games/telemetry.ts:272:       CASE WHEN g.status = 'LIVE' THEN 0 ELSE 1 END,
+apps/api/src/modules/simulation/tournament-runner.ts:11:  startGame(game: SimulatedGame): Promise<void>;
+apps/api/src/modules/simulation/tournament-runner.ts:57:      await adapter.startGame(game);
+apps/api/src/modules/simulation/sportsos-adapter.ts:133:    async startGame(game) {
+apps/api/src/routes/system.ts:70:      "SELECT COUNT(*) AS count FROM games WHERE status IN ('SCHEDULED','LIVE')",
+apps/api/src/services/scoreboardControlLifecyclePolicy.discovery.json:6:      "LIVE",
+apps/api/src/services/scoreboardControlLifecyclePolicy.discovery.json:20:      "startGame",
+apps/api/src/services/scoreboardControlLifecyclePolicy.discovery.json:34:      "LIVE",
+apps/api/src/services/scoreboardControlLifecyclePolicy.discovery.json:68:      "LIVE",
+apps/api/src/services/scoreboardControlLifecyclePolicy.discovery.json:69:      "startGame",
+apps/api/src/services/scoreboardControlLifecyclePolicy.discovery.json:74:      "startGameRuntimeSupervisor"
+apps/api/src/services/scoreboardControlLifecyclePolicy.discovery.json:116:      "LIVE",
+apps/api/src/services/scoreboardControlLifecyclePolicy.discovery.json:131:      "LIVE",
+apps/api/src/services/scoreboardControlLifecyclePolicy.discovery.json:132:      "IN_PROGRESS",
+apps/api/src/services/scoreboardControlLifecyclePolicy.ts:81:    "LIVE",
+apps/api/src/services/scoreboardControlLifecyclePolicy.ts:82:    "IN_PROGRESS",
+apps/api/src/services/scoreboardControlLifecyclePolicy.ts:83:    "STARTED",

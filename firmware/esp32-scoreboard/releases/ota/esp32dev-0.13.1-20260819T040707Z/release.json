@@ -1,0 +1,13 @@
+{
+  "protocolVersion": 1,
+  "releaseId": "esp32dev-0.13.1-20260819T040707Z",
+  "version": "0.13.1",
+  "channel": "stable",
+  "target": "esp32dev",
+  "createdAt": "2026-08-19T04:07:07Z",
+  "firmwareFile": "firmware.bin",
+  "firmwareSha256": "5e07d00976793511600a343847f7b5ebedb988bdbc39fd368829c06e7dd96354",
+  "firmwareSizeBytes": 813856,
+  "minimumCurrentVersion": null,
+  "mandatory": false
+}

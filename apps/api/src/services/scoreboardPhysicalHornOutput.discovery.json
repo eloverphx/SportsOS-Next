@@ -1,0 +1,130 @@
+[
+  {
+    "file": "apps/api/src/services/scoreboardDeviceGateway.ts",
+    "exports": [
+      "ScoreboardDeviceGateway"
+    ],
+    "hornMentions": [],
+    "commandMentions": [
+      "  buildScoreboardMqttCommandEnvelope,",
+      "  type ScoreboardDeviceCommand,",
+      "  public async sendCommand(",
+      "    command: ScoreboardDeviceCommand,",
+      "      buildScoreboardMqttCommandEnvelope(deviceId, command);",
+      "      this.client.publish(",
+      "        mqttTopics.command,"
+    ]
+  },
+  {
+    "file": "apps/api/src/routes/scoreboardDevices.ts",
+    "exports": [
+      "scoreboardDevicesRoutes"
+    ],
+    "hornMentions": [],
+    "commandMentions": [
+      "  validateScoreboardDeviceCommand,",
+      "  type ScoreboardDeviceCommand,",
+      "    Body: ScoreboardDeviceCommand;",
+      "    \"/scoreboard-devices/:deviceId/commands\",",
+      "      let command: ScoreboardDeviceCommand;",
+      "        command = validateScoreboardDeviceCommand(request.body);",
+      "        return reply.code(400).send({",
+      "            code: \"INVALID_SCOREBOARD_COMMAND\",",
+      "                : \"Invalid scoreboard command.\",",
+      "      await gateway.sendCommand(request.params.deviceId, command);",
+      "      return reply.code(202).send({",
+      "          commandId: command.commandId,",
+      "        const commandId =",
+      "          .send({",
+      "              commandId,",
+      "          .send({",
+      "        return reply.send({",
+      "          .send({",
+      "        return reply.send({",
+      "          .send({",
+      "      return reply.send({"
+    ]
+  },
+  {
+    "file": "packages/core/src/scoreboard-device-contract.ts",
+    "exports": [
+      "validateScoreboardDeviceCommand",
+      "buildScoreboardDeviceSnapshot",
+      "SCOREBOARD_DEVICE_PROTOCOL_VERSION"
+    ],
+    "hornMentions": [
+      "  hornActive: boolean;",
+      "      type: \"HORN\";",
+      "    case \"HORN\":",
+      "    hornActive: input.hornActive,"
+    ],
+    "commandMentions": [
+      "export type ScoreboardDeviceCommand =",
+      "      commandId: string;",
+      "      commandId: string;",
+      "      commandId: string;",
+      "      commandId: string;",
+      "      commandId: string;",
+      "      commandId: string;",
+      "export function validateScoreboardDeviceCommand(",
+      "  command: ScoreboardDeviceCommand,",
+      "): ScoreboardDeviceCommand {",
+      "    command.protocolVersion !==",
+      "  if (!command.commandId.trim()) {",
+      "    throw new Error(\"scoreboard commandId is required.\");",
+      "  switch (command.type) {",
+      "      return command;",
+      "      assertNonNegativeInteger(command.homeScore, \"homeScore\");",
+      "      assertNonNegativeInteger(command.awayScore, \"awayScore\");",
+      "      return command;",
+      "        !Number.isFinite(command.remainingMs) ||",
+      "        command.remainingMs < 0",
+      "      return command;",
+      "        command.period !== null &&",
+      "        (!Number.isInteger(command.period) || command.period < 1)",
+      "      return command;",
+      "      return command;",
+      "        command.snapshot.homeScore,",
+      "        command.snapshot.awayScore,",
+      "        !Number.isFinite(command.snapshot.clock.remainingMs) ||",
+      "        command.snapshot.clock.remainingMs < 0",
+      "      return command;"
+    ]
+  },
+  {
+    "file": "packages/core/src/scoreboard-mqtt-contract.ts",
+    "exports": [
+      "scoreboardMqttTopics",
+      "buildScoreboardMqttCommandEnvelope",
+      "buildScoreboardMqttAcknowledgement",
+      "buildScoreboardMqttPresence",
+      "buildScoreboardMqttTelemetry",
+      "buildScoreboardMqttPublications",
+      "SCOREBOARD_MQTT_ROOT"
+    ],
+    "hornMentions": [],
+    "commandMentions": [
+      "  ScoreboardDeviceCommand,",
+      "  command: string;",
+      "export type ScoreboardMqttCommandEnvelope = {",
+      "  command: ScoreboardDeviceCommand;",
+      "  commandId: string;",
+      "      topicKind: \"command\";",
+      "      payload: ScoreboardMqttCommandEnvelope;",
+      "function assertCommandId(commandId: string): string {",
+      "  const normalized = commandId.trim();",
+      "    throw new Error(\"commandId is required.\");",
+      "    command: `${base}/command`,",
+      "export function buildScoreboardMqttCommandEnvelope(",
+      "  command: ScoreboardDeviceCommand,",
+      "): ScoreboardMqttCommandEnvelope {",
+      "    command,",
+      "    commandId: assertCommandId(input.commandId),",
+      "  command?: ScoreboardMqttCommandEnvelope;",
+      "  if (input.command) {",
+      "      topicKind: \"command\",",
+      "      topic: topics.command,",
+      "      payload: input.command,"
+    ]
+  }
+]

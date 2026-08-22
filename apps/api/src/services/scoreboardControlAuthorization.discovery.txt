@@ -1,0 +1,147 @@
+apps/api/src/modules/auth/authorization-error.ts:5:  public constructor(message = "You do not have permission to perform this action") {
+apps/api/src/modules/auth/authorization.ts:5:  roleHasPermission,
+apps/api/src/modules/auth/authorization.ts:7:} from "./permissions.js";
+apps/api/src/modules/auth/authorization.ts:8:import { ROLES } from "./roles.js";
+apps/api/src/modules/auth/authorization.ts:12:  readonly permission: Permission;
+apps/api/src/modules/auth/authorization.ts:20:  if (!roleHasPermission(identity.role, requirement.permission)) {
+apps/api/src/modules/auth/authorization.ts:26:    identity.role !== ROLES.SYSTEM_ADMIN &&
+apps/api/src/modules/auth/identity.ts:2:import { permissionsForRole } from "./permissions.js";
+apps/api/src/modules/auth/identity.ts:3:import { normalizeRole } from "./roles.js";
+apps/api/src/modules/auth/identity.ts:12:  const role = normalizeRole(payload.role);
+apps/api/src/modules/auth/identity.ts:30:    role,
+apps/api/src/modules/auth/identity.ts:31:    permissions: permissionsForRole(role),
+apps/api/src/modules/auth/identity.ts:38:  return identityFromToken(request.user as IdentityTokenPayload);
+apps/api/src/modules/auth/index.ts:6:} from "./role-assignment.js";
+apps/api/src/modules/auth/index.ts:23:  permissionsForRole,
+apps/api/src/modules/auth/index.ts:24:  roleHasPermission,
+apps/api/src/modules/auth/index.ts:26:} from "./permissions.js";
+apps/api/src/modules/auth/index.ts:28:export { ROLES, isRole, normalizeRole, type Role } from "./roles.js";
+apps/api/src/modules/auth/permissions.ts:1:import { ROLES, type Role } from "./roles.js";
+apps/api/src/modules/auth/permissions.ts:152:export function permissionsForRole(role: Role): readonly Permission[] {
+apps/api/src/modules/auth/permissions.ts:153:  return ROLE_PERMISSIONS[role];
+apps/api/src/modules/auth/permissions.ts:156:export function roleHasPermission(
+apps/api/src/modules/auth/permissions.ts:157:  role: Role,
+apps/api/src/modules/auth/permissions.ts:158:  permission: Permission,
+apps/api/src/modules/auth/permissions.ts:160:  return ROLE_PERMISSIONS[role].includes(permission);
+apps/api/src/modules/auth/responses.ts:1:import type { Permission } from "./permissions.js";
+apps/api/src/modules/auth/responses.ts:2:import type { Role } from "./roles.js";
+apps/api/src/modules/auth/responses.ts:12:  readonly role: Role;
+apps/api/src/modules/auth/responses.ts:13:  readonly permissions: readonly Permission[];
+apps/api/src/modules/auth/role-assignment.ts:2:import { ROLES, type Role } from "./roles.js";
+apps/api/src/modules/auth/role-assignment.ts:17:export function isOrganizationMemberRole(role: Role): role is OrganizationMemberRole {
+apps/api/src/modules/auth/role-assignment.ts:18:  return ORGANIZATION_MEMBER_ROLES.includes(role as OrganizationMemberRole);
+apps/api/src/modules/auth/role-assignment.ts:25:  if (actor.role === ROLES.SYSTEM_ADMIN) {
+apps/api/src/modules/auth/role-assignment.ts:31:      "Only a system administrator can assign the system administrator role",
+apps/api/src/modules/auth/role-assignment.ts:37:      "Only a system administrator can assign the organization owner role",
+apps/api/src/modules/auth/role-assignment.ts:42:    throw new AuthorizationError("The requested role cannot be assigned to an organization member");
+apps/api/src/modules/auth/roles.ts:17: * Maps values already stored in the database to the canonical SportsOS roles.
+apps/api/src/modules/auth/types.ts:1:import type { Permission } from "./permissions.js";
+apps/api/src/modules/auth/types.ts:2:import type { Role } from "./roles.js";
+apps/api/src/modules/auth/types.ts:12:  readonly role: Role;
+apps/api/src/modules/auth/types.ts:13:  readonly permissions: readonly Permission[];
+apps/api/src/modules/auth/types.ts:19:  readonly role: Role;
+apps/api/src/routes/auth.ts:8:import { normalizeRole, permissionsForRole } from "../modules/auth/index.js";
+apps/api/src/routes/auth.ts:23:              u.password_hash, u.role, o.name AS organization_name
+apps/api/src/routes/auth.ts:34:    const role = normalizeRole(user.role);
+apps/api/src/routes/auth.ts:40:        role,
+apps/api/src/routes/auth.ts:55:        role,
+apps/api/src/routes/auth.ts:56:        permissions: permissionsForRole(role),
+apps/api/src/routes/auth.ts:72:       u.role,
+apps/api/src/routes/auth.ts:98:        role: identity.role,
+apps/api/src/routes/auth.ts:99:        permissions: identity.permissions,
+apps/api/src/routes/organization-members.ts:34:      permission: PERMISSIONS.ORGANIZATION_MEMBERS_MANAGE,
+apps/api/src/routes/organization-members.ts:58:      permission: PERMISSIONS.ORGANIZATION_MEMBERS_MANAGE,
+apps/api/src/routes/organization-members.ts:62:    assertRoleAssignmentAllowed(identity, body.data.role);
+apps/api/src/routes/organization-members.ts:74:        role: body.data.role,
+apps/api/src/routes/organization-members.ts:80:        role: member.role,
+apps/api/src/routes/organization-members.ts:102:  app.patch("/organizations/:organizationId/members/:userId/role", async (request, reply) => {
+apps/api/src/routes/organization-members.ts:109:        error: "Invalid organization member role update",
+apps/api/src/routes/organization-members.ts:114:      permission: PERMISSIONS.ORGANIZATION_MEMBERS_MANAGE,
+apps/api/src/routes/organization-members.ts:118:    assertRoleAssignmentAllowed(identity, body.data.role);
+apps/api/src/routes/organization-members.ts:128:    if (identity.role !== ROLES.SYSTEM_ADMIN && member.role === ROLES.ORGANIZATION_OWNER) {
+apps/api/src/routes/organization-members.ts:134:    if (identity.userId === params.data.userId && identity.role !== ROLES.SYSTEM_ADMIN) {
+apps/api/src/routes/organization-members.ts:136:        error: "You cannot change your own organization role",
+apps/api/src/routes/organization-members.ts:143:      body.data.role,
+apps/api/src/routes/organization-members.ts:152:    await audit(identity.sub, "organization.member.role_updated", {
+apps/api/src/routes/organization-members.ts:155:      previousRole: member.role,
+apps/api/src/routes/organization-members.ts:156:      role: body.data.role,
+apps/api/src/routes/organization-members.ts:163:        role: body.data.role,
+apps/api/src/routes/organizations.ts:48:      permission: PERMISSIONS.ORGANIZATION_READ,
+apps/api/src/routes/organizations.ts:51:    const systemAdministrator = identity.role === ROLES.SYSTEM_ADMIN;
+apps/api/src/routes/organizations.ts:90:      permission: PERMISSIONS.ORGANIZATION_READ,
+apps/api/src/routes/organizations.ts:115:      permission: PERMISSIONS.ORGANIZATION_CREATE,
+apps/api/src/routes/organizations.ts:161:      permission: PERMISSIONS.ORGANIZATION_UPDATE,
+apps/api/src/routes/organizations.ts:226:      permission: PERMISSIONS.ORGANIZATION_DELETE,
+apps/api/src/routes/setup.ts:49:        "INSERT INTO users (organization_id, first_name, last_name, email, username, password_hash, role) VALUES (?, ?, ?, ?, ?, ?, ?)",
+apps/api/src/routes/teams.ts:59:      permission: PERMISSIONS.TEAM_READ,
+apps/api/src/routes/teams.ts:70:    if (identity.role === ROLES.SYSTEM_ADMIN) {
+apps/api/src/routes/teams.ts:142:      permission: PERMISSIONS.TEAM_READ,
+apps/api/src/routes/teams.ts:164:      permission: PERMISSIONS.TEAM_CREATE,
+apps/api/src/routes/teams.ts:238:      permission: PERMISSIONS.TEAM_UPDATE,
+apps/api/src/routes/teams.ts:244:    if (identity.role !== ROLES.SYSTEM_ADMIN && data.organizationId !== existingOrganizationId) {
+apps/api/src/routes/teams.ts:246:        error: "You do not have permission to move this team to another organization",
+apps/api/src/routes/teams.ts:251:      permission: PERMISSIONS.TEAM_UPDATE,
+apps/api/src/routes/teams.ts:329:      permission: PERMISSIONS.TEAM_DELETE,
+apps/api/src/routes/scoreboardDevices.ts:23:import { authorizeVerifiedScoreboardDevice } from "../services/scoreboardDeviceAuthorization.js";
+apps/api/src/services/scoreboardDeviceAuthorization.ts:16:export function authorizeVerifiedScoreboardDevice(
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:16:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:28:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:77:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:86:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:99:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:108:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:134:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:146:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:195:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:204:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:217:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:226:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:252:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:264:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardPhysicalControlRouteDiscovery.json:282:        "      permission: PERMISSIONS.GAME_SCORE,",
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:1:apps/api/src/modules/auth/authorization-error.ts:5:  public constructor(message = "You do not have permission to perform this action") {
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:2:apps/api/src/modules/auth/authorization.ts:5:  roleHasPermission,
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:3:apps/api/src/modules/auth/authorization.ts:7:} from "./permissions.js";
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:4:apps/api/src/modules/auth/authorization.ts:8:import { ROLES } from "./roles.js";
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:5:apps/api/src/modules/auth/authorization.ts:12:  readonly permission: Permission;
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:6:apps/api/src/modules/auth/authorization.ts:20:  if (!roleHasPermission(identity.role, requirement.permission)) {
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:7:apps/api/src/modules/auth/authorization.ts:26:    identity.role !== ROLES.SYSTEM_ADMIN &&
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:8:apps/api/src/modules/auth/identity.ts:2:import { permissionsForRole } from "./permissions.js";
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:9:apps/api/src/modules/auth/identity.ts:3:import { normalizeRole } from "./roles.js";
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:10:apps/api/src/modules/auth/identity.ts:12:  const role = normalizeRole(payload.role);
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:11:apps/api/src/modules/auth/identity.ts:30:    role,
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:12:apps/api/src/modules/auth/identity.ts:31:    permissions: permissionsForRole(role),
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:13:apps/api/src/modules/auth/identity.ts:38:  return identityFromToken(request.user as IdentityTokenPayload);
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:14:apps/api/src/modules/auth/index.ts:6:} from "./role-assignment.js";
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:15:apps/api/src/modules/auth/index.ts:23:  permissionsForRole,
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:16:apps/api/src/modules/auth/index.ts:24:  roleHasPermission,
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:17:apps/api/src/modules/auth/index.ts:26:} from "./permissions.js";
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:18:apps/api/src/modules/auth/index.ts:28:export { ROLES, isRole, normalizeRole, type Role } from "./roles.js";
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:19:apps/api/src/modules/auth/permissions.ts:1:import { ROLES, type Role } from "./roles.js";
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:20:apps/api/src/modules/auth/permissions.ts:152:export function permissionsForRole(role: Role): readonly Permission[] {
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:21:apps/api/src/modules/auth/permissions.ts:153:  return ROLE_PERMISSIONS[role];
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:22:apps/api/src/modules/auth/permissions.ts:156:export function roleHasPermission(
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:23:apps/api/src/modules/auth/permissions.ts:157:  role: Role,
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:24:apps/api/src/modules/auth/permissions.ts:158:  permission: Permission,
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:25:apps/api/src/modules/auth/permissions.ts:160:  return ROLE_PERMISSIONS[role].includes(permission);
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:26:apps/api/src/modules/auth/responses.ts:1:import type { Permission } from "./permissions.js";
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:27:apps/api/src/modules/auth/responses.ts:2:import type { Role } from "./roles.js";
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:28:apps/api/src/modules/auth/responses.ts:12:  readonly role: Role;
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:29:apps/api/src/modules/auth/responses.ts:13:  readonly permissions: readonly Permission[];
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:30:apps/api/src/modules/auth/role-assignment.ts:2:import { ROLES, type Role } from "./roles.js";
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:31:apps/api/src/modules/auth/role-assignment.ts:17:export function isOrganizationMemberRole(role: Role): role is OrganizationMemberRole {
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:32:apps/api/src/modules/auth/role-assignment.ts:18:  return ORGANIZATION_MEMBER_ROLES.includes(role as OrganizationMemberRole);
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:33:apps/api/src/modules/auth/role-assignment.ts:25:  if (actor.role === ROLES.SYSTEM_ADMIN) {
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:34:apps/api/src/modules/auth/role-assignment.ts:31:      "Only a system administrator can assign the system administrator role",
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:35:apps/api/src/modules/auth/role-assignment.ts:37:      "Only a system administrator can assign the organization owner role",
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:36:apps/api/src/modules/auth/role-assignment.ts:42:    throw new AuthorizationError("The requested role cannot be assigned to an organization member");
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:37:apps/api/src/modules/auth/roles.ts:17: * Maps values already stored in the database to the canonical SportsOS roles.
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:38:apps/api/src/modules/auth/types.ts:1:import type { Permission } from "./permissions.js";
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:39:apps/api/src/modules/auth/types.ts:2:import type { Role } from "./roles.js";
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:40:apps/api/src/modules/auth/types.ts:12:  readonly role: Role;
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:41:apps/api/src/modules/auth/types.ts:13:  readonly permissions: readonly Permission[];
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:42:apps/api/src/modules/auth/types.ts:19:  readonly role: Role;
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:43:apps/api/src/routes/auth.ts:8:import { normalizeRole, permissionsForRole } from "../modules/auth/index.js";
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:44:apps/api/src/routes/auth.ts:23:              u.password_hash, u.role, o.name AS organization_name
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:45:apps/api/src/routes/auth.ts:34:    const role = normalizeRole(user.role);
+apps/api/src/services/scoreboardControlAuthorization.discovery.txt:46:apps/api/src/routes/auth.ts:40:        role,

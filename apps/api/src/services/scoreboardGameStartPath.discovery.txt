@@ -1,0 +1,212 @@
+SportsOS 16.9 corrected game-start discovery
+
+lifecycle.ts startGame references:
+1-import { z } from "zod";
+2-import type { ScoreAction } from "./schemas.js";
+3-import type { Game } from "./types.js";
+4-
+5-export const gameLifecycleCommands = [
+6:  "startGame",
+7-  "endPeriod",
+8-  "beginIntermission",
+9-  "startNextPeriod",
+10-  "startOvertime",
+11-  "finishGame",
+12-] as const;
+13-
+14-export type GameLifecycleCommand = (typeof gameLifecycleCommands)[number];
+--
+33-  "status" | "gamePhase" | "period" | "regulationPeriods" | "clockRemainingMs"
+34->;
+35-
+36-export function resolveLifecycleAction(
+37-  game: LifecycleGame,
+38-  command: GameLifecycleCommand,
+39-): ScoreAction {
+40-  switch (command) {
+41:    case "startGame":
+42-      if (game.status === "FINAL" || game.gamePhase === "FINAL") {
+43-        throw new GameLifecycleError("A final game cannot be restarted");
+44-      }
+45-      if (game.gamePhase !== "PREGAME") {
+46-        throw new GameLifecycleError("The game has already started");
+47-      }
+48-      return { action: "startClock" };
+49-
+
+engine.ts SCHEDULED -> LIVE references:
+71-        throw new GamePhaseError("A final game cannot be restarted");
+72-      }
+73-      if (state.gamePhase === "INTERMISSION") {
+74-        throw new GamePhaseError(
+75-          "Finish or skip intermission before starting the game clock",
+76-        );
+77-      }
+78-      if (state.clockRemainingMs > 0) {
+79-        state.clockRunning = true;
+80-        state.clockStartedAt = copyDate(now);
+81:        if (state.status === "SCHEDULED") state.status = "LIVE";
+82-        if (state.gamePhase === "PREGAME") state.gamePhase = "REGULATION";
+83-      }
+84-      break;
+85-
+86-    case "pauseClock":
+87-      state.clockRunning = false;
+88-      state.clockStartedAt = null;
+89-      break;
+90-
+91-    case "startIntermission":
+--
+185-        throw new GamePhaseError(
+186-          "Finish or skip intermission before starting overtime",
+187-        );
+188-      }
+189-
+190-      state.period = Math.max(state.period + 1, state.regulationPeriods + 1);
+191-      state.periodLengthMs = state.overtimeLengthMs;
+192-      state.clockRemainingMs = state.overtimeLengthMs;
+193-      state.clockRunning = false;
+194-      state.clockStartedAt = null;
+195:      state.status = "LIVE";
+196-      state.intermissionRemainingMs = 0;
+197-      state.intermissionRunning = false;
+198-      state.intermissionStartedAt = null;
+199-      state.gamePhase = "OVERTIME";
+200-      break;
+201-
+202-    case "finishGame":
+203-      state.clockRunning = false;
+204-      state.clockStartedAt = null;
+205-      state.clockRemainingMs = 0;
+--
+251-        state.clockRunning = false;
+252-        state.clockStartedAt = null;
+253-        state.intermissionRunning = false;
+254-        state.intermissionStartedAt = null;
+255-      }
+256-
+257-      if (state.status === "FINAL") {
+258-        state.clockRemainingMs = 0;
+259-        state.intermissionRemainingMs = 0;
+260-        state.gamePhase = "FINAL";
+261:      } else if (state.status === "SCHEDULED") {
+262-        state.gamePhase = "PREGAME";
+263-      } else if (state.status === "LIVE" && state.gamePhase === "PREGAME") {
+264-        state.gamePhase =
+265-          state.period > state.regulationPeriods ? "OVERTIME" : "REGULATION";
+266-      }
+267-      break;
+268-  }
+269-
+270-  if (state.clockRemainingMs === 0) {
+271-    state.clockRunning = false;
+
+routes/repository references:
+apps/api/src/modules/games/routes.ts-3-import { audit } from "../../lib/audit.js";
+apps/api/src/modules/games/routes.ts-4-import { PERMISSIONS, ROLES, requirePermission } from "../auth/index.js";
+apps/api/src/modules/games/routes.ts-5-import { listActivePenalties } from "../penalties/repository.js";
+apps/api/src/modules/games/routes.ts-6-import {
+apps/api/src/modules/games/routes.ts:7:  applyGameScoringAction,
+apps/api/src/modules/games/routes.ts-8-  deleteGame,
+apps/api/src/modules/games/routes.ts-9-  findGameById,
+apps/api/src/modules/games/routes.ts-10-  listGames,
+apps/api/src/modules/games/routes.ts-11-  listGameTeamOptions,
+--
+apps/api/src/modules/games/routes.ts-22-import {
+apps/api/src/modules/games/routes.ts-23-  GameLifecycleError,
+apps/api/src/modules/games/routes.ts-24-  gameLifecycleCommandSchema,
+apps/api/src/modules/games/routes.ts-25-  resolveLifecycleAction,
+apps/api/src/modules/games/routes.ts:26:} from "./lifecycle.js";
+apps/api/src/modules/games/routes.ts-27-import { recordEngineTransition } from "./telemetry.js";
+apps/api/src/modules/games/routes.ts-28-import {
+apps/api/src/modules/games/routes.ts-29-  evaluateSchedulePreview,
+apps/api/src/modules/games/routes.ts-30-  parseScheduleOverride,
+--
+apps/api/src/modules/games/routes.ts-511-
+apps/api/src/modules/games/routes.ts-512-    let result;
+apps/api/src/modules/games/routes.ts-513-
+apps/api/src/modules/games/routes.ts-514-    try {
+apps/api/src/modules/games/routes.ts:515:      result = await applyGameScoringAction(id.data, parsed.data, actionId);
+apps/api/src/modules/games/routes.ts-516-    } catch (error) {
+apps/api/src/modules/games/routes.ts-517-      if (error instanceof IdempotencyConflictError) {
+apps/api/src/modules/games/routes.ts-518-        return reply.code(409).send({ error: error.message });
+apps/api/src/modules/games/routes.ts-519-      }
+--
+apps/api/src/modules/games/routes.ts-554-
+apps/api/src/modules/games/routes.ts-555-    return { game, action: parsed.data.action, replayed: false };
+apps/api/src/modules/games/routes.ts-556-  });
+apps/api/src/modules/games/routes.ts-557-
+apps/api/src/modules/games/routes.ts:558:  app.post("/games/:id/lifecycle", async (request, reply) => {
+apps/api/src/modules/games/routes.ts-559-    const id = gameIdSchema.safeParse((request.params as { id: string }).id);
+apps/api/src/modules/games/routes.ts-560-    const parsed = gameLifecycleCommandSchema.safeParse(request.body);
+apps/api/src/modules/games/routes.ts-561-
+apps/api/src/modules/games/routes.ts-562-    if (!id.success || !parsed.success) {
+apps/api/src/modules/games/routes.ts-563-      return reply.code(400).send({
+apps/api/src/modules/games/routes.ts:564:        error: "Invalid lifecycle command",
+apps/api/src/modules/games/routes.ts-565-        details: parsed.success ? undefined : parsed.error.flatten(),
+apps/api/src/modules/games/routes.ts-566-      });
+apps/api/src/modules/games/routes.ts-567-    }
+apps/api/src/modules/games/routes.ts-568-
+--
+apps/api/src/modules/games/routes.ts-585-    }
+apps/api/src/modules/games/routes.ts-586-
+apps/api/src/modules/games/routes.ts-587-    let result;
+apps/api/src/modules/games/routes.ts-588-    try {
+apps/api/src/modules/games/routes.ts:589:      result = await applyGameScoringAction(
+apps/api/src/modules/games/routes.ts-590-        id.data,
+apps/api/src/modules/games/routes.ts-591-        action,
+apps/api/src/modules/games/routes.ts-592-        parsed.data.commandId,
+apps/api/src/modules/games/routes.ts-593-      );
+--
+apps/api/src/modules/games/routes.ts-626-    }
+apps/api/src/modules/games/routes.ts-627-
+apps/api/src/modules/games/routes.ts-628-    const { game } = result;
+apps/api/src/modules/games/routes.ts-629-
+apps/api/src/modules/games/routes.ts:630:    await audit(identity.sub, "game.lifecycle", {
+apps/api/src/modules/games/routes.ts-631-      gameId: game.id,
+apps/api/src/modules/games/routes.ts-632-      organizationId: game.organizationId,
+apps/api/src/modules/games/routes.ts-633-      command: parsed.data.command,
+apps/api/src/modules/games/routes.ts-634-      commandId: parsed.data.commandId,
+--
+apps/api/src/modules/games/repository.ts-4-import { logoUrl } from "../../lib/media.js";
+apps/api/src/modules/games/repository.ts-5-import type { GameInput, ScoreAction } from "./schemas.js";
+apps/api/src/modules/games/repository.ts-6-import type { Game, GamePhase, GameStatus, GameTeamOption } from "./types.js";
+apps/api/src/modules/games/repository.ts-7-import {
+apps/api/src/modules/games/repository.ts:8:  applyGameEngineAction,
+apps/api/src/modules/games/repository.ts-9-  type GameEngineState,
+apps/api/src/modules/games/repository.ts:10:} from "./engine.js";
+apps/api/src/modules/games/repository.ts:11:export { GamePhaseError } from "./engine.js";
+apps/api/src/modules/games/repository.ts-12-import {
+apps/api/src/modules/games/repository.ts-13-  adjustActivePenaltyClocks,
+apps/api/src/modules/games/repository.ts-14-  materializePenaltyClocks,
+apps/api/src/modules/games/repository.ts-15-  setPenaltyClockRunning,
+--
+apps/api/src/modules/games/repository.ts-615-
+apps/api/src/modules/games/repository.ts-616-  return rows[0] ?? null;
+apps/api/src/modules/games/repository.ts-617-}
+apps/api/src/modules/games/repository.ts-618-
+apps/api/src/modules/games/repository.ts:619:export async function applyGameScoringAction(
+apps/api/src/modules/games/repository.ts-620-  id: number,
+apps/api/src/modules/games/repository.ts-621-  action: ScoreAction,
+apps/api/src/modules/games/repository.ts-622-  actionId?: string,
+apps/api/src/modules/games/repository.ts-623-): Promise<ScoringActionApplication | null> {
+--
+apps/api/src/modules/games/repository.ts-676-      Boolean(row.intermission_running),
+apps/api/src/modules/games/repository.ts-677-      row.intermission_started_at,
+apps/api/src/modules/games/repository.ts-678-    );
+apps/api/src/modules/games/repository.ts-679-
+apps/api/src/modules/games/repository.ts:680:    const engineState: GameEngineState = {
+apps/api/src/modules/games/repository.ts-681-      homeScore: Number(row.home_score),
+apps/api/src/modules/games/repository.ts-682-      awayScore: Number(row.away_score),
+apps/api/src/modules/games/repository.ts-683-      status: row.status,
+apps/api/src/modules/games/repository.ts-684-      gamePhase: row.game_phase ?? (row.status === "FINAL" ? "FINAL" : "PREGAME"),
+--
+apps/api/src/modules/games/repository.ts-707-    };
+apps/api/src/modules/games/repository.ts-708-
+apps/api/src/modules/games/repository.ts-709-    await materializePenaltyClocks(connection, id);
+apps/api/src/modules/games/repository.ts-710-
+apps/api/src/modules/games/repository.ts:711:    const transition = applyGameEngineAction(engineState, action);
+apps/api/src/modules/games/repository.ts-712-    const {
+apps/api/src/modules/games/repository.ts-713-      homeScore,
+apps/api/src/modules/games/repository.ts-714-      awayScore,
+apps/api/src/modules/games/repository.ts-715-      status,

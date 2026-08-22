@@ -9,6 +9,10 @@
   "scripts": {
     "start": "node src/index.js",
     "typecheck": "node --check src/index.js",
-    "build": "node --check src/index.js"
+    "build": "node --check src/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "mqtt": "^5.10.4"
   }
 }

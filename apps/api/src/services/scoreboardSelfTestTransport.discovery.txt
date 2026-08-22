@@ -1,0 +1,502 @@
+SportsOS 17.9 scoreboard transport discovery
+
+apps/api/src/routes/system.ts-1-import type { FastifyInstance } from "fastify";
+apps/api/src/routes/system.ts-2-import type { RowDataPacket } from "mysql2/promise";
+apps/api/src/routes/system.ts-3-import { createClient } from "redis";
+apps/api/src/routes/system.ts:4:import mqtt from "mqtt";
+apps/api/src/routes/system.ts-5-import { config } from "@sportsos/config";
+apps/api/src/routes/system.ts-6-import { pool } from "../infrastructure/database.js";
+apps/api/src/routes/system.ts-7-import { minio } from "../infrastructure/minio.js";
+apps/api/src/routes/system.ts-8-import { requireAuth } from "../lib/auth.js";
+apps/api/src/routes/system.ts-9-
+--
+apps/api/src/routes/system.ts-27-    return "offline";
+apps/api/src/routes/system.ts-28-  }
+apps/api/src/routes/system.ts-29-}
+apps/api/src/routes/system.ts-30-async function checkMqtt(): Promise<"online" | "offline"> {
+apps/api/src/routes/system.ts-31-  return new Promise((resolve) => {
+apps/api/src/routes/system.ts:32:    const client = mqtt.connect(config.mqtt.url, { connectTimeout: 3000, reconnectPeriod: 0 });
+apps/api/src/routes/system.ts-33-    const timer = setTimeout(() => {
+apps/api/src/routes/system.ts-34-      client.end(true);
+apps/api/src/routes/system.ts-35-      resolve("offline");
+apps/api/src/routes/system.ts-36-    }, 3500);
+apps/api/src/routes/system.ts-37-    client.once("connect", () => {
+--
+apps/api/src/routes/system.ts-84-    );
+apps/api/src/routes/system.ts-85-    return { events: rows };
+apps/api/src/routes/system.ts-86-  });
+apps/api/src/routes/system.ts-87-
+apps/api/src/routes/system.ts-88-  app.get("/health", async () => {
+apps/api/src/routes/system.ts:89:    const [mysqlStatus, redisStatus, mqttStatus, minioStatus] = await Promise.all([
+apps/api/src/routes/system.ts-90-      checkMysql(),
+apps/api/src/routes/system.ts-91-      checkRedis(),
+apps/api/src/routes/system.ts-92-      checkMqtt(),
+apps/api/src/routes/system.ts-93-      checkMinio(),
+apps/api/src/routes/system.ts-94-    ]);
+apps/api/src/routes/system.ts-95-    const services = {
+apps/api/src/routes/system.ts-96-      mysql: mysqlStatus,
+apps/api/src/routes/system.ts-97-      redis: redisStatus,
+apps/api/src/routes/system.ts:98:      mqtt: mqttStatus,
+apps/api/src/routes/system.ts-99-      minio: minioStatus,
+apps/api/src/routes/system.ts-100-    };
+apps/api/src/routes/system.ts-101-    const healthy = Object.values(services).every((status) => status === "online");
+apps/api/src/routes/system.ts-102-    return {
+apps/api/src/routes/system.ts-103-      success: healthy,
+--
+apps/api/src/routes/scoreboardDevices.ts-2-import {
+apps/api/src/routes/scoreboardDevices.ts-3-  validateScoreboardDeviceCommand,
+apps/api/src/routes/scoreboardDevices.ts-4-  type ScoreboardDeviceCommand,
+apps/api/src/routes/scoreboardDevices.ts-5-} from "@sportsos/core";
+apps/api/src/routes/scoreboardDevices.ts-6-import {
+apps/api/src/routes/scoreboardDevices.ts:7:  ScoreboardDeviceGateway,
+apps/api/src/routes/scoreboardDevices.ts-8-} from "../services/scoreboardDeviceGateway.js";
+apps/api/src/routes/scoreboardDevices.ts-9-import {
+apps/api/src/routes/scoreboardDevices.ts-10-  GameScoreboardSyncService,
+apps/api/src/routes/scoreboardDevices.ts-11-  type AuthoritativeGameSnapshot,
+apps/api/src/routes/scoreboardDevices.ts-12-} from "../services/gameScoreboardSync.js";
+--
+apps/api/src/routes/scoreboardDevices.ts-21-  ScoreboardDeviceRecoveryService,
+apps/api/src/routes/scoreboardDevices.ts-22-} from "../services/scoreboardDeviceRecovery.js";
+apps/api/src/routes/scoreboardDevices.ts-23-import { authorizeVerifiedScoreboardDevice } from "../services/scoreboardDeviceAuthorization.js";
+apps/api/src/routes/scoreboardDevices.ts-24-import { registerScoreboardControlInputRoutes } from "./scoreboardControlInputs.js";
+apps/api/src/routes/scoreboardDevices.ts-25-
+apps/api/src/routes/scoreboardDevices.ts:26:const gateway = new ScoreboardDeviceGateway();
+apps/api/src/routes/scoreboardDevices.ts-27-const syncService =
+apps/api/src/routes/scoreboardDevices.ts-28-  new GameScoreboardSyncService(gateway);
+apps/api/src/routes/scoreboardDevices.ts-29-const automaticSync =
+apps/api/src/routes/scoreboardDevices.ts-30-  new AutomaticGameScoreboardSync(syncService);
+apps/api/src/routes/scoreboardDevices.ts-31-const recoveryService =
+--
+apps/api/src/routes/scoreboardDevices.ts-58-
+apps/api/src/routes/scoreboardDevices.ts-59-  app.post<{
+apps/api/src/routes/scoreboardDevices.ts-60-    Params: { deviceId: string };
+apps/api/src/routes/scoreboardDevices.ts-61-    Body: ScoreboardDeviceCommand;
+apps/api/src/routes/scoreboardDevices.ts-62-  }>(
+apps/api/src/routes/scoreboardDevices.ts:63:    "/scoreboard-devices/:deviceId/commands",
+apps/api/src/routes/scoreboardDevices.ts-64-    async (request, reply) => {
+apps/api/src/routes/scoreboardDevices.ts-65-      let command: ScoreboardDeviceCommand;
+apps/api/src/routes/scoreboardDevices.ts-66-
+apps/api/src/routes/scoreboardDevices.ts-67-      try {
+apps/api/src/routes/scoreboardDevices.ts-68-        command = validateScoreboardDeviceCommand(request.body);
+--
+apps/api/src/routes/scoreboardDevices.ts-72-          error: {
+apps/api/src/routes/scoreboardDevices.ts-73-            code: "INVALID_SCOREBOARD_COMMAND",
+apps/api/src/routes/scoreboardDevices.ts-74-            message:
+apps/api/src/routes/scoreboardDevices.ts-75-              error instanceof Error
+apps/api/src/routes/scoreboardDevices.ts-76-                ? error.message
+apps/api/src/routes/scoreboardDevices.ts:77:                : "Invalid scoreboard command.",
+apps/api/src/routes/scoreboardDevices.ts-78-          },
+apps/api/src/routes/scoreboardDevices.ts-79-        });
+apps/api/src/routes/scoreboardDevices.ts-80-      }
+apps/api/src/routes/scoreboardDevices.ts-81-
+apps/api/src/routes/scoreboardDevices.ts-82-      await gateway.sendCommand(request.params.deviceId, command);
+--
+apps/api/src/routes/scoreboardControlInputs.ts-374-          command: execution.command,
+apps/api/src/routes/scoreboardControlInputs.ts-375-          execution,
+apps/api/src/routes/scoreboardControlInputs.ts-376-          reconciliation: null,
+apps/api/src/routes/scoreboardControlInputs.ts-377-          error:
+apps/api/src/routes/scoreboardControlInputs.ts-378-            execution.reason ??
+apps/api/src/routes/scoreboardControlInputs.ts:379:            "Physical scoreboard command was not executed.",
+apps/api/src/routes/scoreboardControlInputs.ts-380-          createdAt:
+apps/api/src/routes/scoreboardControlInputs.ts-381-            new Date().toISOString(),
+apps/api/src/routes/scoreboardControlInputs.ts-382-        });
+apps/api/src/routes/scoreboardControlInputs.ts-383-
+apps/api/src/routes/scoreboardControlInputs.ts-384-        return reply.code(
+--
+apps/api/src/routes/scoreboardControlInputs.ts-388-            : 409,
+apps/api/src/routes/scoreboardControlInputs.ts-389-        ).send({
+apps/api/src/routes/scoreboardControlInputs.ts-390-          success: false,
+apps/api/src/routes/scoreboardControlInputs.ts-391-          error:
+apps/api/src/routes/scoreboardControlInputs.ts-392-            execution.reason ??
+apps/api/src/routes/scoreboardControlInputs.ts:393:            "Physical scoreboard command was not executed.",
+apps/api/src/routes/scoreboardControlInputs.ts-394-          data: {
+apps/api/src/routes/scoreboardControlInputs.ts-395-            acknowledgement:
+apps/api/src/routes/scoreboardControlInputs.ts-396-              result,
+apps/api/src/routes/scoreboardControlInputs.ts-397-            execution,
+apps/api/src/routes/scoreboardControlInputs.ts-398-          },
+--
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-236-      });
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-237-    },
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-238-  );
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-239-
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-240-  app.get(
+apps/api/src/routes/scoreboardDeviceCommissioning.ts:241:    "/scoreboard-device-commissioning/:deviceId/self-test/dispatch/:commandId",
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-242-    async (request, reply) => {
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-243-      const params =
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-244-        request.params as {
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-245-          deviceId?: string;
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-246-          commandId?: string;
+--
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-287-      };
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-288-    },
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-289-  );
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-290-
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-291-  app.post(
+apps/api/src/routes/scoreboardDeviceCommissioning.ts:292:    "/scoreboard-device-commissioning/:deviceId/self-test/dispatch/:commandId/ack",
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-293-    async (request, reply) => {
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-294-      const params =
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-295-        request.params as {
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-296-          deviceId?: string;
+apps/api/src/routes/scoreboardDeviceCommissioning.ts-297-          commandId?: string;
+--
+apps/api/src/services/scoreboardDeviceGateway.ts:1:import mqtt, {
+apps/api/src/services/scoreboardDeviceGateway.ts-2-  type IClientOptions,
+apps/api/src/services/scoreboardDeviceGateway.ts-3-  type MqttClient,
+apps/api/src/services/scoreboardDeviceGateway.ts:4:} from "mqtt";
+apps/api/src/services/scoreboardDeviceGateway.ts-5-import {
+apps/api/src/services/scoreboardDeviceGateway.ts-6-  buildScoreboardMqttCommandEnvelope,
+apps/api/src/services/scoreboardDeviceGateway.ts-7-  scoreboardMqttTopics,
+apps/api/src/services/scoreboardDeviceGateway.ts-8-  type ScoreboardDeviceCommand,
+apps/api/src/services/scoreboardDeviceGateway.ts-9-  type ScoreboardDeviceSnapshot,
+--
+apps/api/src/services/scoreboardDeviceGateway.ts-23-export type ScoreboardPresenceListener = (
+apps/api/src/services/scoreboardDeviceGateway.ts-24-  deviceId: string,
+apps/api/src/services/scoreboardDeviceGateway.ts-25-  online: boolean,
+apps/api/src/services/scoreboardDeviceGateway.ts-26-) => void | Promise<void>;
+apps/api/src/services/scoreboardDeviceGateway.ts-27-
+apps/api/src/services/scoreboardDeviceGateway.ts:28:export class ScoreboardDeviceGateway {
+apps/api/src/services/scoreboardDeviceGateway.ts-29-  private readonly presenceListeners =
+apps/api/src/services/scoreboardDeviceGateway.ts-30-    new Set<ScoreboardPresenceListener>();
+apps/api/src/services/scoreboardDeviceGateway.ts-31-
+apps/api/src/services/scoreboardDeviceGateway.ts-32-  private readonly client: MqttClient;
+apps/api/src/services/scoreboardDeviceGateway.ts-33-  private readonly devices =
+apps/api/src/services/scoreboardDeviceGateway.ts-34-    new Map<string, ScoreboardDeviceRuntime>();
+apps/api/src/services/scoreboardDeviceGateway.ts-35-
+apps/api/src/services/scoreboardDeviceGateway.ts-36-  public constructor(options: {
+apps/api/src/services/scoreboardDeviceGateway.ts:37:    mqttUrl?: string;
+apps/api/src/services/scoreboardDeviceGateway.ts:38:    mqttOptions?: IClientOptions;
+apps/api/src/services/scoreboardDeviceGateway.ts-39-  } = {}) {
+apps/api/src/services/scoreboardDeviceGateway.ts:40:    const mqttUrl =
+apps/api/src/services/scoreboardDeviceGateway.ts:41:      options.mqttUrl ??
+apps/api/src/services/scoreboardDeviceGateway.ts-42-      process.env.MQTT_URL ??
+apps/api/src/services/scoreboardDeviceGateway.ts:43:      "mqtt://sportsos_mqtt:1883";
+apps/api/src/services/scoreboardDeviceGateway.ts-44-
+apps/api/src/services/scoreboardDeviceGateway.ts:45:    this.client = mqtt.connect(mqttUrl, options.mqttOptions);
+apps/api/src/services/scoreboardDeviceGateway.ts-46-
+apps/api/src/services/scoreboardDeviceGateway.ts-47-    this.client.on("connect", () => {
+apps/api/src/services/scoreboardDeviceGateway.ts-48-      this.client.subscribe([
+apps/api/src/services/scoreboardDeviceGateway.ts-49-        "sportsos/scoreboards/+/state",
+apps/api/src/services/scoreboardDeviceGateway.ts-50-        "sportsos/scoreboards/+/presence",
+--
+apps/api/src/services/scoreboardDeviceGateway.ts-86-
+apps/api/src/services/scoreboardDeviceGateway.ts-87-  public async sendCommand(
+apps/api/src/services/scoreboardDeviceGateway.ts-88-    deviceId: string,
+apps/api/src/services/scoreboardDeviceGateway.ts-89-    command: ScoreboardDeviceCommand,
+apps/api/src/services/scoreboardDeviceGateway.ts-90-  ): Promise<void> {
+apps/api/src/services/scoreboardDeviceGateway.ts:91:    const mqttTopics = scoreboardMqttTopics(deviceId);
+apps/api/src/services/scoreboardDeviceGateway.ts-92-    const envelope =
+apps/api/src/services/scoreboardDeviceGateway.ts-93-      buildScoreboardMqttCommandEnvelope(deviceId, command);
+apps/api/src/services/scoreboardDeviceGateway.ts-94-
+apps/api/src/services/scoreboardDeviceGateway.ts-95-    await new Promise<void>((resolve, reject) => {
+apps/api/src/services/scoreboardDeviceGateway.ts:96:      this.client.publish(
+apps/api/src/services/scoreboardDeviceGateway.ts:97:        mqttTopics.command,
+apps/api/src/services/scoreboardDeviceGateway.ts-98-        JSON.stringify(envelope),
+apps/api/src/services/scoreboardDeviceGateway.ts-99-        { qos: 1, retain: false },
+apps/api/src/services/scoreboardDeviceGateway.ts-100-        (error) => {
+apps/api/src/services/scoreboardDeviceGateway.ts-101-          if (error) {
+apps/api/src/services/scoreboardDeviceGateway.ts-102-            reject(error);
+--
+apps/api/src/services/gameScoreboardSync.ts-1-import {
+apps/api/src/services/gameScoreboardSync.ts-2-  SCOREBOARD_DEVICE_PROTOCOL_VERSION,
+apps/api/src/services/gameScoreboardSync.ts-3-  type ScoreboardDeviceCommand,
+apps/api/src/services/gameScoreboardSync.ts-4-} from "@sportsos/core";
+apps/api/src/services/gameScoreboardSync.ts-5-import {
+apps/api/src/services/gameScoreboardSync.ts:6:  ScoreboardDeviceGateway,
+apps/api/src/services/gameScoreboardSync.ts-7-} from "./scoreboardDeviceGateway.js";
+apps/api/src/services/gameScoreboardSync.ts-8-
+apps/api/src/services/gameScoreboardSync.ts-9-export type AuthoritativeGameSnapshot = {
+apps/api/src/services/gameScoreboardSync.ts-10-  gameId: string;
+apps/api/src/services/gameScoreboardSync.ts-11-  homeScore: number;
+--
+apps/api/src/services/gameScoreboardSync.ts-94-}
+apps/api/src/services/gameScoreboardSync.ts-95-
+apps/api/src/services/gameScoreboardSync.ts-96-export class GameScoreboardSyncService {
+apps/api/src/services/gameScoreboardSync.ts-97-  public constructor(
+apps/api/src/services/gameScoreboardSync.ts-98-    private readonly gateway:
+apps/api/src/services/gameScoreboardSync.ts:99:      ScoreboardDeviceGateway,
+apps/api/src/services/gameScoreboardSync.ts-100-  ) {}
+apps/api/src/services/gameScoreboardSync.ts-101-
+apps/api/src/services/gameScoreboardSync.ts-102-  public async sync(
+apps/api/src/services/gameScoreboardSync.ts-103-    snapshot: AuthoritativeGameSnapshot,
+apps/api/src/services/gameScoreboardSync.ts-104-    deviceId: string,
+--
+apps/api/src/services/scoreboardPhysicalControlExecution.ts-177-    ];
+apps/api/src/services/scoreboardPhysicalControlExecution.ts-178-  }
+apps/api/src/services/scoreboardPhysicalControlExecution.ts-179-
+apps/api/src/services/scoreboardPhysicalControlExecution.ts-180-  /*
+apps/api/src/services/scoreboardPhysicalControlExecution.ts-181-   * Horn is a physical side-effect, not a persistent game-state mutation.
+apps/api/src/services/scoreboardPhysicalControlExecution.ts:182:   * It is acknowledged here and is bound to the scoreboard device command
+apps/api/src/services/scoreboardPhysicalControlExecution.ts-183-   * transport in a later milestone.
+apps/api/src/services/scoreboardPhysicalControlExecution.ts-184-   */
+apps/api/src/services/scoreboardPhysicalControlExecution.ts-185-  return [];
+apps/api/src/services/scoreboardPhysicalControlExecution.ts-186-}
+apps/api/src/services/scoreboardPhysicalControlExecution.ts-187-
+--
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-1-[
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-2-  {
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-3-    "file": "apps/api/src/services/scoreboardDeviceGateway.ts",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-4-    "exports": [
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json:5:      "ScoreboardDeviceGateway"
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-6-    ],
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-7-    "hornMentions": [],
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-8-    "commandMentions": [
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-9-      "  buildScoreboardMqttCommandEnvelope,",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-10-      "  type ScoreboardDeviceCommand,",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-11-      "  public async sendCommand(",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-12-      "    command: ScoreboardDeviceCommand,",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-13-      "      buildScoreboardMqttCommandEnvelope(deviceId, command);",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json:14:      "      this.client.publish(",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json:15:      "        mqttTopics.command,"
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-16-    ]
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-17-  },
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-18-  {
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-19-    "file": "apps/api/src/routes/scoreboardDevices.ts",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-20-    "exports": [
+--
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-23-    "hornMentions": [],
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-24-    "commandMentions": [
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-25-      "  validateScoreboardDeviceCommand,",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-26-      "  type ScoreboardDeviceCommand,",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-27-      "    Body: ScoreboardDeviceCommand;",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json:28:      "    \"/scoreboard-devices/:deviceId/commands\",",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-29-      "      let command: ScoreboardDeviceCommand;",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-30-      "        command = validateScoreboardDeviceCommand(request.body);",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-31-      "        return reply.code(400).send({",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-32-      "            code: \"INVALID_SCOREBOARD_COMMAND\",",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json:33:      "                : \"Invalid scoreboard command.\",",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-34-      "      await gateway.sendCommand(request.params.deviceId, command);",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-35-      "      return reply.code(202).send({",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-36-      "          commandId: command.commandId,",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-37-      "        const commandId =",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-38-      "          .send({",
+--
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-69-      "export function validateScoreboardDeviceCommand(",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-70-      "  command: ScoreboardDeviceCommand,",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-71-      "): ScoreboardDeviceCommand {",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-72-      "    command.protocolVersion !==",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-73-      "  if (!command.commandId.trim()) {",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json:74:      "    throw new Error(\"scoreboard commandId is required.\");",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-75-      "  switch (command.type) {",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-76-      "      return command;",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-77-      "      assertNonNegativeInteger(command.homeScore, \"homeScore\");",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-78-      "      assertNonNegativeInteger(command.awayScore, \"awayScore\");",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-79-      "      return command;",
+--
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-90-      "        command.snapshot.clock.remainingMs < 0",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-91-      "      return command;"
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-92-    ]
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-93-  },
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-94-  {
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json:95:    "file": "packages/core/src/scoreboard-mqtt-contract.ts",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-96-    "exports": [
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-97-      "scoreboardMqttTopics",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-98-      "buildScoreboardMqttCommandEnvelope",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-99-      "buildScoreboardMqttAcknowledgement",
+apps/api/src/services/scoreboardPhysicalHornOutput.discovery.json-100-      "buildScoreboardMqttPresence",
+--
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-26-
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-27-  return [
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-28-    {
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-29-      method: "POST",
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-30-      url:
+apps/api/src/services/scoreboardPhysicalHornOutput.ts:31:        `/scoreboard-devices/${encoded}/commands`,
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-32-      payload: {
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-33-        command: "TRIGGER_HORN",
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-34-      },
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-35-    },
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-36-    {
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-37-      method: "POST",
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-38-      url:
+apps/api/src/services/scoreboardPhysicalHornOutput.ts:39:        `/scoreboard-devices/${encoded}/command`,
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-40-      payload: {
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-41-        command: "TRIGGER_HORN",
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-42-      },
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-43-    },
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-44-    {
+--
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-107-    triggered: false,
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-108-    statusCode: 501,
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-109-    deviceId,
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-110-    responseBody: null,
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-111-    reason:
+apps/api/src/services/scoreboardPhysicalHornOutput.ts:112:      "No compatible scoreboard horn command route was found.",
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-113-  };
+apps/api/src/services/scoreboardPhysicalHornOutput.ts-114-}
+--
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-1-SportsOS 17.9 scoreboard transport discovery
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-2-
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-3-apps/api/src/routes/system.ts-1-import type { FastifyInstance } from "fastify";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-4-apps/api/src/routes/system.ts-2-import type { RowDataPacket } from "mysql2/promise";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-5-apps/api/src/routes/system.ts-3-import { createClient } from "redis";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:6:apps/api/src/routes/system.ts:4:import mqtt from "mqtt";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-7-apps/api/src/routes/system.ts-5-import { config } from "@sportsos/config";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-8-apps/api/src/routes/system.ts-6-import { pool } from "../infrastructure/database.js";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-9-apps/api/src/routes/system.ts-7-import { minio } from "../infrastructure/minio.js";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-10-apps/api/src/routes/system.ts-8-import { requireAuth } from "../lib/auth.js";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-11-apps/api/src/routes/system.ts-9-
+--
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-13-apps/api/src/routes/system.ts-27-    return "offline";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-14-apps/api/src/routes/system.ts-28-  }
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-15-apps/api/src/routes/system.ts-29-}
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-16-apps/api/src/routes/system.ts-30-async function checkMqtt(): Promise<"online" | "offline"> {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-17-apps/api/src/routes/system.ts-31-  return new Promise((resolve) => {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:18:apps/api/src/routes/system.ts:32:    const client = mqtt.connect(config.mqtt.url, { connectTimeout: 3000, reconnectPeriod: 0 });
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-19-apps/api/src/routes/system.ts-33-    const timer = setTimeout(() => {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-20-apps/api/src/routes/system.ts-34-      client.end(true);
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-21-apps/api/src/routes/system.ts-35-      resolve("offline");
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-22-apps/api/src/routes/system.ts-36-    }, 3500);
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-23-apps/api/src/routes/system.ts-37-    client.once("connect", () => {
+--
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-25-apps/api/src/routes/system.ts-84-    );
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-26-apps/api/src/routes/system.ts-85-    return { events: rows };
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-27-apps/api/src/routes/system.ts-86-  });
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-28-apps/api/src/routes/system.ts-87-
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-29-apps/api/src/routes/system.ts-88-  app.get("/health", async () => {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:30:apps/api/src/routes/system.ts:89:    const [mysqlStatus, redisStatus, mqttStatus, minioStatus] = await Promise.all([
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-31-apps/api/src/routes/system.ts-90-      checkMysql(),
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-32-apps/api/src/routes/system.ts-91-      checkRedis(),
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-33-apps/api/src/routes/system.ts-92-      checkMqtt(),
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-34-apps/api/src/routes/system.ts-93-      checkMinio(),
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-35-apps/api/src/routes/system.ts-94-    ]);
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-36-apps/api/src/routes/system.ts-95-    const services = {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-37-apps/api/src/routes/system.ts-96-      mysql: mysqlStatus,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-38-apps/api/src/routes/system.ts-97-      redis: redisStatus,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:39:apps/api/src/routes/system.ts:98:      mqtt: mqttStatus,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-40-apps/api/src/routes/system.ts-99-      minio: minioStatus,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-41-apps/api/src/routes/system.ts-100-    };
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-42-apps/api/src/routes/system.ts-101-    const healthy = Object.values(services).every((status) => status === "online");
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-43-apps/api/src/routes/system.ts-102-    return {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-44-apps/api/src/routes/system.ts-103-      success: healthy,
+--
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-46-apps/api/src/routes/scoreboardDevices.ts-2-import {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-47-apps/api/src/routes/scoreboardDevices.ts-3-  validateScoreboardDeviceCommand,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-48-apps/api/src/routes/scoreboardDevices.ts-4-  type ScoreboardDeviceCommand,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-49-apps/api/src/routes/scoreboardDevices.ts-5-} from "@sportsos/core";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-50-apps/api/src/routes/scoreboardDevices.ts-6-import {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:51:apps/api/src/routes/scoreboardDevices.ts:7:  ScoreboardDeviceGateway,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-52-apps/api/src/routes/scoreboardDevices.ts-8-} from "../services/scoreboardDeviceGateway.js";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-53-apps/api/src/routes/scoreboardDevices.ts-9-import {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-54-apps/api/src/routes/scoreboardDevices.ts-10-  GameScoreboardSyncService,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-55-apps/api/src/routes/scoreboardDevices.ts-11-  type AuthoritativeGameSnapshot,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-56-apps/api/src/routes/scoreboardDevices.ts-12-} from "../services/gameScoreboardSync.js";
+--
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-58-apps/api/src/routes/scoreboardDevices.ts-21-  ScoreboardDeviceRecoveryService,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-59-apps/api/src/routes/scoreboardDevices.ts-22-} from "../services/scoreboardDeviceRecovery.js";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-60-apps/api/src/routes/scoreboardDevices.ts-23-import { authorizeVerifiedScoreboardDevice } from "../services/scoreboardDeviceAuthorization.js";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-61-apps/api/src/routes/scoreboardDevices.ts-24-import { registerScoreboardControlInputRoutes } from "./scoreboardControlInputs.js";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-62-apps/api/src/routes/scoreboardDevices.ts-25-
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:63:apps/api/src/routes/scoreboardDevices.ts:26:const gateway = new ScoreboardDeviceGateway();
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-64-apps/api/src/routes/scoreboardDevices.ts-27-const syncService =
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-65-apps/api/src/routes/scoreboardDevices.ts-28-  new GameScoreboardSyncService(gateway);
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-66-apps/api/src/routes/scoreboardDevices.ts-29-const automaticSync =
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-67-apps/api/src/routes/scoreboardDevices.ts-30-  new AutomaticGameScoreboardSync(syncService);
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-68-apps/api/src/routes/scoreboardDevices.ts-31-const recoveryService =
+--
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-70-apps/api/src/routes/scoreboardDevices.ts-58-
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-71-apps/api/src/routes/scoreboardDevices.ts-59-  app.post<{
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-72-apps/api/src/routes/scoreboardDevices.ts-60-    Params: { deviceId: string };
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-73-apps/api/src/routes/scoreboardDevices.ts-61-    Body: ScoreboardDeviceCommand;
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-74-apps/api/src/routes/scoreboardDevices.ts-62-  }>(
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:75:apps/api/src/routes/scoreboardDevices.ts:63:    "/scoreboard-devices/:deviceId/commands",
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-76-apps/api/src/routes/scoreboardDevices.ts-64-    async (request, reply) => {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:77:apps/api/src/routes/scoreboardDevices.ts-65-      let command: ScoreboardDeviceCommand;
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-78-apps/api/src/routes/scoreboardDevices.ts-66-
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-79-apps/api/src/routes/scoreboardDevices.ts-67-      try {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:80:apps/api/src/routes/scoreboardDevices.ts-68-        command = validateScoreboardDeviceCommand(request.body);
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-81---
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-82-apps/api/src/routes/scoreboardDevices.ts-72-          error: {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-83-apps/api/src/routes/scoreboardDevices.ts-73-            code: "INVALID_SCOREBOARD_COMMAND",
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-84-apps/api/src/routes/scoreboardDevices.ts-74-            message:
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-85-apps/api/src/routes/scoreboardDevices.ts-75-              error instanceof Error
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-86-apps/api/src/routes/scoreboardDevices.ts-76-                ? error.message
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:87:apps/api/src/routes/scoreboardDevices.ts:77:                : "Invalid scoreboard command.",
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-88-apps/api/src/routes/scoreboardDevices.ts-78-          },
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-89-apps/api/src/routes/scoreboardDevices.ts-79-        });
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-90-apps/api/src/routes/scoreboardDevices.ts-80-      }
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-91-apps/api/src/routes/scoreboardDevices.ts-81-
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:92:apps/api/src/routes/scoreboardDevices.ts-82-      await gateway.sendCommand(request.params.deviceId, command);
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-93---
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:94:apps/api/src/routes/scoreboardControlInputs.ts-374-          command: execution.command,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-95-apps/api/src/routes/scoreboardControlInputs.ts-375-          execution,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-96-apps/api/src/routes/scoreboardControlInputs.ts-376-          reconciliation: null,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-97-apps/api/src/routes/scoreboardControlInputs.ts-377-          error:
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-98-apps/api/src/routes/scoreboardControlInputs.ts-378-            execution.reason ??
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:99:apps/api/src/routes/scoreboardControlInputs.ts:379:            "Physical scoreboard command was not executed.",
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-100-apps/api/src/routes/scoreboardControlInputs.ts-380-          createdAt:
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-101-apps/api/src/routes/scoreboardControlInputs.ts-381-            new Date().toISOString(),
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-102-apps/api/src/routes/scoreboardControlInputs.ts-382-        });
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-103-apps/api/src/routes/scoreboardControlInputs.ts-383-
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-104-apps/api/src/routes/scoreboardControlInputs.ts-384-        return reply.code(
+--
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-106-apps/api/src/routes/scoreboardControlInputs.ts-388-            : 409,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-107-apps/api/src/routes/scoreboardControlInputs.ts-389-        ).send({
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-108-apps/api/src/routes/scoreboardControlInputs.ts-390-          success: false,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-109-apps/api/src/routes/scoreboardControlInputs.ts-391-          error:
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-110-apps/api/src/routes/scoreboardControlInputs.ts-392-            execution.reason ??
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:111:apps/api/src/routes/scoreboardControlInputs.ts:393:            "Physical scoreboard command was not executed.",
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-112-apps/api/src/routes/scoreboardControlInputs.ts-394-          data: {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-113-apps/api/src/routes/scoreboardControlInputs.ts-395-            acknowledgement:
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-114-apps/api/src/routes/scoreboardControlInputs.ts-396-              result,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-115-apps/api/src/routes/scoreboardControlInputs.ts-397-            execution,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-116-apps/api/src/routes/scoreboardControlInputs.ts-398-          },
+--
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-118-apps/api/src/routes/scoreboardDeviceCommissioning.ts-236-      });
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-119-apps/api/src/routes/scoreboardDeviceCommissioning.ts-237-    },
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-120-apps/api/src/routes/scoreboardDeviceCommissioning.ts-238-  );
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-121-apps/api/src/routes/scoreboardDeviceCommissioning.ts-239-
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-122-apps/api/src/routes/scoreboardDeviceCommissioning.ts-240-  app.get(
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:123:apps/api/src/routes/scoreboardDeviceCommissioning.ts:241:    "/scoreboard-device-commissioning/:deviceId/self-test/dispatch/:commandId",
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-124-apps/api/src/routes/scoreboardDeviceCommissioning.ts-242-    async (request, reply) => {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-125-apps/api/src/routes/scoreboardDeviceCommissioning.ts-243-      const params =
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-126-apps/api/src/routes/scoreboardDeviceCommissioning.ts-244-        request.params as {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-127-apps/api/src/routes/scoreboardDeviceCommissioning.ts-245-          deviceId?: string;
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:128:apps/api/src/routes/scoreboardDeviceCommissioning.ts-246-          commandId?: string;
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-129---
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-130-apps/api/src/routes/scoreboardDeviceCommissioning.ts-287-      };
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-131-apps/api/src/routes/scoreboardDeviceCommissioning.ts-288-    },
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-132-apps/api/src/routes/scoreboardDeviceCommissioning.ts-289-  );
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-133-apps/api/src/routes/scoreboardDeviceCommissioning.ts-290-
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-134-apps/api/src/routes/scoreboardDeviceCommissioning.ts-291-  app.post(
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:135:apps/api/src/routes/scoreboardDeviceCommissioning.ts:292:    "/scoreboard-device-commissioning/:deviceId/self-test/dispatch/:commandId/ack",
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-136-apps/api/src/routes/scoreboardDeviceCommissioning.ts-293-    async (request, reply) => {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-137-apps/api/src/routes/scoreboardDeviceCommissioning.ts-294-      const params =
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-138-apps/api/src/routes/scoreboardDeviceCommissioning.ts-295-        request.params as {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-139-apps/api/src/routes/scoreboardDeviceCommissioning.ts-296-          deviceId?: string;
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:140:apps/api/src/routes/scoreboardDeviceCommissioning.ts-297-          commandId?: string;
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-141---
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:142:apps/api/src/services/scoreboardDeviceGateway.ts:1:import mqtt, {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-143-apps/api/src/services/scoreboardDeviceGateway.ts-2-  type IClientOptions,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-144-apps/api/src/services/scoreboardDeviceGateway.ts-3-  type MqttClient,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:145:apps/api/src/services/scoreboardDeviceGateway.ts:4:} from "mqtt";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-146-apps/api/src/services/scoreboardDeviceGateway.ts-5-import {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-147-apps/api/src/services/scoreboardDeviceGateway.ts-6-  buildScoreboardMqttCommandEnvelope,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-148-apps/api/src/services/scoreboardDeviceGateway.ts-7-  scoreboardMqttTopics,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-149-apps/api/src/services/scoreboardDeviceGateway.ts-8-  type ScoreboardDeviceCommand,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-150-apps/api/src/services/scoreboardDeviceGateway.ts-9-  type ScoreboardDeviceSnapshot,
+--
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-152-apps/api/src/services/scoreboardDeviceGateway.ts-23-export type ScoreboardPresenceListener = (
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-153-apps/api/src/services/scoreboardDeviceGateway.ts-24-  deviceId: string,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-154-apps/api/src/services/scoreboardDeviceGateway.ts-25-  online: boolean,
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-155-apps/api/src/services/scoreboardDeviceGateway.ts-26-) => void | Promise<void>;
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-156-apps/api/src/services/scoreboardDeviceGateway.ts-27-
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:157:apps/api/src/services/scoreboardDeviceGateway.ts:28:export class ScoreboardDeviceGateway {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-158-apps/api/src/services/scoreboardDeviceGateway.ts-29-  private readonly presenceListeners =
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-159-apps/api/src/services/scoreboardDeviceGateway.ts-30-    new Set<ScoreboardPresenceListener>();
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-160-apps/api/src/services/scoreboardDeviceGateway.ts-31-
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-161-apps/api/src/services/scoreboardDeviceGateway.ts-32-  private readonly client: MqttClient;
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-162-apps/api/src/services/scoreboardDeviceGateway.ts-33-  private readonly devices =
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-163-apps/api/src/services/scoreboardDeviceGateway.ts-34-    new Map<string, ScoreboardDeviceRuntime>();
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-164-apps/api/src/services/scoreboardDeviceGateway.ts-35-
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-165-apps/api/src/services/scoreboardDeviceGateway.ts-36-  public constructor(options: {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:166:apps/api/src/services/scoreboardDeviceGateway.ts:37:    mqttUrl?: string;
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:167:apps/api/src/services/scoreboardDeviceGateway.ts:38:    mqttOptions?: IClientOptions;
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-168-apps/api/src/services/scoreboardDeviceGateway.ts-39-  } = {}) {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:169:apps/api/src/services/scoreboardDeviceGateway.ts:40:    const mqttUrl =
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:170:apps/api/src/services/scoreboardDeviceGateway.ts:41:      options.mqttUrl ??
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-171-apps/api/src/services/scoreboardDeviceGateway.ts-42-      process.env.MQTT_URL ??
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:172:apps/api/src/services/scoreboardDeviceGateway.ts:43:      "mqtt://sportsos_mqtt:1883";
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-173-apps/api/src/services/scoreboardDeviceGateway.ts-44-
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt:174:apps/api/src/services/scoreboardDeviceGateway.ts:45:    this.client = mqtt.connect(mqttUrl, options.mqttOptions);
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-175-apps/api/src/services/scoreboardDeviceGateway.ts-46-
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-176-apps/api/src/services/scoreboardDeviceGateway.ts-47-    this.client.on("connect", () => {
+apps/api/src/services/scoreboardSelfTestTransport.discovery.txt-177-apps/api/src/services/scoreboardDeviceGateway.ts-48-      this.client.subscribe([

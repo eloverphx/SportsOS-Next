@@ -1,3 +1,6 @@
+import {
+  startScoreboardMqttAdapter,
+} from "./mqtt-adapter.js";
 import http from "node:http";
 
 const API_URL = process.env.API_URL ?? "http://api:4001";
@@ -438,3 +441,16 @@ await fetchGame();
 
 setInterval(() => void heartbeat(), HEARTBEAT_INTERVAL_MS);
 setInterval(() => void fetchGame(), GAME_POLL_INTERVAL_MS);
+
+
+const mqttAdapter = startScoreboardMqttAdapter();
+
+process.on("SIGTERM", async () => {
+  await mqttAdapter.stop();
+  process.exit(0);
+});
+
+process.on("SIGINT", async () => {
+  await mqttAdapter.stop();
+  process.exit(0);
+});

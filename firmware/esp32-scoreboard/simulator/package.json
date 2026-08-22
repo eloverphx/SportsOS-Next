@@ -1,0 +1,9 @@
+{
+  "name": "@sportsos/esp32-firmware-simulator",
+  "private": true,
+  "version": "0.11.9",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

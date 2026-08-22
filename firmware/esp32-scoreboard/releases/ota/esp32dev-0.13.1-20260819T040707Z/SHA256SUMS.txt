@@ -1,0 +1,2 @@
+5e07d00976793511600a343847f7b5ebedb988bdbc39fd368829c06e7dd96354  /mnt/user/appdata/SportsOS-Next/firmware/esp32-scoreboard/releases/ota/esp32dev-0.13.1-20260819T040707Z/firmware.bin
+ad7148519c7f7ed09c425b69b165af61c6ee09ff8abcbe803e6758d9586b6ee5  /mnt/user/appdata/SportsOS-Next/firmware/esp32-scoreboard/releases/ota/esp32dev-0.13.1-20260819T040707Z/release.json
