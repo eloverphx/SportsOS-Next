@@ -1,82 +1,101 @@
 # SportsOS Next
 
-SportsOS Next is a modular platform for sports administration, live scoring,
-broadcast overlays, streaming workflows, and connected scoreboard hardware.
+SportsOS Next is a modular sports operations platform for live scoring, game administration, broadcast overlays, streaming workflows, and connected scoreboard hardware.
+
+## Current platform
+
+SportsOS Next currently includes:
+
+- Fastify API
+- Next.js dashboard
+- shared TypeScript packages
+- MySQL
+- Redis
+- MQTT
+- MinIO
+- Socket.IO realtime transport
+- scoreboard device enrollment and verification
+- scoreboard assignment and synchronization
+- ESP32 scoreboard firmware
+- firmware release, artifact, rollout, OTA, and recovery flows
+- physical scoreboard controls
+- commissioning workflow
+- firmware-driven commissioning self-test
+- game-day hardware preflight
+- assignment-bound game-start safety enforcement
+- emergency start override with expiration and audit history
 
 ## Repository structure
 
-````text
+```text
 apps/
-  api/         Fastify API and realtime services
-  dashboard/   Next.js administration dashboard
+  api/                  Fastify API and realtime services
+  dashboard/            Next.js administration and operations UI
+  scoreboard-simulator/ Hardware/device simulator
 
 packages/
-  config/      Validated, typed runtime configuration
-  core/        Shared contracts, errors, logging interfaces, and utilities
+  config/               Typed runtime configuration
+  core/                 Shared contracts and utilities
 
-scripts/       Repository maintenance scripts
+firmware/
+  esp32-scoreboard/     Production ESP32 scoreboard firmware
 
-## Requirements
-
-- Node.js 22
-- npm 10 or newer
-- Docker and Docker Compose for the full local stack
-
-## Install
-
-Install all workspace dependencies from the repository root:
-
-```bash
-npm install
-````
-
-## Development
-
-Start the API:
-
-```bash
-npm run dev:api
+docs/                   Architecture, acceptance, and continuation notes
+scripts/                Repository maintenance and acceptance scripts
+e2e/                    Playwright end-to-end tests
 ```
 
-Start the dashboard in another terminal:
+## Local deployment
+
+Primary ports:
+
+- Dashboard: `4000`
+- API: `4001`
+- MQTT: `4012`
+- MinIO API: `4013`
+- MinIO Console: `4014`
+- Scoreboard simulator: `4020`
+
+The development environment is designed to run locally first using Docker Compose.
+
+## Validation
+
+From the repository root:
 
 ```bash
-npm run dev:dashboard
-```
-
-The dashboard uses port `4000`. The API uses port `4001` unless overridden by environment configuration.
-
-## Repository commands
-
-```bash
-npm run build
 npm run typecheck
-npm run lint
-npm run test
-npm run clean
+npm test
+npm run build
+bash firmware/esp32-scoreboard/build-in-docker.sh
+docker compose up -d --build api dashboard
+npm run test:e2e:docker
 ```
 
-`npm run build` builds the shared core package first, followed by the API and dashboard.
+Changes to scoring, lifecycle, scoreboard-device, firmware, or start-authorization behavior must include regression tests.
 
-## Architecture principles
+## Authoritative game state
 
-- Shared contracts belong in `@sportsos/core`.
-- Sports-domain logic remains inside its feature module.
-- Applications depend on packages; packages must not depend on applications.
-- Configuration is validated at application startup.
-- API routes remain thin and delegate behavior to services.
-- Changes to calculation or scoring behavior require matching automated tests.
+The API remains authoritative for game state.
 
-## Current applications
+Scoreboards and physical controllers are clients of that state and must not independently become authoritative for score, clock, period, or lifecycle state.
 
-### API
+The explicit game-start transition is:
 
-Fastify service providing HTTP endpoints, realtime communication, persistence integrations, and future domain modules.
+```text
+POST /games/:id/lifecycle
+command = startGame
+```
 
-### Dashboard
+Game-day preflight and scoreboard readiness checks execute before lifecycle mutation.
 
-Next.js interface for administration, team management, scoring operations, and platform status.
+## Continue development
 
-## Roadmap
+Read:
 
-The next API-foundation milestones add shared configuration, a testable Fastify application factory, production middleware, platform health endpoints, OpenAPI documentation, and integration tests.
+```text
+docs/RESUME-HERE.md
+docs/ARCHITECTURE.md
+docs/MILESTONE-STATUS.md
+```
+
+before beginning a new milestone.
