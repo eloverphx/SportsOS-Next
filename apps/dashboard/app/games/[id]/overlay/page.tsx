@@ -1,6 +1,6 @@
 "use client";
 
-import type { PublicScoreboardGame, ScoreboardPenalty } from "@sportsos/core";
+import type { BroadcastEffectPayload, PublicScoreboardGame, ScoreboardPenalty } from "@sportsos/core";
 
 import { useParams, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -10,6 +10,27 @@ import styles from "./overlay.module.css";
 
 type Penalty = ScoreboardPenalty;
 type Game = PublicScoreboardGame;
+
+type BroadcastSessionProfile = {
+  gameId: string;
+  enabled: boolean;
+  title: string | null;
+  sponsorUrl: string | null;
+  showPowerPlay: boolean;
+  showTeamLogos: boolean;
+  scenePreset:
+    | "STANDARD"
+    | "MINIMAL"
+    | "SPONSOR_FOCUS";
+  sponsorUrls: string[];
+  sponsorRotationSeconds: number;
+  soundEnabled: boolean;
+  goalSoundUrl: string | null;
+  penaltySoundUrl: string | null;
+  hornSoundUrl: string | null;
+  intermissionSoundUrl: string | null;
+  updatedAt: string;
+};
 
 function remaining(game: Game, now: number): number {
   if (!game.clockRunning || !game.clockStartedAt) return Math.max(0, game.clockRemainingMs);
@@ -52,12 +73,127 @@ function Logo({ url, name }: { url: string | null; name: string }) {
   );
 }
 
+function BroadcastEffectCard({
+  effect,
+  game,
+}: {
+  effect:
+    BroadcastEffectPayload;
+  game:
+    Game;
+}) {
+  const teamName =
+    effect.side ===
+      "home"
+      ? game.homeTeamName
+      : game.awayTeamName;
+
+  const heading =
+    effect.type ===
+      "GOAL"
+      ? "GOAL"
+      : effect.type ===
+          "PENALTY"
+        ? "PENALTY"
+        : "PENALTY ENDED";
+
+  const detail =
+    effect.type ===
+      "GOAL"
+      ? [
+          effect.jerseyNumber
+            ? `#${effect.jerseyNumber}`
+            : null,
+          effect.playerName ??
+            null,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : effect.type ===
+          "PENALTY"
+        ? [
+            effect.jerseyNumber
+              ? `#${effect.jerseyNumber}`
+              : null,
+            effect.playerName ??
+              null,
+            effect.infraction ??
+              null,
+            effect.penaltyMinutes
+              ? `${effect.penaltyMinutes} MIN`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : teamName;
+
+  return (
+    <section
+      className={
+        `${styles.effectCard} ${styles[`effect${effect.type.replaceAll("_", "")}`]}`
+      }
+      data-effect-type={
+        effect.type
+      }
+      data-effect-side={
+        effect.side
+      }
+    >
+      <span>
+        {teamName}
+      </span>
+      <strong>
+        {heading}
+      </strong>
+      {detail && (
+        <small>
+          {detail}
+        </small>
+      )}
+    </section>
+  );
+}
+
+function playBroadcastSound(
+  url: string | null,
+): void {
+  if (!url) {
+    return;
+  }
+
+  const audio =
+    new Audio(
+      url,
+    );
+
+  audio.preload =
+    "auto";
+
+  void audio.play().catch(
+    () => {
+      // Browser/OBS autoplay policy may reject playback.
+      // Audio failure must never affect overlay rendering or game state.
+    },
+  );
+}
+
 export default function OverlayPage() {
   const params = useParams<{ id: string }>();
   const search = useSearchParams();
   const gameId = Number(params.id);
   const [game, setGame] = useState<Game | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [profile, setProfile] =
+    useState<BroadcastSessionProfile | null>(null);
+  const [sponsorIndex, setSponsorIndex] =
+    useState(0);
+  const [
+    activeEffect,
+    setActiveEffect,
+  ] =
+    useState<BroadcastEffectPayload | null>(
+      null,
+    );
 
   const load = useCallback(async () => {
     const response = await fetch(`${API}/public/games/${gameId}/scoreboard`, { cache: "no-store" });
@@ -65,8 +201,34 @@ export default function OverlayPage() {
     setGame(body.game);
   }, [gameId]);
 
+  const loadBroadcastProfile =
+    useCallback(async () => {
+      const response = await fetch(
+        `${API}/public/games/${gameId}/broadcast-session`,
+        { cache: "no-store" },
+      );
+
+      if (!response.ok) {
+        setProfile(null);
+        return;
+      }
+
+      const body =
+        (await response.json()) as {
+          data?: {
+            profile?: BroadcastSessionProfile | null;
+          };
+        };
+
+      setProfile(
+        body.data?.profile ??
+        null,
+      );
+    }, [gameId]);
+
   useEffect(() => {
     void load();
+    void loadBroadcastProfile();
     const socket = createRealtimeSocket(API);
     let connectedOnce = false;
 
@@ -79,6 +241,7 @@ export default function OverlayPage() {
       }
 
       void load();
+      void loadBroadcastProfile();
     });
 
     const refresh = (payload: { id?: number; gameId?: number; game?: { id?: number } }) => {
@@ -91,10 +254,175 @@ export default function OverlayPage() {
     socket.on("game:event-created", refresh);
     socket.on("game:event-voided", refresh);
     socket.on("game:penalties-updated", refresh);
+
+    socket.on(
+      "scoreboard:sound",
+      (payload) => {
+        if (
+          Number(
+            payload.gameId,
+          ) !==
+          gameId ||
+          !profile?.soundEnabled
+        ) {
+          return;
+        }
+
+        const url =
+          payload.type ===
+            "GOAL"
+            ? profile.goalSoundUrl
+            : payload.type ===
+                "PENALTY"
+              ? profile.penaltySoundUrl
+              : payload.type ===
+                  "HORN"
+                ? profile.hornSoundUrl
+                : profile.intermissionSoundUrl;
+
+        playBroadcastSound(
+          url,
+        );
+      },
+    );
+
+    socket.on(
+      "scoreboard:effect",
+      (
+        payload:
+          BroadcastEffectPayload,
+      ) => {
+        if (
+          Number(
+            payload.gameId,
+          ) !==
+          gameId
+        ) {
+          return;
+        }
+
+        setActiveEffect(
+          payload,
+        );
+      },
+    );
+
+    socket.on(
+      "broadcast-session:updated",
+      (payload: {
+        gameId?: number | string;
+        profile?: BroadcastSessionProfile | null;
+      }) => {
+        if (
+          String(
+            payload.gameId ??
+            "",
+          ) ===
+          String(
+            gameId,
+          )
+        ) {
+          setProfile(
+            payload.profile ??
+            null,
+          );
+        }
+      },
+    );
+
+    socket.on(
+      "broadcast-session:deleted",
+      (payload: {
+        gameId?: number | string;
+      }) => {
+        if (
+          String(
+            payload.gameId ??
+            "",
+          ) ===
+          String(
+            gameId,
+          )
+        ) {
+          setProfile(
+            null,
+          );
+        }
+      },
+    );
     return () => {
       socket.disconnect();
     };
-  }, [gameId, load]);
+  }, [gameId, load, loadBroadcastProfile]);
+
+  // Broadcast effect auto-clear
+  useEffect(() => {
+    if (!activeEffect) {
+      return;
+    }
+
+    const durationMs =
+      activeEffect.type ===
+        "GOAL"
+        ? 5000
+        : 4000;
+
+    const timer =
+      window.setTimeout(
+        () => {
+          setActiveEffect(
+            null,
+          );
+        },
+        durationMs,
+      );
+
+    return () => {
+      window.clearTimeout(
+        timer,
+      );
+    };
+  }, [
+    activeEffect,
+  ]);
+
+  // Sponsor rotation timer
+  useEffect(() => {
+    const sponsors =
+      profile?.sponsorUrls ??
+      [];
+
+    if (sponsors.length <= 1) {
+      setSponsorIndex(0);
+      return;
+    }
+
+    const seconds =
+      Math.max(
+        3,
+        profile?.sponsorRotationSeconds ??
+          10,
+      );
+
+    const timer =
+      window.setInterval(
+        () => {
+          setSponsorIndex(
+            (current) =>
+              (current + 1) %
+              sponsors.length,
+          );
+        },
+        seconds * 1000,
+      );
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [
+    profile?.sponsorUrls,
+    profile?.sponsorRotationSeconds,
+  ]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 250);
@@ -115,8 +443,44 @@ export default function OverlayPage() {
 
   if (!game) return null;
 
-  const title = search.get("title") || game.organizationName;
-  const sponsorUrl = search.get("sponsorUrl");
+  const effectiveTitle =
+    search.get("title") ??
+    profile?.title ??
+    game.organizationName;
+
+  const effectiveSponsorUrl =
+    search.get("sponsorUrl") ??
+    profile?.sponsorUrl ??
+    null;
+
+  const rotatingSponsorUrl =
+    profile?.sponsorUrls?.[
+      sponsorIndex %
+      Math.max(
+        1,
+        profile?.sponsorUrls?.length ??
+          1,
+      )
+    ] ??
+    effectiveSponsorUrl;
+
+  const scenePreset =
+    profile?.scenePreset ??
+    "STANDARD";
+
+  const showPowerPlay =
+    search.get("showPowerPlay") === "0"
+      ? false
+      : search.get("showPowerPlay") === "1"
+        ? true
+        : profile?.showPowerPlay ?? true;
+
+  const showTeamLogos =
+    search.get("showTeamLogos") === "0"
+      ? false
+      : search.get("showTeamLogos") === "1"
+        ? true
+        : profile?.showTeamLogos ?? true;
 
   return (
     <main
@@ -128,12 +492,28 @@ export default function OverlayPage() {
         } as React.CSSProperties
       }
     >
-      <section className={styles.bar}>
+      {activeEffect && (
+        <BroadcastEffectCard
+          effect={
+            activeEffect
+          }
+          game={
+            game
+          }
+        />
+      )}
+
+      <section
+        className={styles.bar}
+        data-scene-preset={scenePreset}
+      >
         <div className={`${styles.team} ${styles.away}`}>
           <div className={styles.logo}>
-            <Logo url={game.awayTeamLogoUrl} name={game.awayTeamName} />
+            {showTeamLogos ? <Logo url={game.awayTeamLogoUrl} name={game.awayTeamName} /> : null}
           </div>
-          <strong>{game.awayTeamName}</strong>
+          {scenePreset !== "MINIMAL" && (
+            <strong>{game.awayTeamName}</strong>
+          )}
           <b>{game.awayScore}</b>
         </div>
         <div className={styles.center}>
@@ -149,20 +529,34 @@ export default function OverlayPage() {
               ? formatClock(effectiveIntermissionMs(game, now))
               : formatClock(remaining(game, now))}
           </strong>
-          {powerPlay && <small>POWER PLAY · {powerPlay}</small>}
+          {scenePreset !== "SPONSOR_FOCUS" &&
+            showPowerPlay &&
+            powerPlay && (
+              <small>
+                POWER PLAY · {powerPlay}
+              </small>
+            )}
         </div>
         <div className={`${styles.team} ${styles.home}`}>
           <b>{game.homeScore}</b>
-          <strong>{game.homeTeamName}</strong>
+          {scenePreset !== "MINIMAL" && (
+            <strong>{game.homeTeamName}</strong>
+          )}
           <div className={styles.logo}>
-            <Logo url={game.homeTeamLogoUrl} name={game.homeTeamName} />
+            {showTeamLogos ? <Logo url={game.homeTeamLogoUrl} name={game.homeTeamName} /> : null}
           </div>
         </div>
       </section>
 
-      <section className={styles.brandStrip}>
-        <span>{title}</span>
-        {sponsorUrl && <img src={sponsorUrl} alt="Sponsor" />}
+      <section
+        className={
+          scenePreset === "SPONSOR_FOCUS"
+            ? `${styles.brandStrip} ${styles.sponsorFocus}`
+            : styles.brandStrip
+        }
+      >
+        <span>{effectiveTitle}</span>
+        {rotatingSponsorUrl && <img src={rotatingSponsorUrl} alt="Sponsor" />}
       </section>
     </main>
   );

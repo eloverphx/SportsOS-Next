@@ -6,6 +6,8 @@ import { PhysicalControlDiagnosticsPanel } from "./PhysicalControlDiagnosticsPan
 import { PhysicalControlPolicyPanel } from "./PhysicalControlPolicyPanel";
 import { ScoreboardCommissioningWizard } from "./ScoreboardCommissioningWizard";
 import { GameDayHardwarePreflightPanel } from "./GameDayHardwarePreflightPanel";
+import { BroadcastSessionPanel } from "./BroadcastSessionPanel";
+import { StreamDestinationPanel } from "./StreamDestinationPanel";
 
 export default function ScoreboardOperationsPage() {
   return (
@@ -39,6 +41,8 @@ export default function ScoreboardOperationsPage() {
       <GameDayHardwarePreflightPanel />
       <PhysicalControlPolicyPanel />
       <PhysicalControlDiagnosticsPanel />
+      <BroadcastSessionPanel />
+      <StreamDestinationPanel />
 </main>
   );
 }

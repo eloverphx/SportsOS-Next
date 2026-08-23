@@ -115,6 +115,36 @@ export interface BroadcastSoundPayload {
   type: BroadcastSoundType;
 }
 
+export interface BroadcastSessionProfilePayload {
+  gameId: string;
+  enabled: boolean;
+  title: string | null;
+  sponsorUrl: string | null;
+  showPowerPlay: boolean;
+  showTeamLogos: boolean;
+  scenePreset:
+    | "STANDARD"
+    | "MINIMAL"
+    | "SPONSOR_FOCUS";
+  sponsorUrls: string[];
+  sponsorRotationSeconds: number;
+  soundEnabled: boolean;
+  goalSoundUrl: string | null;
+  penaltySoundUrl: string | null;
+  hornSoundUrl: string | null;
+  intermissionSoundUrl: string | null;
+  updatedAt: string;
+}
+
+export interface BroadcastSessionUpdatedPayload {
+  gameId: string;
+  profile: BroadcastSessionProfilePayload;
+}
+
+export interface BroadcastSessionDeletedPayload {
+  gameId: string;
+}
+
 export interface ScoreboardDeviceChangedPayload {
   id: number;
   organizationId: number;
@@ -156,6 +186,9 @@ export interface RealtimeServerEvents {
 
   "scoreboard:effect": (payload: BroadcastEffectPayload) => void;
   "scoreboard:sound": (payload: BroadcastSoundPayload) => void;
+
+  "broadcast-session:updated": (payload: BroadcastSessionUpdatedPayload) => void;
+  "broadcast-session:deleted": (payload: BroadcastSessionDeletedPayload) => void;
 
   "scoreboard-device:updated": (payload: ScoreboardDeviceChangedPayload) => void;
   "scoreboard-device:deleted": (payload: ScoreboardDeviceDeletedPayload) => void;

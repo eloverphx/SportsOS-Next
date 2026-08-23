@@ -28,7 +28,9 @@ Game-day preflight, freshness, start enforcement, assignment binding, emergency 
 
 ```text
 Milestone 18.11 complete
-Milestone 19 next
+Milestone 19.10 complete
+Milestone 20.1 in progress
+Milestone 20.1 in progress
 ```
 
 ## Required acceptance
@@ -43,4 +45,52 @@ When relevant:
 bash firmware/esp32-scoreboard/build-in-docker.sh
 docker compose up -d --build api dashboard
 npm run test:e2e:docker
+```
+
+
+### Milestone 19
+
+Broadcast operations foundation:
+
+- repository continuation baseline
+- persisted broadcast-session profile
+- overlay profile consumption
+- operator broadcast-session UI
+- realtime profile updates
+- scene presets
+- sponsor rotation
+- goal and penalty presentation effects
+- audio policy
+- local audio test/readiness controls
+- broadcast operations acceptance
+
+
+### Milestone 20
+
+Streaming output and encoder operations.
+
+Current work:
+
+- 20.1 stream destination profile foundation
+
+
+### Milestone 20
+
+Streaming output and encoder operations:
+
+- stream destination profile
+- stream destination operator UI
+- reachability probe
+- encoder session model
+- FFmpeg runtime adapter
+- telemetry and publish health
+- automatic recovery policy
+- runtime audit history
+- streaming readiness preflight
+- streaming operations acceptance
+
+## Current streaming checkpoint
+
+```text
+Milestone 20.10 complete
 ```

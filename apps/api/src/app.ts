@@ -37,6 +37,9 @@ import { registerScoreboardControlPolicyRoutes } from "./routes/scoreboardContro
 import { startScoreboardReadinessIncidentMonitor } from "./services/scoreboardReadinessIncidentMonitor.js";
 import { registerScoreboardDeviceCommissioningRoutes } from "./routes/scoreboardDeviceCommissioning.js";
 import { registerGameDayHardwarePreflightRoutes } from "./routes/gameDayHardwarePreflight.js";
+import { registerBroadcastSessionProfileRoutes } from "./routes/broadcastSessionProfiles.js";
+import { registerStreamDestinationProfileRoutes } from "./routes/streamDestinationProfiles.js";
+import { registerEncoderSessionRoutes } from "./routes/encoderSessions.js";
 
 import { scoreboardDevicesRoutes } from "./routes/scoreboardDevices.js";
 
@@ -122,6 +125,9 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     await app.register(simulationRoutes);
   await app.register(registerScoreboardDeviceCommissioningRoutes);
   await app.register(registerGameDayHardwarePreflightRoutes);
+  await app.register(registerBroadcastSessionProfileRoutes);
+  await app.register(registerStreamDestinationProfileRoutes);
+  await app.register(registerEncoderSessionRoutes);
   }
 
   await registerScoreboardDeviceEnrollmentRoutes(app);

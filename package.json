@@ -19,7 +19,7 @@
     "build:core": "npm run build --workspace=@sportsos/core",
     "build:api": "npm run build --workspace=@sportsos/api",
     "build:dashboard": "npm run build --workspace=@sportsos/dashboard",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run ci:prepare && npm run typecheck --workspaces --if-present",
     "lint": "prettier --check .",
     "format": "prettier --write .",
     "test": "npm run test --workspaces --if-present",
