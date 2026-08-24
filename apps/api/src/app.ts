@@ -41,6 +41,9 @@ import { registerBroadcastSessionProfileRoutes } from "./routes/broadcastSession
 import { registerStreamDestinationProfileRoutes } from "./routes/streamDestinationProfiles.js";
 import { registerEncoderSessionRoutes } from "./routes/encoderSessions.js";
 import { registerGoLiveSessionRoutes } from "./routes/goLiveSessions.js";
+import { startBroadcastCoordinatorSupervisor } from "./services/broadcastSessionCoordinatorSupervisor.js";
+import { listActiveBroadcastGameIds } from "./services/broadcastSessionCoordinator.js";
+import { registerBroadcastSessionCoordinatorRoutes } from "./routes/broadcastSessionCoordinator.js";
 
 import { scoreboardDevicesRoutes } from "./routes/scoreboardDevices.js";
 
@@ -77,6 +80,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     let stopClockExpirationService: (() => void) | undefined;
     let stopGameRuntimeSupervisor: (() => void) | undefined;
     let stopRealtimeOutboxDispatcher: (() => void) | undefined;
+    let stopBroadcastCoordinatorSupervisor: (() => void) | undefined;
 
     app.addHook("onReady", async () => {
       const recovered = await recoverGameClocksOnStartup();
@@ -96,12 +100,31 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
         onError: (error) =>
           app.log.error({ error }, "Game runtime supervisor failed"),
       });
+
+      stopBroadcastCoordinatorSupervisor =
+        startBroadcastCoordinatorSupervisor({
+          gameIds: () => listActiveBroadcastGameIds(),
+          intervalMs:
+            5000,
+          onError: (
+            error,
+            gameId,
+          ) =>
+            app.log.error(
+              {
+                error,
+                gameId,
+              },
+              "Broadcast coordinator supervisor tick failed",
+            ),
+        });
     });
 
     app.addHook("onClose", async () => {
       stopClockExpirationService?.();
       stopGameRuntimeSupervisor?.();
       stopRealtimeOutboxDispatcher?.();
+      stopBroadcastCoordinatorSupervisor?.();
     });
   }
 
@@ -130,6 +153,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(registerStreamDestinationProfileRoutes);
   await app.register(registerEncoderSessionRoutes);
   await app.register(registerGoLiveSessionRoutes);
+  await app.register(registerBroadcastSessionCoordinatorRoutes);
   }
 
   await registerScoreboardDeviceEnrollmentRoutes(app);
