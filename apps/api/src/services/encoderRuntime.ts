@@ -871,6 +871,26 @@ export async function startEncoderRuntime(input: {
     );
 }
 
+export function suppressEncoderRecovery(
+  gameId: string,
+): void {
+  const snapshot =
+    getEncoderRecoverySnapshot(
+      gameId,
+    );
+
+  recovery.set(
+    gameId,
+    {
+      ...snapshot,
+      state:
+        "EXHAUSTED",
+      nextRetryAt:
+        null,
+    },
+  );
+}
+
 export async function stopEncoderRuntime(
   gameId: string,
 ): Promise<void> {

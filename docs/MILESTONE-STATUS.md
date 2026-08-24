@@ -94,3 +94,31 @@ Streaming output and encoder operations:
 ```text
 Milestone 20.10 complete
 ```
+
+### Milestone 21
+
+Production streaming orchestration and game-day go-live.
+
+Current work:
+
+- 21.1 production go-live session foundation
+
+
+## Milestone 21 closeout
+
+Production streaming orchestration and game-day go-live:
+
+- production go-live session lifecycle
+- scheduled start window
+- scheduled auto-arm countdown
+- go-live health hold
+- live broadcast watchdog
+- degraded incident acknowledgement
+- emergency broadcast stop
+- go-live audit timeline
+- final game-day go-live preflight
+- production go-live acceptance
+
+```text
+Milestone 21.10 complete
+```

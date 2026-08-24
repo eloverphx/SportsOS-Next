@@ -40,6 +40,7 @@ import { registerGameDayHardwarePreflightRoutes } from "./routes/gameDayHardware
 import { registerBroadcastSessionProfileRoutes } from "./routes/broadcastSessionProfiles.js";
 import { registerStreamDestinationProfileRoutes } from "./routes/streamDestinationProfiles.js";
 import { registerEncoderSessionRoutes } from "./routes/encoderSessions.js";
+import { registerGoLiveSessionRoutes } from "./routes/goLiveSessions.js";
 
 import { scoreboardDevicesRoutes } from "./routes/scoreboardDevices.js";
 
@@ -128,6 +129,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   await app.register(registerBroadcastSessionProfileRoutes);
   await app.register(registerStreamDestinationProfileRoutes);
   await app.register(registerEncoderSessionRoutes);
+  await app.register(registerGoLiveSessionRoutes);
   }
 
   await registerScoreboardDeviceEnrollmentRoutes(app);
