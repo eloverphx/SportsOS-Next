@@ -31,6 +31,22 @@ import {
 import {
   evaluateResilienceRetryBudget,
 } from "../services/broadcastResilienceRetryBudget.js";
+import {
+  evaluateBroadcastReleaseReadiness,
+} from "../services/broadcastReleaseReadiness.js";
+import {
+  createDeploymentManifest,
+} from "../services/deploymentManifest.js";
+import {
+  evaluateDataMigrationReadiness,
+} from "../services/dataMigrationReadiness.js";
+import mysql from "mysql2/promise";
+import {
+  validateSecretEnvironment,
+} from "../services/secretEnvironmentValidation.js";
+import {
+  evaluateRollbackRestoreReadiness,
+} from "../services/rollbackRestoreReadiness.js";
 
 import {
   configureBroadcastCoordinatorRetry,
@@ -385,6 +401,129 @@ export async function registerBroadcastSessionCoordinatorRoutes(
             items.length,
           items,
         },
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/rollback-restore-readiness",
+    async () => {
+      return {
+        success: true,
+        data:
+          evaluateRollbackRestoreReadiness({
+            root:
+              process.cwd(),
+            dataDir:
+              process.env.SPORTSOS_DATA_DIR ??
+              null,
+            backupDir:
+              process.env.SPORTSOS_BACKUP_DIR ??
+              "/app/data/backups",
+          }),
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/secret-environment-validation",
+    async () => {
+      return {
+        success: true,
+        data:
+          validateSecretEnvironment(
+            process.env,
+          ),
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/data-migration-readiness",
+    async () => {
+      let mysqlReachable =
+        false;
+
+      try {
+        const connection =
+          await mysql.createConnection({
+            host:
+              process.env.MYSQL_HOST ??
+              "mysql",
+            port:
+              Number(
+                process.env.MYSQL_PORT ??
+                3306,
+              ),
+            database:
+              process.env.MYSQL_DATABASE,
+            user:
+              process.env.MYSQL_USER,
+            password:
+              process.env.MYSQL_PASSWORD,
+          });
+
+        try {
+          await connection.query(
+            "SELECT 1",
+          );
+
+          mysqlReachable =
+            true;
+        } finally {
+          await connection.end();
+        }
+      } catch {
+        mysqlReachable =
+          false;
+      }
+
+      return {
+        success: true,
+        data:
+          evaluateDataMigrationReadiness({
+            dataDir:
+              process.env.SPORTSOS_DATA_DIR ??
+              null,
+            mysqlReachable,
+            files: [
+              "broadcast-operator-notes.json",
+              "broadcast-recovery-snapshots.json",
+              "broadcast-session-profiles.json",
+              "stream-destination-profiles.json",
+              "encoder-sessions.json",
+              "encoder-runtime-audit.json",
+              "go-live-sessions.json",
+              "go-live-audit.json",
+              "broadcast-session-coordinator.json",
+              "broadcast-coordinator-audit.json",
+            ],
+          }),
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/deployment-manifest",
+    async () => {
+      return {
+        success: true,
+        data:
+          createDeploymentManifest(),
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/release-readiness",
+    async () => {
+      return {
+        success: true,
+        data:
+          evaluateBroadcastReleaseReadiness({
+            env:
+              process.env,
+          }),
       };
     },
   );

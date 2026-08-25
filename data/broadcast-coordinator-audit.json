@@ -184,6 +184,94 @@
       "timestamp": "2026-08-25T02:52:26.504Z",
       "correlationId": null,
       "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787627616921-2nlw9r",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STARTED",
+      "timestamp": "2026-08-25T03:13:36.921Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787628169698-jjgb9s",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STOPPED",
+      "timestamp": "2026-08-25T03:22:49.698Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787628197906-v4fiq5",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STARTED",
+      "timestamp": "2026-08-25T03:23:17.906Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787629295493-ts6dnu",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STOPPED",
+      "timestamp": "2026-08-25T03:41:35.493Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787629328922-9tpbvb",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STARTED",
+      "timestamp": "2026-08-25T03:42:08.922Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787629928331-l269qn",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STOPPED",
+      "timestamp": "2026-08-25T03:52:08.331Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787629952898-s5cszx",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STARTED",
+      "timestamp": "2026-08-25T03:52:32.898Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787630756417-nor52q",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STOPPED",
+      "timestamp": "2026-08-25T04:05:56.417Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787630794859-jveu7w",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STARTED",
+      "timestamp": "2026-08-25T04:06:34.859Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787658223600-7e6dlx",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STOPPED",
+      "timestamp": "2026-08-25T11:43:43.600Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787658265536-ivftig",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STARTED",
+      "timestamp": "2026-08-25T11:44:25.536Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
     }
   ]
 }
