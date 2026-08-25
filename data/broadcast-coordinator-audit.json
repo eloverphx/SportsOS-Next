@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "events": [
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787604132022-90flb5",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STARTED",
+      "timestamp": "2026-08-24T20:42:12.022Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787615499902-1poi0h",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STOPPED",
+      "timestamp": "2026-08-24T23:51:39.902Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787615528793-nzqtrk",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STARTED",
+      "timestamp": "2026-08-24T23:52:08.793Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787621790517-doo9jh",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STOPPED",
+      "timestamp": "2026-08-25T01:36:30.517Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787621836974-gz0krl",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STARTED",
+      "timestamp": "2026-08-25T01:37:16.974Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787622433658-lumtd5",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STOPPED",
+      "timestamp": "2026-08-25T01:47:13.658Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787622463985-qckrt5",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STARTED",
+      "timestamp": "2026-08-25T01:47:43.985Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787622703627-4ntx9n",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STOPPED",
+      "timestamp": "2026-08-25T01:51:43.627Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    },
+    {
+      "id": "broadcast-coordinator-audit-__runtime__-1787622733302-hlm2k1",
+      "gameId": "__runtime__",
+      "type": "SUPERVISOR_STARTED",
+      "timestamp": "2026-08-25T01:52:13.302Z",
+      "correlationId": null,
+      "detail": "intervalMs=5000"
+    }
+  ]
+}

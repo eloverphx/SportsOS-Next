@@ -130,3 +130,19 @@ Production broadcast automation and resilience.
 Current work:
 
 - 22.1 broadcast session coordinator foundation
+
+### Milestone 23
+
+Broadcast operations and operator experience.
+
+Current work:
+
+- 23.1 broadcast operations console foundation
+
+### Milestone 23
+
+Broadcast operations and operator experience.
+
+Current work:
+
+- 23.1 broadcast operations console foundation

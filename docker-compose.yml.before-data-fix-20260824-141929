@@ -90,9 +90,6 @@ services:
       MINIO_PORT: 9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-      SPORTSOS_DATA_DIR: /app/data
-    volumes:
-      - /mnt/user/appdata/SportsOS-Next/data:/app/data
     ports:
       - "4001:4001"
     depends_on:

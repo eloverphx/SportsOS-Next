@@ -4,6 +4,13 @@ import type {
 import {
   listBroadcastCoordinatorAudit,
 } from "../services/broadcastCoordinatorAudit.js";
+import {
+  listGoLiveAuditEvents,
+} from "../services/goLiveAudit.js";
+import {
+  addBroadcastOperatorNote,
+  listBroadcastOperatorNotes,
+} from "../services/broadcastOperatorNotes.js";
 
 import {
   configureBroadcastCoordinatorRetry,
@@ -225,6 +232,180 @@ export async function registerBroadcastSessionCoordinatorRoutes(
   );
 
   app.get(
+    "/broadcast-coordinator/attention-queue",
+    async () => {
+      const gameIds =
+        listActiveBroadcastGameIds();
+
+      const items =
+        gameIds
+          .map(
+            (gameId) => {
+              const snapshot =
+                getBroadcastCoordinatorSnapshot(
+                  gameId,
+                );
+
+              const health =
+                evaluateBroadcastCoordinatorHealth(
+                  gameId,
+                );
+
+              const retry =
+                getBroadcastCoordinatorRetry(
+                  gameId,
+                );
+
+              let severity:
+                | "CRITICAL"
+                | "HIGH"
+                | "MEDIUM"
+                | "LOW" =
+                "LOW";
+
+              let reason =
+                "Active broadcast requires no immediate attention.";
+
+              if (
+                snapshot.goLive.status ===
+                  "EMERGENCY_STOPPED"
+              ) {
+                severity =
+                  "CRITICAL";
+
+                reason =
+                  "Emergency stop is active.";
+              } else if (
+                !health.healthy
+              ) {
+                severity =
+                  "HIGH";
+
+                reason =
+                  health.issues
+                    .map(
+                      (issue) =>
+                        issue.message,
+                    )
+                    .join(" | ");
+              } else if (
+                snapshot.goLive.status ===
+                  "DEGRADED"
+              ) {
+                severity =
+                  "HIGH";
+
+                reason =
+                  snapshot.goLive.degradationReason ??
+                  "Broadcast is degraded.";
+              } else if (
+                retry.state ===
+                  "EXHAUSTED"
+              ) {
+                severity =
+                  "HIGH";
+
+                reason =
+                  retry.lastError ??
+                  "Coordinator retries are exhausted.";
+              } else if (
+                retry.state ===
+                  "SCHEDULED"
+              ) {
+                severity =
+                  "MEDIUM";
+
+                reason =
+                  retry.nextRetryAt
+                    ? `Coordinator retry scheduled for ${retry.nextRetryAt}.`
+                    : "Coordinator retry is scheduled.";
+              } else if (
+                snapshot.goLive.status ===
+                  "STARTING" ||
+                snapshot.goLive.status ===
+                  "STOPPING"
+              ) {
+                severity =
+                  "MEDIUM";
+
+                reason =
+                  `Go-live transition is ${snapshot.goLive.status}.`;
+              }
+
+              const score =
+                severity === "CRITICAL"
+                  ? 400
+                  : severity === "HIGH"
+                    ? 300
+                    : severity === "MEDIUM"
+                      ? 200
+                      : 100;
+
+              return {
+                gameId,
+                severity,
+                score,
+                reason,
+                health,
+                retry,
+                snapshot,
+              };
+            },
+          )
+          .sort(
+            (a, b) =>
+              b.score -
+              a.score,
+          );
+
+      return {
+        success: true,
+        data: {
+          count:
+            items.length,
+          items,
+        },
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/operations-summary",
+    async () => {
+      const gameIds =
+        listActiveBroadcastGameIds();
+
+      const items =
+        gameIds.map(
+          (gameId) => ({
+            gameId,
+            snapshot:
+              getBroadcastCoordinatorSnapshot(
+                gameId,
+              ),
+            health:
+              evaluateBroadcastCoordinatorHealth(
+                gameId,
+              ),
+            retry:
+              getBroadcastCoordinatorRetry(
+                gameId,
+              ),
+          }),
+        );
+
+      return {
+        success: true,
+        data: {
+          count:
+            items.length,
+          items,
+        },
+      };
+    },
+  );
+
+  app.get(
     "/broadcast-coordinator/active",
     async () => {
       const gameIds =
@@ -236,6 +417,311 @@ export async function registerBroadcastSessionCoordinatorRoutes(
           gameIds,
           count:
             gameIds.length,
+        },
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/:gameId/handoff-summary",
+    async (request, reply) => {
+      const gameId =
+        (request.params as {
+          gameId?: string;
+        }).gameId?.trim();
+
+      if (!gameId) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            "Game ID is required.",
+        });
+      }
+
+      const snapshot =
+        getBroadcastCoordinatorSnapshot(
+          gameId,
+        );
+
+      const health =
+        evaluateBroadcastCoordinatorHealth(
+          gameId,
+        );
+
+      const retry =
+        getBroadcastCoordinatorRetry(
+          gameId,
+        );
+
+      const notes =
+        listBroadcastOperatorNotes(
+          gameId,
+          5,
+        );
+
+      const coordinatorEvents =
+        listBroadcastCoordinatorAudit(
+          gameId,
+          10,
+        ).map(
+          (event) => ({
+            source:
+              "COORDINATOR",
+            type:
+              event.type,
+            timestamp:
+              event.timestamp,
+            detail:
+              event.detail,
+          }),
+        );
+
+      const goLiveEvents =
+        listGoLiveAuditEvents(
+          gameId,
+          10,
+        ).map(
+          (event) => ({
+            source:
+              "GO_LIVE",
+            type:
+              event.type,
+            timestamp:
+              event.timestamp,
+            detail:
+              event.detail,
+          }),
+        );
+
+      const recentEvents =
+        [
+          ...coordinatorEvents,
+          ...goLiveEvents,
+        ]
+          .sort(
+            (a, b) =>
+              Date.parse(
+                b.timestamp,
+              ) -
+              Date.parse(
+                a.timestamp,
+              ),
+          )
+          .slice(
+            0,
+            10,
+          );
+
+      return {
+        success: true,
+        data: {
+          gameId,
+          generatedAt:
+            new Date().toISOString(),
+          snapshot,
+          health,
+          retry,
+          notes,
+          recentEvents,
+        },
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/:gameId/operator-notes",
+    async (request, reply) => {
+      const gameId =
+        (request.params as {
+          gameId?: string;
+        }).gameId?.trim();
+
+      if (!gameId) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            "Game ID is required.",
+        });
+      }
+
+      return {
+        success: true,
+        data: {
+          notes:
+            listBroadcastOperatorNotes(
+              gameId,
+              100,
+            ),
+        },
+      };
+    },
+  );
+
+  app.post(
+    "/broadcast-coordinator/:gameId/operator-notes",
+    async (request, reply) => {
+      const gameId =
+        (request.params as {
+          gameId?: string;
+        }).gameId?.trim();
+
+      const body =
+        request.body as {
+          operator?: string;
+          note?: string;
+        };
+
+      if (!gameId) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            "Game ID is required.",
+        });
+      }
+
+      try {
+        const note =
+          addBroadcastOperatorNote({
+            gameId,
+            operator:
+              body.operator ??
+              "",
+            note:
+              body.note ??
+              "",
+          });
+
+        return {
+          success: true,
+          data: {
+            note,
+          },
+        };
+      } catch (error) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Unable to save operator note.",
+        });
+      }
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/:gameId/operator-timeline",
+    async (request, reply) => {
+      const gameId =
+        (request.params as {
+          gameId?: string;
+        }).gameId?.trim();
+
+      const query =
+        request.query as {
+          limit?: string;
+        };
+
+      if (!gameId) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            "Game ID is required.",
+        });
+      }
+
+      const parsedLimit =
+        Number.parseInt(
+          query.limit ??
+          "100",
+          10,
+        );
+
+      const limit =
+        Number.isFinite(
+          parsedLimit,
+        )
+          ? Math.max(
+              1,
+              Math.min(
+                parsedLimit,
+                200,
+              ),
+            )
+          : 100;
+
+      const coordinatorEvents =
+        listBroadcastCoordinatorAudit(
+          gameId,
+          limit,
+        ).map(
+          (event) => ({
+            id:
+              event.id,
+            source:
+              "COORDINATOR",
+            type:
+              event.type,
+            timestamp:
+              event.timestamp,
+            detail:
+              event.detail,
+            operator:
+              null,
+            correlationId:
+              event.correlationId,
+          }),
+        );
+
+      const goLiveEvents =
+        listGoLiveAuditEvents(
+          gameId,
+          limit,
+        ).map(
+          (event) => ({
+            id:
+              event.id,
+            source:
+              "GO_LIVE",
+            type:
+              event.type,
+            timestamp:
+              event.timestamp,
+            detail:
+              event.detail,
+            operator:
+              event.operator,
+            correlationId:
+              null,
+          }),
+        );
+
+      const events =
+        [
+          ...coordinatorEvents,
+          ...goLiveEvents,
+        ]
+          .sort(
+            (a, b) =>
+              Date.parse(
+                b.timestamp,
+              ) -
+              Date.parse(
+                a.timestamp,
+              ),
+          )
+          .slice(
+            0,
+            limit,
+          );
+
+      return {
+        success: true,
+        data: {
+          gameId,
+          count:
+            events.length,
+          events,
         },
       };
     },
