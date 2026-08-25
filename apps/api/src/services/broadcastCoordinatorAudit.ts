@@ -23,7 +23,10 @@ export type BroadcastCoordinatorAuditType =
   | "SUPERVISOR_ACTION_REFUSED"
   | "SUPERVISOR_STARTED"
   | "SUPERVISOR_STOPPED"
-  | "SUPERVISOR_TICK_FAILED";
+  | "SUPERVISOR_TICK_FAILED"
+  | "RECOVERY_REQUESTED"
+  | "RECOVERY_EXECUTED"
+  | "RECOVERY_REFUSED";
 
 export type BroadcastCoordinatorAuditEvent = {
   id: string;

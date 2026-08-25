@@ -11,6 +11,26 @@ import {
   addBroadcastOperatorNote,
   listBroadcastOperatorNotes,
 } from "../services/broadcastOperatorNotes.js";
+import {
+  evaluateBroadcastRuntimeHeartbeat,
+} from "../services/broadcastRuntimeHeartbeat.js";
+import {
+  evaluateBroadcastResilienceSupervisor,
+} from "../services/broadcastResilienceSupervisor.js";
+import {
+  executeControlledBroadcastRecovery,
+} from "../services/broadcastControlledRecovery.js";
+import {
+  getBroadcastRecoverySnapshot,
+  listBroadcastRecoverySnapshots,
+  saveBroadcastRecoverySnapshot,
+} from "../services/broadcastRecoverySnapshotStore.js";
+import {
+  classifyStreamDestinationFailure,
+} from "../services/streamDestinationFailurePolicy.js";
+import {
+  evaluateResilienceRetryBudget,
+} from "../services/broadcastResilienceRetryBudget.js";
 
 import {
   configureBroadcastCoordinatorRetry,
@@ -765,6 +785,492 @@ export async function registerBroadcastSessionCoordinatorRoutes(
                 ? parsed
                 : 100,
             ),
+        },
+      };
+    },
+  );
+
+  app.post(
+    "/broadcast-coordinator/:gameId/recovery/execute",
+    async (request, reply) => {
+      const gameId =
+        (request.params as {
+          gameId?: string;
+        }).gameId?.trim();
+
+      const body =
+        request.body as {
+          operator?: string;
+          approveDestructive?: boolean;
+        };
+
+      if (!gameId) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            "Game ID is required.",
+        });
+      }
+
+      const snapshot =
+        getBroadcastCoordinatorSnapshot(
+          gameId,
+        );
+
+      const lastActivityAt =
+        snapshot.runtime.telemetry.lastProgressAt ??
+        null;
+
+      const stateAgeMs =
+        lastActivityAt
+          ? Math.max(
+              0,
+              Date.now() -
+                Date.parse(
+                  lastActivityAt,
+                ),
+            )
+          : 0;
+
+      try {
+        const result =
+          await executeControlledBroadcastRecovery({
+            gameId,
+            operator:
+              body.operator ??
+              "",
+            approveDestructive:
+              body.approveDestructive ===
+              true,
+            coordinatorIntent:
+              snapshot.coordinator.intent,
+            runtimeStatus:
+              snapshot.runtime.session.status,
+            lastActivityAt,
+            stateAgeMs,
+          });
+
+        return {
+          success: true,
+          data:
+            result,
+        };
+      } catch (error) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Controlled recovery failed.",
+        });
+      }
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/recovery-snapshots",
+    async () => {
+      return {
+        success: true,
+        data: {
+          snapshots:
+            listBroadcastRecoverySnapshots(),
+        },
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/:gameId/recovery-snapshot",
+    async (request, reply) => {
+      const gameId =
+        (request.params as {
+          gameId?: string;
+        }).gameId?.trim();
+
+      if (!gameId) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            "Game ID is required.",
+        });
+      }
+
+      return {
+        success: true,
+        data: {
+          snapshot:
+            getBroadcastRecoverySnapshot(
+              gameId,
+            ),
+        },
+      };
+    },
+  );
+
+  app.post(
+    "/broadcast-coordinator/:gameId/recovery-snapshot/capture",
+    async (request, reply) => {
+      const gameId =
+        (request.params as {
+          gameId?: string;
+        }).gameId?.trim();
+
+      if (!gameId) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            "Game ID is required.",
+        });
+      }
+
+      const snapshot =
+        getBroadcastCoordinatorSnapshot(
+          gameId,
+        );
+
+      const lastActivityAt =
+        snapshot.runtime.telemetry.lastProgressAt ??
+        null;
+
+      const stateAgeMs =
+        lastActivityAt
+          ? Math.max(
+              0,
+              Date.now() -
+                Date.parse(
+                  lastActivityAt,
+                ),
+            )
+          : 0;
+
+      const decision =
+        evaluateBroadcastResilienceSupervisor({
+          coordinatorIntent:
+            snapshot.coordinator.intent,
+          runtimeStatus:
+            snapshot.runtime.session.status,
+          lastActivityAt,
+          stateAgeMs,
+        });
+
+      const captured =
+        saveBroadcastRecoverySnapshot({
+          gameId,
+          capturedAt:
+            new Date().toISOString(),
+          coordinatorIntent:
+            snapshot.coordinator.intent,
+          runtimeStatus:
+            snapshot.runtime.session.status,
+          lastActivityAt,
+          recoveryAction:
+            decision.recovery.action,
+          heartbeatState:
+            decision.heartbeat.state,
+        });
+
+      return {
+        success: true,
+        data: {
+          snapshot:
+            captured,
+        },
+      };
+    },
+  );
+
+  app.post(
+    "/broadcast-coordinator/:gameId/resilience-retry-budget",
+    async (request, reply) => {
+      const gameId =
+        (request.params as {
+          gameId?: string;
+        }).gameId?.trim();
+
+      const body =
+        request.body as {
+          attempts?: number;
+          maxAttempts?: number;
+          baseDelayMs?: number;
+          maxDelayMs?: number;
+          failure?: {
+            failureClass?: string;
+            action?: string;
+            retryable?: boolean;
+            reason?: string;
+          };
+        };
+
+      if (!gameId) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            "Game ID is required.",
+        });
+      }
+
+      if (!body.failure) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            "Failure classification is required.",
+        });
+      }
+
+      const decision =
+        evaluateResilienceRetryBudget({
+          attempts:
+            body.attempts ??
+            0,
+          maxAttempts:
+            body.maxAttempts,
+          baseDelayMs:
+            body.baseDelayMs,
+          maxDelayMs:
+            body.maxDelayMs,
+          failure: {
+            failureClass:
+              (body.failure.failureClass ??
+                "UNKNOWN") as any,
+            action:
+              (body.failure.action ??
+                "OPERATOR_REVIEW") as any,
+            retryable:
+              body.failure.retryable ===
+              true,
+            reason:
+              body.failure.reason ??
+              "Unspecified failure.",
+          },
+        });
+
+      return {
+        success: true,
+        data: {
+          gameId,
+          decision,
+        },
+      };
+    },
+  );
+
+  app.post(
+    "/broadcast-coordinator/:gameId/destination-failure/classify",
+    async (request, reply) => {
+      const gameId =
+        (request.params as {
+          gameId?: string;
+        }).gameId?.trim();
+
+      const body =
+        request.body as {
+          ok?: boolean;
+          statusCode?: number | null;
+          errorCode?: string | null;
+          message?: string | null;
+        };
+
+      if (!gameId) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            "Game ID is required.",
+        });
+      }
+
+      const decision =
+        classifyStreamDestinationFailure({
+          ok:
+            body.ok ===
+            true,
+          statusCode:
+            body.statusCode ??
+            null,
+          errorCode:
+            body.errorCode ??
+            null,
+          message:
+            body.message ??
+            null,
+        });
+
+      return {
+        success: true,
+        data: {
+          gameId,
+          decision,
+        },
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/:gameId/resilience-status",
+    async (request, reply) => {
+      const gameId =
+        (request.params as {
+          gameId?: string;
+        }).gameId?.trim();
+
+      if (!gameId) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            "Game ID is required.",
+        });
+      }
+
+      const snapshot =
+        getBroadcastCoordinatorSnapshot(
+          gameId,
+        );
+
+      const lastActivityAt =
+        snapshot.runtime.telemetry.lastProgressAt ??
+        null;
+
+      const stateAgeMs =
+        lastActivityAt
+          ? Math.max(
+              0,
+              Date.now() -
+                Date.parse(
+                  lastActivityAt,
+                ),
+            )
+          : 0;
+
+      const decision =
+        evaluateBroadcastResilienceSupervisor({
+          coordinatorIntent:
+            snapshot.coordinator.intent,
+          runtimeStatus:
+            snapshot.runtime.session.status,
+          lastActivityAt,
+          stateAgeMs,
+        });
+
+      return {
+        success: true,
+        data: {
+          gameId,
+          heartbeat:
+            decision.heartbeat,
+          recovery:
+            decision.recovery,
+          persistedSnapshot:
+            getBroadcastRecoverySnapshot(
+              gameId,
+            ),
+        },
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/:gameId/resilience-supervisor",
+    async (request, reply) => {
+      const gameId =
+        (request.params as {
+          gameId?: string;
+        }).gameId?.trim();
+
+      if (!gameId) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            "Game ID is required.",
+        });
+      }
+
+      const snapshot =
+        getBroadcastCoordinatorSnapshot(
+          gameId,
+        );
+
+      const telemetry =
+        snapshot.runtime.telemetry;
+
+      const session =
+        snapshot.runtime.session;
+
+      const lastActivityAt =
+        telemetry.lastProgressAt ??
+        null;
+
+      const stateAgeMs =
+        lastActivityAt
+          ? Math.max(
+              0,
+              Date.now() -
+                Date.parse(
+                  lastActivityAt,
+                ),
+            )
+          : 0;
+
+      const decision =
+        evaluateBroadcastResilienceSupervisor({
+          coordinatorIntent:
+            snapshot.coordinator.intent,
+          runtimeStatus:
+            session.status,
+          lastActivityAt,
+          stateAgeMs,
+        });
+
+      return {
+        success: true,
+        data: {
+          gameId,
+          decision,
+        },
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/:gameId/runtime-heartbeat",
+    async (request, reply) => {
+      const gameId =
+        (request.params as {
+          gameId?: string;
+        }).gameId?.trim();
+
+      if (!gameId) {
+        return reply.code(400).send({
+          success: false,
+          error:
+            "Game ID is required.",
+        });
+      }
+
+      const snapshot =
+        getBroadcastCoordinatorSnapshot(
+          gameId,
+        );
+
+      const session =
+        snapshot.runtime.session;
+
+      const telemetry =
+        snapshot.runtime.telemetry;
+
+      const lastActivityAt =
+        telemetry.lastProgressAt ??
+        null;
+
+      return {
+        success: true,
+        data: {
+          gameId,
+          heartbeat:
+            evaluateBroadcastRuntimeHeartbeat({
+              runtimeStatus:
+                session.status,
+              lastActivityAt,
+            }),
         },
       };
     },

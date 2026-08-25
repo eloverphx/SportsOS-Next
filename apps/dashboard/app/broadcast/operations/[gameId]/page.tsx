@@ -53,6 +53,29 @@ type CoordinatorRetry = {
   lastError: string | null;
 };
 
+type ResilienceStatus = {
+  heartbeat: {
+    state: string;
+    stale: boolean;
+    ageMs: number | null;
+    staleAfterMs: number;
+    reason: string;
+  };
+  recovery: {
+    action: string;
+    reason: string;
+    automatic: boolean;
+    destructive: boolean;
+  };
+  persistedSnapshot: {
+    capturedAt: string;
+    coordinatorIntent: string;
+    runtimeStatus: string;
+    recoveryAction: string;
+    heartbeatState: string;
+  } | null;
+};
+
 type HandoffSummary = {
   generatedAt: string;
   snapshot: CoordinatorSnapshot;
@@ -192,6 +215,26 @@ export default function BroadcastFocusPage() {
       null,
     );
 
+  const [
+    recoveryOperator,
+    setRecoveryOperator,
+  ] =
+    useState("");
+
+  const [
+    approveDestructiveRecovery,
+    setApproveDestructiveRecovery,
+  ] =
+    useState(false);
+
+  const [
+    resilienceStatus,
+    setResilienceStatus,
+  ] =
+    useState<ResilienceStatus | null>(
+      null,
+    );
+
   const load =
     useCallback(
       async () => {
@@ -201,6 +244,7 @@ export default function BroadcastFocusPage() {
           retryResponse,
           timelineResponse,
           notesResponse,
+          resilienceResponse,
         ] =
           await Promise.all([
             fetch(
@@ -238,6 +282,13 @@ export default function BroadcastFocusPage() {
                   "no-store",
               },
             ),
+            fetch(
+              `${API_BASE}/broadcast-coordinator/${encodeURIComponent(gameId)}/resilience-status`,
+              {
+                cache:
+                  "no-store",
+              },
+            ),
           ]);
 
         const snapshotJson =
@@ -254,6 +305,9 @@ export default function BroadcastFocusPage() {
 
         const notesJson =
           await notesResponse.json();
+
+        const resilienceJson =
+          await resilienceResponse.json();
 
         if (!snapshotResponse.ok) {
           throw new Error(
@@ -285,6 +339,11 @@ export default function BroadcastFocusPage() {
         setOperatorNotes(
           notesJson?.data?.notes ??
           [],
+        );
+
+        setResilienceStatus(
+          resilienceJson?.data ??
+          null,
         );
       },
       [
@@ -403,6 +462,81 @@ export default function BroadcastFocusPage() {
       [
         gameId,
         load,
+      ],
+    );
+
+  const executeRecovery =
+    useCallback(
+      async () => {
+        if (!recoveryOperator.trim()) {
+          setMessage(
+            "Operator name is required for controlled recovery.",
+          );
+          return;
+        }
+
+        setBusy(
+          true,
+        );
+
+        try {
+          const response =
+            await fetch(
+              `${API_BASE}/broadcast-coordinator/${encodeURIComponent(gameId)}/recovery/execute`,
+              {
+                method:
+                  "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json",
+                },
+                body:
+                  JSON.stringify({
+                    operator:
+                      recoveryOperator.trim(),
+                    approveDestructive:
+                      approveDestructiveRecovery,
+                  }),
+              },
+            );
+
+          const json =
+            await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              json?.error ??
+              "Controlled recovery failed.",
+            );
+          }
+
+          setMessage(
+            json?.data?.message ??
+            "Controlled recovery completed.",
+          );
+
+          setApproveDestructiveRecovery(
+            false,
+          );
+
+          await load();
+        } catch (error) {
+          setMessage(
+            error instanceof Error
+              ? error.message
+              : "Controlled recovery failed.",
+          );
+        } finally {
+          setBusy(
+            false,
+          );
+        }
+      },
+      [
+        approveDestructiveRecovery,
+        gameId,
+        load,
+        recoveryOperator,
       ],
     );
 
@@ -1005,6 +1139,170 @@ export default function BroadcastFocusPage() {
                 )
               )}
             </div>
+          </section>
+
+          <section className="mt-4 rounded-xl border border-slate-800 p-5">
+            <div className="text-sm font-semibold">
+              Resilience Telemetry
+            </div>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Read-only recovery context from heartbeat, supervisor, and persisted restart state.
+            </p>
+
+            {!resilienceStatus ? (
+              <div className="mt-3 text-xs text-slate-500">
+                Resilience status unavailable.
+              </div>
+            ) : (
+              <div className="mt-4 space-y-4">
+                <div className="grid gap-3 md:grid-cols-4">
+                  <div className="rounded border border-slate-800 p-3">
+                    <div className="text-xs text-slate-500">
+                      Heartbeat
+                    </div>
+                    <div className="mt-1 text-sm font-semibold">
+                      {resilienceStatus.heartbeat.state}
+                    </div>
+                  </div>
+
+                  <div className="rounded border border-slate-800 p-3">
+                    <div className="text-xs text-slate-500">
+                      Recovery Action
+                    </div>
+                    <div className="mt-1 text-sm font-semibold">
+                      {resilienceStatus.recovery.action}
+                    </div>
+                  </div>
+
+                  <div className="rounded border border-slate-800 p-3">
+                    <div className="text-xs text-slate-500">
+                      Automatic
+                    </div>
+                    <div className="mt-1 text-sm font-semibold">
+                      {resilienceStatus.recovery.automatic
+                        ? "YES"
+                        : "NO"}
+                    </div>
+                  </div>
+
+                  <div className="rounded border border-slate-800 p-3">
+                    <div className="text-xs text-slate-500">
+                      Destructive
+                    </div>
+                    <div className="mt-1 text-sm font-semibold">
+                      {resilienceStatus.recovery.destructive
+                        ? "YES"
+                        : "NO"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded border border-slate-800 p-3">
+                  <div className="text-xs font-semibold">
+                    Heartbeat Reason
+                  </div>
+                  <div className="mt-1 text-xs text-slate-400">
+                    {resilienceStatus.heartbeat.reason}
+                  </div>
+
+                  {resilienceStatus.heartbeat.ageMs !== null && (
+                    <div className="mt-1 text-[10px] text-slate-600">
+                      Age: {resilienceStatus.heartbeat.ageMs} ms · stale after {resilienceStatus.heartbeat.staleAfterMs} ms
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded border border-slate-800 p-3">
+                  <div className="text-xs font-semibold">
+                    Recovery Reason
+                  </div>
+                  <div className="mt-1 text-xs text-slate-400">
+                    {resilienceStatus.recovery.reason}
+                  </div>
+                </div>
+
+                <div className="rounded border border-slate-800 p-3">
+                  <div className="text-xs font-semibold">
+                    Persisted Recovery Snapshot
+                  </div>
+
+                  {!resilienceStatus.persistedSnapshot ? (
+                    <div className="mt-1 text-xs text-slate-500">
+                      No persisted recovery snapshot has been captured.
+                    </div>
+                  ) : (
+                    <div className="mt-2 space-y-1 text-xs text-slate-400">
+                      <div>
+                        Captured: {resilienceStatus.persistedSnapshot.capturedAt}
+                      </div>
+                      <div>
+                        Coordinator: {resilienceStatus.persistedSnapshot.coordinatorIntent}
+                      </div>
+                      <div>
+                        Runtime: {resilienceStatus.persistedSnapshot.runtimeStatus}
+                      </div>
+                      <div>
+                        Heartbeat: {resilienceStatus.persistedSnapshot.heartbeatState}
+                      </div>
+                      <div>
+                        Recovery: {resilienceStatus.persistedSnapshot.recoveryAction}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section className="mt-4 rounded-xl border border-amber-900/40 p-5">
+            <div className="text-sm font-semibold">
+              Controlled Recovery
+            </div>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Recovery recommendations remain operator-approved. Destructive recovery requires explicit approval.
+            </p>
+
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <input
+                value={recoveryOperator}
+                onChange={(event) =>
+                  setRecoveryOperator(
+                    event.target.value,
+                  )
+                }
+                placeholder="Operator name"
+                className="rounded-lg border border-slate-800 bg-transparent px-3 py-2 text-xs"
+              />
+
+              <label className="flex items-center gap-2 rounded-lg border border-slate-800 px-3 py-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={approveDestructiveRecovery}
+                  onChange={(event) =>
+                    setApproveDestructiveRecovery(
+                      event.target.checked,
+                    )
+                  }
+                />
+                Approve destructive recovery if recommended
+              </label>
+            </div>
+
+            <button
+              type="button"
+              disabled={
+                busy ||
+                !recoveryOperator.trim()
+              }
+              onClick={() =>
+                void executeRecovery()
+              }
+              className="mt-3 rounded-lg border border-amber-800 px-3 py-2 text-xs font-semibold disabled:opacity-50"
+            >
+              Execute Controlled Recovery
+            </button>
           </section>
 
           <section className="mt-4 rounded-xl border border-slate-800 p-5">
