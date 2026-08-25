@@ -52,3 +52,7 @@ scoring-console-debug.txt
 game-engine-*-unraid.sh
 game-engine-*-repair-unraid.sh
 *.bak-game-engine-*
+
+# SportsOS local security / installer backups
+.security-backups/
+.game-engine-backups/

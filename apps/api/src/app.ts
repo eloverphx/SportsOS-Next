@@ -44,6 +44,9 @@ import { registerGoLiveSessionRoutes } from "./routes/goLiveSessions.js";
 import { startBroadcastCoordinatorSupervisor } from "./services/broadcastSessionCoordinatorSupervisor.js";
 import { listActiveBroadcastGameIds } from "./services/broadcastSessionCoordinator.js";
 import { registerBroadcastSessionCoordinatorRoutes } from "./routes/broadcastSessionCoordinator.js";
+import {
+  securityHeadersPlugin,
+} from "./plugins/securityHeaders.js";
 
 import { scoreboardDevicesRoutes } from "./routes/scoreboardDevices.js";
 
@@ -65,7 +68,12 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     requestIdHeader: "x-request-id",
   });
 
-  await registerPlatformPlugins(app);
+  
+await securityHeadersPlugin(
+  app,
+);
+
+await registerPlatformPlugins(app);
 
   await app.register(scoreboardDevicesRoutes);
   await app.register(jwt, {

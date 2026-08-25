@@ -47,6 +47,18 @@ import {
 import {
   evaluateRollbackRestoreReadiness,
 } from "../services/rollbackRestoreReadiness.js";
+import {
+  evaluateCredentialRotationReadiness,
+} from "../services/credentialRotationReadiness.js";
+import {
+  evaluateSecretSourceHardening,
+} from "../services/secretSourceHardening.js";
+import {
+  evaluateSessionInvalidationReadiness,
+} from "../services/sessionInvalidationReadiness.js";
+import {
+  evaluateSecurityTelemetry,
+} from "../services/securityTelemetry.js";
 
 import {
   configureBroadcastCoordinatorRetry,
@@ -401,6 +413,219 @@ export async function registerBroadcastSessionCoordinatorRoutes(
             items.length,
           items,
         },
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/security-telemetry",
+    async () => {
+      const rollback =
+        evaluateRollbackRestoreReadiness({
+          root:
+            process.cwd(),
+          dataDir:
+            process.env.SPORTSOS_DATA_DIR ??
+            null,
+          backupDir:
+            process.env.SPORTSOS_BACKUP_DIR ??
+            "/app/data/backups",
+        });
+
+      let mysqlReachable =
+        false;
+
+      try {
+        const mysql =
+          await import(
+            "mysql2/promise",
+          );
+
+        const connection =
+          await mysql.default.createConnection({
+            host:
+              process.env.MYSQL_HOST ??
+              "mysql",
+            port:
+              Number(
+                process.env.MYSQL_PORT ??
+                3306,
+              ),
+            database:
+              process.env.MYSQL_DATABASE,
+            user:
+              process.env.MYSQL_USER,
+            password:
+              process.env.MYSQL_PASSWORD,
+          });
+
+        try {
+          await connection.query(
+            "SELECT 1",
+          );
+
+          mysqlReachable =
+            true;
+        } finally {
+          await connection.end();
+        }
+      } catch {
+        mysqlReachable =
+          false;
+      }
+
+      const migration =
+        evaluateDataMigrationReadiness({
+          dataDir:
+            process.env.SPORTSOS_DATA_DIR ??
+            null,
+          mysqlReachable,
+          files: [
+            "broadcast-operator-notes.json",
+            "broadcast-recovery-snapshots.json",
+            "broadcast-session-profiles.json",
+            "stream-destination-profiles.json",
+            "encoder-sessions.json",
+            "encoder-runtime-audit.json",
+            "go-live-sessions.json",
+            "go-live-audit.json",
+            "broadcast-session-coordinator.json",
+            "broadcast-coordinator-audit.json",
+          ],
+        });
+
+      return {
+        success: true,
+        data:
+          evaluateSecurityTelemetry({
+            root:
+              process.cwd(),
+            env:
+              process.env,
+            rollbackReady:
+              rollback.ready,
+            dataMigrationReady:
+              migration.ready,
+          }),
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/session-invalidation-readiness",
+    async () => {
+      return {
+        success: true,
+        data:
+          evaluateSessionInvalidationReadiness(
+            process.env,
+          ),
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/secret-source-hardening",
+    async () => {
+      return {
+        success: true,
+        data:
+          evaluateSecretSourceHardening({
+            root:
+              process.cwd(),
+          }),
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/credential-rotation-readiness",
+    async () => {
+      const rollback =
+        evaluateRollbackRestoreReadiness({
+          root:
+            process.cwd(),
+          dataDir:
+            process.env.SPORTSOS_DATA_DIR ??
+            null,
+          backupDir:
+            process.env.SPORTSOS_BACKUP_DIR ??
+            "/app/data/backups",
+        });
+
+      let mysqlReachable =
+        false;
+
+      try {
+        const mysql =
+          await import(
+            "mysql2/promise",
+          );
+
+        const connection =
+          await mysql.default.createConnection({
+            host:
+              process.env.MYSQL_HOST ??
+              "mysql",
+            port:
+              Number(
+                process.env.MYSQL_PORT ??
+                3306,
+              ),
+            database:
+              process.env.MYSQL_DATABASE,
+            user:
+              process.env.MYSQL_USER,
+            password:
+              process.env.MYSQL_PASSWORD,
+          });
+
+        try {
+          await connection.query(
+            "SELECT 1",
+          );
+
+          mysqlReachable =
+            true;
+        } finally {
+          await connection.end();
+        }
+      } catch {
+        mysqlReachable =
+          false;
+      }
+
+      const migration =
+        evaluateDataMigrationReadiness({
+          dataDir:
+            process.env.SPORTSOS_DATA_DIR ??
+            null,
+          mysqlReachable,
+          files: [
+            "broadcast-operator-notes.json",
+            "broadcast-recovery-snapshots.json",
+            "broadcast-session-profiles.json",
+            "stream-destination-profiles.json",
+            "encoder-sessions.json",
+            "encoder-runtime-audit.json",
+            "go-live-sessions.json",
+            "go-live-audit.json",
+            "broadcast-session-coordinator.json",
+            "broadcast-coordinator-audit.json",
+          ],
+        });
+
+      return {
+        success: true,
+        data:
+          evaluateCredentialRotationReadiness({
+            env:
+              process.env,
+            rollbackReady:
+              rollback.ready,
+            dataMigrationReady:
+              migration.ready,
+          }),
       };
     },
   );
