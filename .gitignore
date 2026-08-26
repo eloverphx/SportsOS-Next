@@ -56,3 +56,6 @@ game-engine-*-repair-unraid.sh
 # SportsOS local security / installer backups
 .security-backups/
 .game-engine-backups/
+.deployment-backups/
+/sportsos-milestone-*.sh
+/sportsos-crashthenet-online-production-domain-cutover.sh

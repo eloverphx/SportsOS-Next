@@ -59,6 +59,12 @@ import {
 import {
   evaluateSecurityTelemetry,
 } from "../services/securityTelemetry.js";
+import {
+  evaluateExternalHttpsReadiness,
+} from "../services/externalHttpsReadiness.js";
+import {
+  evaluateTrustedProxyReadiness,
+} from "../services/trustedProxyConfig.js";
 
 import {
   configureBroadcastCoordinatorRetry,
@@ -413,6 +419,32 @@ export async function registerBroadcastSessionCoordinatorRoutes(
             items.length,
           items,
         },
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/trusted-proxy-readiness",
+    async () => {
+      return {
+        success: true,
+        data:
+          evaluateTrustedProxyReadiness(
+            process.env,
+          ),
+      };
+    },
+  );
+
+  app.get(
+    "/broadcast-coordinator/external-https-readiness",
+    async () => {
+      return {
+        success: true,
+        data:
+          evaluateExternalHttpsReadiness(
+            process.env,
+          ),
       };
     },
   );

@@ -47,6 +47,24 @@ import { registerBroadcastSessionCoordinatorRoutes } from "./routes/broadcastSes
 import {
   securityHeadersPlugin,
 } from "./plugins/securityHeaders.js";
+import {
+  resolveTrustedProxyConfig,
+} from "./services/trustedProxyConfig.js";
+import {
+  getReverseProxyRouteContract,
+} from "./services/reverseProxyRouteContract.js";
+import {
+  evaluateTlsCertificateReadiness,
+} from "./services/tlsCertificateReadiness.js";
+import {
+  evaluateExternalHealthReadiness,
+} from "./services/externalHealthReadiness.js";
+import {
+  evaluateExternalRealtimeReadiness,
+} from "./services/externalRealtimeReadiness.js";
+import {
+  evaluatePublicExposureReadiness,
+} from "./services/publicExposureReadiness.js";
 
 import { scoreboardDevicesRoutes } from "./routes/scoreboardDevices.js";
 
@@ -62,9 +80,9 @@ export interface BuildAppOptions {
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: options.logger ?? true,
+    trustProxy: resolveTrustedProxyConfig(process.env),
+  logger: options.logger ?? true,
     bodyLimit: 6 * 1024 * 1024,
-    trustProxy: true,
     requestIdHeader: "x-request-id",
   });
 
@@ -75,7 +93,72 @@ await securityHeadersPlugin(
 
 await registerPlatformPlugins(app);
 
-  await app.register(scoreboardDevicesRoutes);
+  
+  
+  app.get(
+    "/deployment/public-exposure-readiness",
+    async () => {
+      return {
+        success: true,
+        data:
+          evaluatePublicExposureReadiness(
+            process.env,
+          ),
+      };
+    },
+  );
+
+app.get(
+    "/deployment/external-realtime-readiness",
+    async () => {
+      return {
+        success: true,
+        data:
+          evaluateExternalRealtimeReadiness(
+            process.env,
+          ),
+      };
+    },
+  );
+
+app.get(
+    "/deployment/external-health-readiness",
+    async () => {
+      return {
+        success: true,
+        data:
+          evaluateExternalHealthReadiness(
+            process.env,
+          ),
+      };
+    },
+  );
+
+app.get(
+    "/deployment/tls-certificate-readiness",
+    async () => {
+      return {
+        success: true,
+        data:
+          evaluateTlsCertificateReadiness(
+            process.env,
+          ),
+      };
+    },
+  );
+
+app.get(
+    "/deployment/reverse-proxy-route-contract",
+    async () => {
+      return {
+        success: true,
+        data:
+          getReverseProxyRouteContract(),
+      };
+    },
+  );
+
+await app.register(scoreboardDevicesRoutes);
   await app.register(jwt, {
     secret: config.auth.jwtSecret,
   });
