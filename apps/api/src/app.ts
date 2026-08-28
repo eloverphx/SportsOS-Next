@@ -1,3 +1,4 @@
+import { registerOperationsStatusRoutes } from "./routes/operationsStatus.js";
 import Fastify, { type FastifyInstance } from "fastify";
 import jwt from "@fastify/jwt";
 import { config } from "@sportsos/config";
@@ -245,6 +246,7 @@ await app.register(scoreboardDevicesRoutes);
   await app.register(registerEncoderSessionRoutes);
   await app.register(registerGoLiveSessionRoutes);
   await app.register(registerBroadcastSessionCoordinatorRoutes);
+  await app.register(registerOperationsStatusRoutes);
   }
 
   await registerScoreboardDeviceEnrollmentRoutes(app);
