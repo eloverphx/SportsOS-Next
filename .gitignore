@@ -59,3 +59,7 @@ game-engine-*-repair-unraid.sh
 .deployment-backups/
 /sportsos-milestone-*.sh
 /sportsos-crashthenet-online-production-domain-cutover.sh
+
+# SportsOS runtime data and local discovery artifacts - Milestone 31.2
+/data/
+/sportsos-*-discovery.sh
