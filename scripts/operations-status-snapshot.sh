@@ -129,3 +129,20 @@ console.log(`Operations status: ${payload.overallStatus}`);
 console.log(`Recent runs: ${totalRuns} total, ${passedRuns} passed, ${failedRuns} failed`);
 console.log(`Snapshot: ${latest}`);
 NODE
+
+# SPORTSOS_M30_2_2_STATUS_PERMISSION_NORMALIZATION
+# Keep protected operations status readable by the non-root API runtime.
+SPORTSOS_STATUS_RUNTIME_UID="${SPORTSOS_STATUS_RUNTIME_UID:-1000}"
+SPORTSOS_STATUS_RUNTIME_GID="${SPORTSOS_STATUS_RUNTIME_GID:-1000}"
+SPORTSOS_STATUS_PERMISSION_DIR="${SPORTSOS_STATUS_PERMISSION_DIR:-/mnt/user/appdata/SportsOS-Next/data/operations-status}"
+
+if [[ -d "$SPORTSOS_STATUS_PERMISSION_DIR" ]]; then
+  chown "$SPORTSOS_STATUS_RUNTIME_UID:$SPORTSOS_STATUS_RUNTIME_GID" "$SPORTSOS_STATUS_PERMISSION_DIR"
+  chmod 750 "$SPORTSOS_STATUS_PERMISSION_DIR"
+
+  while IFS= read -r -d '' status_file; do
+    chown "$SPORTSOS_STATUS_RUNTIME_UID:$SPORTSOS_STATUS_RUNTIME_GID" "$status_file"
+    chmod 640 "$status_file"
+  done < <(find "$SPORTSOS_STATUS_PERMISSION_DIR" -maxdepth 1 -type f -name '*.json' -print0)
+fi
+# END SPORTSOS_M30_2_2_STATUS_PERMISSION_NORMALIZATION

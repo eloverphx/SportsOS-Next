@@ -74,6 +74,8 @@ services:
     container_name: sportsos_api
     restart: unless-stopped
     environment:
+      SPORTSOS_OPERATIONS_STATUS_TOKEN: ${SPORTSOS_OPERATIONS_STATUS_TOKEN:-}
+      SPORTSOS_OPERATIONS_STATUS_API_ENABLED: ${SPORTSOS_OPERATIONS_STATUS_API_ENABLED:-false}
       PORT: 4001
       HOST: 0.0.0.0
       DASHBOARD_ORIGIN: ${SPORTSOS_DASHBOARD_URL}
@@ -121,6 +123,9 @@ services:
     container_name: sportsos_dashboard
     restart: unless-stopped
     environment:
+      SPORTSOS_API_INTERNAL_URL: ${SPORTSOS_API_INTERNAL_URL:-http://api:4001}
+      SPORTSOS_OPERATIONS_STATUS_TOKEN: ${SPORTSOS_OPERATIONS_STATUS_TOKEN:-}
+      SPORTSOS_OPERATIONS_DASHBOARD_ENABLED: ${SPORTSOS_OPERATIONS_DASHBOARD_ENABLED:-false}
       PORT: 4000
       HOSTNAME: 0.0.0.0
     ports:
