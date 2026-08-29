@@ -1,4 +1,5 @@
 import {
+  getOperationsIncidents,
   getOperationsStatus,
   type OperationResult,
   type OperationsSeverityReason,
@@ -80,7 +81,11 @@ function SeverityReason({
   );
 }
 
+import { IncidentActions } from "./IncidentActions"; // SPORTSOS_M34_7_DASHBOARD_ACTIONS
 export default async function OperationsPage() {
+  const incidentsResponse = await getOperationsIncidents();
+  const incidentData = incidentsResponse.data;
+
   const response = await getOperationsStatus();
 
   if (!response.success || !response.data) {
@@ -421,6 +426,89 @@ export default async function OperationsPage() {
 </section>
       ) : null}
 
-    </div>
+    
+      {/* SPORTSOS_M34_5_INCIDENT_PANEL */}
+      <section className="mt-6 rounded-xl border border-slate-800 bg-slate-950/60 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-100">
+              Production Incidents
+            </h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Read-only incident visibility synthesized from production operations,
+              reliability, and bounded recovery telemetry.
+            </p>
+          </div>
+          {incidentData ? (
+            <div className="text-right text-sm text-slate-300">
+              <div>
+                Active: {incidentData.summary.open + incidentData.summary.acknowledged}
+              </div>
+              <div className="text-slate-500">
+                Critical {incidentData.summary.critical} · Warning {incidentData.summary.warning}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        {!incidentData ? (
+          <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/50 p-4 text-sm text-slate-400">
+            Incident telemetry is currently unavailable.
+          </div>
+        ) : incidentData.incidents.length === 0 ? (
+          <div className="mt-4 rounded-lg border border-slate-800 bg-slate-900/50 p-4">
+            <div className="font-medium text-slate-200">No incidents recorded</div>
+            <div className="mt-1 text-sm text-slate-400">
+              No production incident has been synthesized into the durable incident journal.
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {incidentData.incidents.map((incident) => (
+              <article
+                key={incident.id}
+                className="rounded-lg border border-slate-800 bg-slate-900/50 p-4"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-slate-100">
+                        {incident.title}
+                      </span>
+                      <span className="rounded border border-slate-700 px-2 py-0.5 text-xs uppercase text-slate-300">
+                        {incident.severity}
+                      </span>
+                      <span className="rounded border border-slate-700 px-2 py-0.5 text-xs uppercase text-slate-300">
+                        {incident.status}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-300">
+                      {incident.summary}
+                    </p>
+                  </div>
+                  <div className="text-right text-xs text-slate-500">
+                    <div>{incident.source}</div>
+                    {incident.service ? <div>{incident.service}</div> : null}
+                  </div>
+                </div>
+
+                <div className="mt-3 grid gap-2 text-xs text-slate-400 sm:grid-cols-2 lg:grid-cols-4">
+                  <div>Occurrences: {incident.occurrences}</div>
+                  <div>First seen: {incident.firstSeenAt}</div>
+                  <div>Last seen: {incident.lastSeenAt}</div>
+                  <div>Events: {incident.events.length}</div>
+                </div>
+                <IncidentActions incidentId={incident.id} status={incident.status} />
+              </article>
+            ))}
+          </div>
+        )}
+
+        <p className="mt-4 text-xs text-slate-500">
+          Operator actions are authenticated server-side and recorded in the durable incident journal.
+        </p>
+      </section>
+
+      </div>
   );
 }

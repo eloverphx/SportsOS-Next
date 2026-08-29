@@ -68,6 +68,7 @@ import {
 } from "./services/publicExposureReadiness.js";
 
 import { scoreboardDevicesRoutes } from "./routes/scoreboardDevices.js";
+import { registerOperationsIncidentRoutes } from "./routes/operationsIncidents.js";
 
 export interface BuildAppOptions {
   readonly logger?: boolean;
@@ -250,6 +251,7 @@ await app.register(scoreboardDevicesRoutes);
   }
 
   await registerScoreboardDeviceEnrollmentRoutes(app);
+  await registerOperationsIncidentRoutes(app);
   await registerScoreboardFirmwareReleaseRoutes(app);
   await registerScoreboardFirmwareArtifactRoutes(app);
   await registerScoreboardFirmwareDeploymentStatusRoutes(app);
