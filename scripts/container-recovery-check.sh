@@ -3,6 +3,7 @@ set -euo pipefail
 # SPORTSOS_M32_5_BOUNDED_SELF_HEALING
 
 ROOT="${1:-/mnt/user/appdata/SportsOS-Next}"
+source "${ROOT}/scripts/lib/recovery-policy.sh"
 EXPECTED_ROOT="/mnt/user/appdata/SportsOS-Next"
 
 STATE_DIR="${SPORTSOS_RECOVERY_STATE_DIR:-${ROOT}/data/operations-recovery}"
@@ -11,12 +12,6 @@ ACTION_LOG="${STATE_DIR}/recovery-actions.tsv"
 LOCK_FILE="${STATE_DIR}/recovery-engine.lock"
 
 APPLY_RECOVERY="${SPORTSOS_APPLY_RECOVERY:-0}"
-RESTART_DELTA_THRESHOLD="${SPORTSOS_RECOVERY_RESTART_DELTA_THRESHOLD:-3}"
-COOLDOWN_SECONDS="${SPORTSOS_RECOVERY_COOLDOWN_SECONDS:-900}"
-BUDGET_WINDOW_SECONDS="${SPORTSOS_RECOVERY_BUDGET_WINDOW_SECONDS:-3600}"
-MAX_ACTIONS_PER_WINDOW="${SPORTSOS_RECOVERY_MAX_ACTIONS_PER_WINDOW:-2}"
-POST_RECOVERY_TIMEOUT_SECONDS="${SPORTSOS_RECOVERY_POST_TIMEOUT_SECONDS:-60}"
-
 ROOT_REAL="$(readlink -f "$ROOT" 2>/dev/null || true)"
 EXPECTED_REAL="$(readlink -f "$EXPECTED_ROOT" 2>/dev/null || true)"
 
@@ -64,19 +59,7 @@ if ! flock -n 9; then
   exit 0
 fi
 
-# format: compose-service:container-name:auto-recovery-policy
-# auto = eligible for one bounded `docker compose restart`
-# monitor = diagnostics only; requires operator intervention
-containers=(
-  "api:sportsos_api:auto"
-  "dashboard:sportsos_dashboard:auto"
-  "mysql:sportsos_mysql:monitor"
-  "redis:sportsos_redis:monitor"
-  "mqtt:sportsos_mqtt:auto"
-  "minio:sportsos_minio:monitor"
-  "scoreboard-simulator:sportsos_scoreboard_simulator:auto"
-)
-
+# Recovery policy is defined centrally by M33.5.
 declare -A previous_counts
 if [[ -f "$STATE_FILE" ]]; then
   while IFS='=' read -r key value; do

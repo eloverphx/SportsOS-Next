@@ -30,6 +30,7 @@ export type OperationResult = {
 };
 
 export type OperationsStatusSnapshot = {
+  recovery?: OperationsRecoveryStatus;
   schemaVersion: number;
   generatedAt: string;
   windowHours: number;
@@ -133,3 +134,48 @@ export async function getOperationsStatus(): Promise<
 
   return body;
 }
+
+
+// SPORTSOS_M33_3_RECOVERY_TYPES
+export type OperationsRecoveryAction = {
+  timestamp: number | null;
+  time: string | null;
+  service: string;
+  container: string;
+  action: string;
+  result: string;
+};
+
+export type OperationsRecoveryService = {
+  service: string;
+  policy: "auto" | "monitor";
+  restartCount: number;
+};
+
+export type OperationsRecoveryStatus = {
+  schemaVersion: number;
+  generatedAt: string;
+  mode: "bounded";
+  defaults: {
+    restartDeltaThreshold: number;
+    cooldownSeconds: number;
+    budgetWindowSeconds: number;
+    maxActionsPerWindow: number;
+    postRecoveryTimeoutSeconds: number;
+  };
+  summary: {
+    servicesMonitored: number;
+    autoRecoveryServices: number;
+    monitorOnlyServices: number;
+    totalSuccessfulRecoveries: number;
+    totalBlockedRecoveries: number;
+    totalFailedRecoveries: number;
+    recentSuccessfulRecoveries: number;
+    recentBlockedRecoveries: number;
+  };
+  lastSuccessfulRecovery: OperationsRecoveryAction | null;
+  lastBlockedRecovery: OperationsRecoveryAction | null;
+  lastFailedRecovery: OperationsRecoveryAction | null;
+  services: OperationsRecoveryService[];
+  recentActions: OperationsRecoveryAction[];
+};

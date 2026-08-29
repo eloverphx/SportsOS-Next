@@ -9,34 +9,39 @@ function repoFile(path: string): string {
 describe("Milestone 32 runtime self-healing release contract", () => {
   it("keeps the recovery engine bounded and dry-run by default", () => {
     const script = repoFile("scripts/container-recovery-check.sh");
+    const policy = repoFile("scripts/lib/recovery-policy.sh");
+    expect(script).toContain('source "${ROOT}/scripts/lib/recovery-policy.sh"');
+    expect(policy).toContain("SPORTSOS_M33_5_SHARED_RECOVERY_POLICY");
 
     expect(script).toContain("SPORTSOS_M32_5_BOUNDED_SELF_HEALING");
     expect(script).toContain('APPLY_RECOVERY="${SPORTSOS_APPLY_RECOVERY:-0}"');
-    expect(script).toContain("SPORTSOS_RECOVERY_COOLDOWN_SECONDS");
-    expect(script).toContain("SPORTSOS_RECOVERY_BUDGET_WINDOW_SECONDS");
-    expect(script).toContain("SPORTSOS_RECOVERY_MAX_ACTIONS_PER_WINDOW");
-    expect(script).toContain("SPORTSOS_RECOVERY_POST_TIMEOUT_SECONDS");
+    expect(policy).toContain("SPORTSOS_RECOVERY_COOLDOWN_SECONDS");
+    expect(policy).toContain("SPORTSOS_RECOVERY_BUDGET_WINDOW_SECONDS");
+    expect(policy).toContain("SPORTSOS_RECOVERY_MAX_ACTIONS_PER_WINDOW");
+    expect(policy).toContain("SPORTSOS_RECOVERY_POST_TIMEOUT_SECONDS");
     expect(script).toContain("flock -n");
     expect(script).toContain("recovery-actions.tsv");
   });
 
   it("allows bounded recovery only for the intended stateless/control services", () => {
     const script = repoFile("scripts/container-recovery-check.sh");
+    const policy = repoFile("scripts/lib/recovery-policy.sh");
 
-    expect(script).toContain('"api:sportsos_api:auto"');
-    expect(script).toContain('"dashboard:sportsos_dashboard:auto"');
-    expect(script).toContain('"mqtt:sportsos_mqtt:auto"');
-    expect(script).toContain(
+    expect(policy).toContain('"api:sportsos_api:auto"');
+    expect(policy).toContain('"dashboard:sportsos_dashboard:auto"');
+    expect(policy).toContain('"mqtt:sportsos_mqtt:auto"');
+    expect(policy).toContain(
       '"scoreboard-simulator:sportsos_scoreboard_simulator:auto"',
     );
   });
 
   it("keeps stateful services monitor-only", () => {
     const script = repoFile("scripts/container-recovery-check.sh");
+    const policy = repoFile("scripts/lib/recovery-policy.sh");
 
-    expect(script).toContain('"mysql:sportsos_mysql:monitor"');
-    expect(script).toContain('"redis:sportsos_redis:monitor"');
-    expect(script).toContain('"minio:sportsos_minio:monitor"');
+    expect(policy).toContain('"mysql:sportsos_mysql:monitor"');
+    expect(policy).toContain('"redis:sportsos_redis:monitor"');
+    expect(policy).toContain('"minio:sportsos_minio:monitor"');
   });
 
   it("activates bounded recovery only in the scheduled Unraid recovery wrapper", () => {

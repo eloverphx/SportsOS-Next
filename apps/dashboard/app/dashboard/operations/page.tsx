@@ -4,6 +4,28 @@ import {
   type OperationsSeverityReason,
 } from "./operationsStatus";
 
+
+type RecoveryGuardrailService = {
+  service: string;
+  policy: "auto" | "monitor";
+  restartCount?: number;
+  guardrailState:
+    | "ready"
+    | "cooldown"
+    | "budget-exhausted"
+    | "monitor-only";
+  eligible: boolean;
+  blockedReason:
+    | "cooldown"
+    | "budget-exhausted"
+    | "monitor-only"
+    | null;
+  successfulActionsInWindow: number;
+  remainingBudget: number;
+  cooldownRemainingSeconds: number;
+};
+
+// SPORTSOS_M33_6_5_DASHBOARD_GUARDRAILS
 export const dynamic = "force-dynamic";
 
 function statusText(result: OperationResult | null): string {
@@ -247,6 +269,158 @@ export default async function OperationsPage() {
           </ul>
         </section>
       ) : null}
+
+      {/* SPORTSOS_M33_3_RECOVERY_DASHBOARD */}
+      {response.data?.recovery ? (
+        <section className="mt-8 space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold">Runtime Recovery</h2>
+            <p className="text-sm text-slate-400">
+              Bounded production self-healing status and recent recovery activity.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+              <div className="text-sm text-slate-400">Recovery mode</div>
+              <div className="mt-1 text-lg font-semibold capitalize">
+                {response.data?.recovery.mode}
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+              <div className="text-sm text-slate-400">Successful recoveries</div>
+              <div className="mt-1 text-lg font-semibold">
+                {response.data?.recovery.summary.totalSuccessfulRecoveries}
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+              <div className="text-sm text-slate-400">Blocked recoveries</div>
+              <div className="mt-1 text-lg font-semibold">
+                {response.data?.recovery.summary.totalBlockedRecoveries}
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+              <div className="text-sm text-slate-400">Failed recoveries</div>
+              <div className="mt-1 text-lg font-semibold">
+                {response.data?.recovery.summary.totalFailedRecoveries}
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+            <h3 className="font-semibold">Recovery guardrails</h3>
+            <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+              <div>Cooldown: {response.data?.recovery.defaults.cooldownSeconds}s</div>
+              <div>
+                Budget: {response.data?.recovery.defaults.maxActionsPerWindow} /{" "}
+                {response.data?.recovery.defaults.budgetWindowSeconds}s
+              </div>
+              <div>
+                Restart delta: {response.data?.recovery.defaults.restartDeltaThreshold}
+              </div>
+              <div>
+                Health timeout: {response.data?.recovery.defaults.postRecoveryTimeoutSeconds}s
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+            <h3 className="font-semibold">Service recovery policy</h3>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="text-slate-400">
+                  <tr>
+                    <th className="py-2 pr-4">Service</th>
+                    <th className="py-2 pr-4">Policy</th>
+                    <th className="py-2">Restart count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {response.data?.recovery.services.map((service) => (
+                    <tr key={service.service} className="border-t border-slate-800">
+                      <td className="py-2 pr-4">{service.service}</td>
+                      <td className="py-2 pr-4">
+                        {service.policy === "auto" ? "Auto recovery" : "Monitor only"}
+                      </td>
+                      <td className="py-2">{service.restartCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+            <h3 className="font-semibold">Recent recovery activity</h3>
+            {response.data?.recovery.recentActions.length > 0 ? (
+              <div className="mt-3 space-y-2">
+                {response.data?.recovery.recentActions.slice(0, 10).map((entry, index) => (
+                  <div
+                    key={`${entry.timestamp ?? "none"}-${entry.service}-${index}`}
+                    className="rounded-lg border border-slate-800 p-3 text-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-medium">{entry.service}</span>
+                      <span className="text-slate-400">
+                        {entry.time ?? "Unknown time"}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-slate-300">
+                      {entry.action}: {entry.result}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-slate-400">
+                No recovery actions recorded.
+              </p>
+            )}
+          </div>
+        
+        <section className="mt-6">
+          <h3 className="text-lg font-semibold">Recovery Guardrails</h3>
+          <p className="mt-1 text-sm text-slate-400">
+            Live bounded-recovery eligibility. Observability only.
+          </p>
+          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {(((response.data?.recovery?.services ?? []) as unknown) as RecoveryGuardrailService[]).map(
+              (service) => (
+                <div
+                  key={`guardrail-${service.service}`}
+                  className="rounded-lg border border-slate-800 p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-medium">{service.service}</span>
+                    <span className="text-sm font-semibold">
+                      {service.guardrailState === "ready"
+                        ? "READY"
+                        : service.guardrailState === "cooldown"
+                          ? "COOLDOWN"
+                          : service.guardrailState === "budget-exhausted"
+                            ? "BUDGET EXHAUSTED"
+                            : "MONITOR ONLY"}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-xs text-slate-400">
+                    Policy: {service.policy} · Eligible:{" "}
+                    {service.eligible ? "yes" : "no"}
+                  </div>
+                  <div className="mt-1 text-xs text-slate-400">
+                    Successful in window: {service.successfulActionsInWindow} ·
+                    Remaining budget: {service.remainingBudget}
+                  </div>
+                  <div className="mt-1 text-xs text-slate-400">
+                    Cooldown remaining: {service.cooldownRemainingSeconds}s
+                  </div>
+                </div>
+              ),
+            )}
+          </div>
+        </section>
+</section>
+      ) : null}
+
     </div>
   );
 }
