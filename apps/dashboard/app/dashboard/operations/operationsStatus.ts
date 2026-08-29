@@ -1,3 +1,27 @@
+
+/* SPORTSOS_M35_5_ESCALATION_STATUS_TYPES */
+export type IncidentEscalationEvent = {
+  observedAt: string | null;
+  incidentId: string | null;
+  severity: string | null;
+  action: string | null;
+  result: string | null;
+  detail: string | null;
+};
+
+export type IncidentEscalationStatus = {
+  schemaVersion: 1;
+  available: boolean;
+  stateFilePresent: boolean;
+  auditFilePresent: boolean;
+  trackedIncidents: number;
+  auditEventCount: number;
+  recentEventCount: number;
+  recentDeliveryFailureCount: number;
+  lastEvent: IncidentEscalationEvent | null;
+  recentEvents: IncidentEscalationEvent[];
+};
+
 export type OperationsSeverityReason = {
   severity: string;
   reason: string;
@@ -66,6 +90,8 @@ export type OperationsStatusSnapshot = {
     failedRuns: number;
     passedRuns: number;
   };
+
+  incidentEscalation?: IncidentEscalationStatus; // SPORTSOS_M35_5_5_SNAPSHOT_ESCALATION_TYPE
 };
 
 type OperationsStatusResponse = {

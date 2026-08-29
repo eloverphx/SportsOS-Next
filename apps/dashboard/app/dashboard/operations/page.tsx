@@ -428,7 +428,114 @@ export default async function OperationsPage() {
 
     
       {/* SPORTSOS_M34_5_INCIDENT_PANEL */}
-      <section className="mt-6 rounded-xl border border-slate-800 bg-slate-950/60 p-5">
+      
+      {/* SPORTSOS_M35_5_ESCALATION_DASHBOARD */}
+      {/* SPORTSOS_M35_5_4_RESPONSE_DATA_BINDING */}
+      <section className="mt-6 rounded-xl border border-slate-800 bg-slate-950/50 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Incident Escalation Delivery</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Notification delivery telemetry from the production incident escalation engine.
+            </p>
+          </div>
+          <div className="text-right text-sm text-slate-400">
+            <div>
+              {response.data?.incidentEscalation?.available
+                ? "Telemetry active"
+                : "No delivery telemetry yet"}
+            </div>
+            <div>
+              {response.data?.incidentEscalation?.recentDeliveryFailureCount ?? 0} recent delivery failures
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border border-slate-800 p-3">
+            <div className="text-xs uppercase tracking-wide text-slate-500">
+              Tracked incidents
+            </div>
+            <div className="mt-1 text-2xl font-semibold">
+              {response.data?.incidentEscalation?.trackedIncidents ?? 0}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-800 p-3">
+            <div className="text-xs uppercase tracking-wide text-slate-500">
+              Audit events
+            </div>
+            <div className="mt-1 text-2xl font-semibold">
+              {response.data?.incidentEscalation?.auditEventCount ?? 0}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-800 p-3">
+            <div className="text-xs uppercase tracking-wide text-slate-500">
+              Recent events
+            </div>
+            <div className="mt-1 text-2xl font-semibold">
+              {response.data?.incidentEscalation?.recentEventCount ?? 0}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-800 p-3">
+            <div className="text-xs uppercase tracking-wide text-slate-500">
+              Delivery failures
+            </div>
+            <div className="mt-1 text-2xl font-semibold">
+              {response.data?.incidentEscalation?.recentDeliveryFailureCount ?? 0}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <h3 className="text-sm font-medium text-slate-300">
+            Recent escalation activity
+          </h3>
+
+          {(response.data?.incidentEscalation?.recentEvents.length ?? 0) === 0 ? (
+            <p className="mt-2 text-sm text-slate-500">
+              No escalation delivery events have been recorded yet.
+            </p>
+          ) : (
+            <div className="mt-2 space-y-2">
+              {response.data?.incidentEscalation?.recentEvents
+                .slice(0, 8)
+                .map((event, index) => (
+                  <div
+                    key={`${event.observedAt ?? "unknown"}-${event.incidentId ?? "none"}-${index}`}
+                    className="rounded-lg border border-slate-800 px-3 py-2 text-sm"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="font-medium text-slate-200">
+                        {event.severity ?? "unknown"} · {event.action ?? "event"} ·{" "}
+                        {event.result ?? "unknown"}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {event.observedAt ?? "unknown time"}
+                      </div>
+                    </div>
+
+                    {event.incidentId ? (
+                      <div className="mt-1 font-mono text-xs text-slate-500">
+                        Incident {event.incidentId}
+                      </div>
+                    ) : null}
+
+                    {event.detail ? (
+                      <div className="mt-1 text-xs text-slate-400">
+                        {event.detail}
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+<section className="mt-6 rounded-xl border border-slate-800 bg-slate-950/60 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold text-slate-100">

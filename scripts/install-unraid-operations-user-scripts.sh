@@ -91,3 +91,4 @@ echo "Installation complete."
 echo
 echo "Open Unraid -> Settings -> User Scripts and verify the four SportsOS entries."
 echo "The plugin remains responsible for applying its schedules."
+

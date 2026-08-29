@@ -48,7 +48,23 @@ run_step() {
   fi
 }
 
+
+# SPORTSOS_M35_2_INCIDENT_ESCALATION_RUNNER
+run_incident_escalation() {
+  local escalation_script="${ROOT}/scripts/operations-incident-escalation.sh"
+
+  if [[ ! -x "$escalation_script" ]]; then
+    echo "ERROR: incident escalation script is missing or not executable: $escalation_script" >&2
+    return 1
+  fi
+
+  bash "$escalation_script" "$ROOT"
+}
+
 case "$MODE" in
+  incident-escalation)
+    run_incident_escalation
+    ;;
   health|alert|recovery|mysql-backup|persistent-backup|backup-all|restore-rehearsal|retention|daily|weekly|reliability-alert)
     ;;
   observability-refresh)

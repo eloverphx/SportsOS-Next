@@ -5,6 +5,7 @@ import {
   acknowledgeOperationsIncident,
   findOperationsIncidentById,
   listOperationsIncidents,
+  openOrUpdateOperationsIncident,
   resolveOperationsIncident,
 } from "../services/operationsIncidentJournal.js";
 
@@ -171,6 +172,52 @@ export async function registerOperationsIncidentRoutes(
           },
         });
       }
+
+      return reply.code(200).send({
+        success: true,
+        data: {
+          schemaVersion: 1,
+          incident,
+        },
+      });
+    },
+  );
+
+  // SPORTSOS_M35_6_DELIVERY_FAILURE_SIGNAL_ROUTE
+  app.post<{
+    Body: {
+      incidentId?: string;
+      channel?: string;
+      detail?: string | null;
+      observedAt?: string;
+    };
+  }>(
+    `${OPERATIONS_INCIDENTS_PATH}/signals/escalation-delivery-failure`,
+    async (request, reply) => {
+      setProtectedResponseHeaders(reply);
+      if (!(await authorize(request, reply))) return;
+
+      const incidentId = request.body?.incidentId?.trim() || null;
+      const channel = request.body?.channel?.trim() || "webhook";
+      const detail = request.body?.detail?.trim() || null;
+      const observedAt = request.body?.observedAt?.trim() || undefined;
+
+      const incident = await openOrUpdateOperationsIncident({
+        fingerprint:
+          "operations:incident-escalation-delivery-failure",
+        source: "operations",
+        severity: "critical",
+        title: "Incident escalation delivery failure",
+        summary:
+          "SportsOS could not deliver an incident escalation notification.",
+        service: "incident-escalation",
+        metadata: {
+          channel,
+          failedIncidentId: incidentId,
+          detail,
+        },
+        observedAt,
+      });
 
       return reply.code(200).send({
         success: true,

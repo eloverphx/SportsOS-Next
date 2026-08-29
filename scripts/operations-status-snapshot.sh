@@ -419,3 +419,51 @@ NODE
 
 chown 1000:1000 "$SPORTSOS_M33_6_STATUS_FILE" 2>/dev/null || true
 chmod 640 "$SPORTSOS_M33_6_STATUS_FILE" 2>/dev/null || true
+
+# SPORTSOS_M35_4_ESCALATION_STATUS_MERGE
+# Add notification/escalation delivery observability after the existing
+# operations snapshot has been fully produced. This does not alter recovery.
+M35_4_STATUS_FILE="${ROOT}/data/operations-status/latest.json"
+M35_4_ESCALATION_COLLECTOR="${ROOT}/scripts/operations-incident-escalation-status.sh"
+
+if [[ -f "$M35_4_STATUS_FILE" && -x "$M35_4_ESCALATION_COLLECTOR" ]]; then
+  M35_4_ESCALATION_JSON="$("$M35_4_ESCALATION_COLLECTOR" "$ROOT")"
+
+  node - "$M35_4_STATUS_FILE" "$M35_4_ESCALATION_JSON" <<'M35_4_NODE'
+const fs = require("fs");
+const path = require("path");
+
+const statusFile = process.argv[2];
+const escalation = JSON.parse(process.argv[3]);
+
+const status = JSON.parse(fs.readFileSync(statusFile, "utf8"));
+status.incidentEscalation = escalation;
+
+const tempFile =
+  statusFile +
+  ".m35-4-" +
+  process.pid +
+  "-" +
+  Date.now() +
+  ".tmp";
+
+fs.writeFileSync(
+  tempFile,
+  JSON.stringify(status, null, 2) + "\n",
+  { mode: 0o640 },
+);
+
+fs.renameSync(tempFile, statusFile);
+
+// SPORTSOS_M35_4_1_STATUS_OWNERSHIP
+// API container runs as uid/gid 1000:1000 and requires read access.
+try {
+  fs.chownSync(statusFile, 1000, 1000);
+} catch {}
+
+try {
+  fs.chmodSync(statusFile, 0o640);
+} catch {}
+M35_4_NODE
+fi
+

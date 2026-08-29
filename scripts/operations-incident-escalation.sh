@@ -33,6 +33,22 @@ DRY_RUN="${SPORTSOS_INCIDENT_ESCALATION_DRY_RUN:-0}"
 
 mkdir -p "$STATE_DIR"
 
+# SPORTSOS_M35_2_ESCALATION_PERMISSION_NORMALIZATION
+# Runtime escalation telemetry is operator-readable but not world-writable.
+# Match the production Node service identity already used by operations status.
+chown 1000:1000 "$STATE_DIR" 2>/dev/null || true
+chmod 0750 "$STATE_DIR"
+
+if [[ -f "$STATE_FILE" ]]; then
+  chown 1000:1000 "$STATE_FILE" 2>/dev/null || true
+  chmod 0640 "$STATE_FILE"
+fi
+
+if [[ -f "$AUDIT_FILE" ]]; then
+  chown 1000:1000 "$AUDIT_FILE" 2>/dev/null || true
+  chmod 0640 "$AUDIT_FILE"
+fi
+
 exec 9>"$LOCK_FILE"
 if ! flock -n 9; then
   echo "Incident escalation already running; exiting."
@@ -46,9 +62,11 @@ fi
 
 node - "$INCIDENT_FILE" "$STATE_FILE" "$AUDIT_FILE" \
   "$WARNING_ESCALATE_SECONDS" "$CRITICAL_ESCALATE_SECONDS" "$REPEAT_SECONDS" \
-  "$WEBHOOK_URL" "$DRY_RUN" <<'NODE'
+  "$WEBHOOK_URL" "$DRY_RUN" "$ROOT" <<'NODE'
 const fs = require("fs");
 const path = require("path");
+// SPORTSOS_M35_7_3_SINGLE_PATH_REQUIRE
+
 const { spawnSync } = require("child_process");
 
 const [
@@ -60,6 +78,7 @@ const [
   repeatSecondsRaw,
   webhookUrl,
   dryRunRaw,
+  rootDir,
 ] = process.argv.slice(2);
 
 const warningSeconds = Number(warningSecondsRaw);
@@ -85,6 +104,93 @@ function writeAtomic(file, value) {
 
 function appendAudit(fields) {
   fs.appendFileSync(auditFile, fields.join("\t") + "\n", { mode: 0o640 });
+}
+
+// SPORTSOS_M35_6_DELIVERY_FAILURE_SIGNAL
+function readDotEnvValue(key) {
+  if (process.env[key]?.trim()) {
+    return process.env[key].trim();
+  }
+
+  const envFile = path.join(rootDir, ".env");
+  if (!fs.existsSync(envFile)) return "";
+
+  const lines = fs.readFileSync(envFile, "utf8").split(/\r?\n/);
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    const separator = line.indexOf("=");
+    if (separator < 1) continue;
+
+    const name = line.slice(0, separator).trim();
+    if (name !== key) continue;
+
+    let value = line.slice(separator + 1).trim();
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    return value.trim();
+  }
+
+  return "";
+}
+
+function signalDeliveryFailure(incident, detail) {
+  const token = readDotEnvValue("SPORTSOS_OPERATIONS_STATUS_TOKEN");
+  if (token.length < 32) {
+    console.error(
+      "Unable to persist escalation delivery-failure incident: Operations token is unavailable.",
+    );
+    return false;
+  }
+
+  const baseUrl = (
+    readDotEnvValue("SPORTSOS_OPERATIONS_INTERNAL_API_URL") ||
+    "http://127.0.0.1:4001"
+  ).replace(/\/$/, "");
+
+  const response = spawnSync(
+    "curl",
+    [
+      "--fail",
+      "--silent",
+      "--show-error",
+      "--max-time",
+      "10",
+      "-H",
+      `Authorization: Bearer ${token}`,
+      "-H",
+      "Content-Type: application/json",
+      "--data-binary",
+      JSON.stringify({
+        incidentId: incident.id,
+        channel: "webhook",
+        detail,
+        observedAt: nowIso,
+      }),
+      `${baseUrl}/deployment/operations/incidents/signals/escalation-delivery-failure`,
+    ],
+    {
+      encoding: "utf8",
+      stdio: ["ignore", "ignore", "pipe"],
+    },
+  );
+
+  if (response.status !== 0) {
+    console.error(
+      "Unable to persist escalation delivery-failure incident through protected Operations API.",
+    );
+    return false;
+  }
+
+  return true;
 }
 
 function secondsBetween(fromIso, toMs) {
@@ -193,6 +299,13 @@ for (const incident of active) {
         "webhook",
         String(ageSeconds),
       ]);
+
+      const deliveryDetail =
+        typeof delivery.stderr === "string" && delivery.stderr.trim()
+          ? delivery.stderr.trim().slice(0, 500)
+          : "Webhook delivery failed.";
+
+      signalDeliveryFailure(incident, deliveryDetail);
       continue;
     }
 
@@ -225,6 +338,14 @@ for (const [incidentId] of Object.entries(state.incidents)) {
 }
 
 writeAtomic(stateFile, state);
+
+try {
+  fs.chmodSync(stateFile, 0o640);
+} catch {}
+
+try {
+  fs.chmodSync(auditFile, 0o640);
+} catch {}
 
 console.log(
   JSON.stringify({
