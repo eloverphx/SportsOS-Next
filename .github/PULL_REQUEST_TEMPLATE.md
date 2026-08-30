@@ -20,3 +20,13 @@ Describe what changed and why.
 ## Deployment notes
 
 List migrations, environment changes, rebuild requirements, or operational checks. Write "None" when not applicable.
+
+<!-- SPORTSOS_M36_1_RELEASE_GOVERNANCE -->
+## Release and dependency governance
+
+- [ ] The branch is based on the current `main` release lineage.
+- [ ] CI is green for the candidate commit before merge/release.
+- [ ] Dependency changes are isolated from unrelated product changes when practical.
+- [ ] Security-related dependency updates identify the advisory/update being addressed and include focused regression coverage.
+- [ ] Major-version dependency upgrades are reviewed and validated independently; they are not treated as routine auto-merge updates.
+- [ ] Release tags are annotated and created only after the full release gate passes.
