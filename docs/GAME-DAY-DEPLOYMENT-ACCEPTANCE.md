@@ -53,3 +53,9 @@ Milestones 18.1 through 18.10 establish the game-day preflight safety boundary:
 - acceptance criteria
 
 Future scoreboard work should preserve this boundary and add regression coverage when changing start authorization, assignment behavior, device communication, or preflight semantics.
+
+## Milestone 18.11 corrective closeout
+
+The authoritative `startGame` boundary now resolves the current scoreboard assignment before lifecycle mutation and passes that device ID into the game-day preflight guard.
+
+This closes two gaps: device swaps now invalidate an older preflight, and preflight/readiness rejection occurs before `applyGameScoringAction()` can mutate lifecycle state. Emergency override lookup is also scoped to the currently assigned device.

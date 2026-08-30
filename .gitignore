@@ -52,3 +52,14 @@ scoring-console-debug.txt
 game-engine-*-unraid.sh
 game-engine-*-repair-unraid.sh
 *.bak-game-engine-*
+
+# SportsOS local security / installer backups
+.security-backups/
+.game-engine-backups/
+.deployment-backups/
+/sportsos-milestone-*.sh
+/sportsos-crashthenet-online-production-domain-cutover.sh
+
+# SportsOS runtime data and local discovery artifacts - Milestone 31.2
+/data/
+/sportsos-*-discovery.sh

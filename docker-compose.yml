@@ -74,6 +74,8 @@ services:
     container_name: sportsos_api
     restart: unless-stopped
     environment:
+      SPORTSOS_OPERATIONS_STATUS_TOKEN: ${SPORTSOS_OPERATIONS_STATUS_TOKEN:-}
+      SPORTSOS_OPERATIONS_STATUS_API_ENABLED: ${SPORTSOS_OPERATIONS_STATUS_API_ENABLED:-false}
       PORT: 4001
       HOST: 0.0.0.0
       DASHBOARD_ORIGIN: ${SPORTSOS_DASHBOARD_URL}
@@ -90,6 +92,9 @@ services:
       MINIO_PORT: 9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      SPORTSOS_DATA_DIR: /app/data
+    volumes:
+      - /mnt/user/appdata/SportsOS-Next/data:/app/data
     ports:
       - "4001:4001"
     depends_on:
@@ -118,6 +123,9 @@ services:
     container_name: sportsos_dashboard
     restart: unless-stopped
     environment:
+      SPORTSOS_API_INTERNAL_URL: ${SPORTSOS_API_INTERNAL_URL:-http://api:4001}
+      SPORTSOS_OPERATIONS_STATUS_TOKEN: ${SPORTSOS_OPERATIONS_STATUS_TOKEN:-}
+      SPORTSOS_OPERATIONS_DASHBOARD_ENABLED: ${SPORTSOS_OPERATIONS_DASHBOARD_ENABLED:-false}
       PORT: 4000
       HOSTNAME: 0.0.0.0
     ports:

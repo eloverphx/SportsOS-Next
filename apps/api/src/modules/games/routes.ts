@@ -587,69 +587,8 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       throw error;
     }
 
-    let result;
-    try {
-      result = await applyGameScoringAction(
-        id.data,
-        action,
-        parsed.data.commandId,
-      );
-    } catch (error) {
-      if (error instanceof IdempotencyConflictError) {
-        return reply.code(409).send({ error: error.message });
-      }
-      if (error instanceof GamePhaseError) {
-        return reply.code(400).send({ error: error.message });
-      }
-      throw error;
-    }
-
-    if (!result) {
-      if (parsed.data.commandId) {
-        const game = await findGameById(id.data);
-
-    // PREGAME_SCOREBOARD_READINESS_GATE_16_9
-    // Enforce only the explicit startGame lifecycle command. Other
-    // startClock operations (period resume, recovery, etc.) remain unchanged.
+    // AUTHORITATIVE_ASSIGNMENT_BOUND_START_GATE_18_11
     if (parsed.data.command === "startGame") {
-
-      // GAME_START_PREFLIGHT_ENFORCEMENT_18_4
-      const gameStartPreflight =
-        evaluateGameStartPreflight(
-          String(id.data),
-        );
-
-      if (
-        !gameStartPreflight.allowed
-      ) {
-        // GAME_START_PREFLIGHT_OVERRIDE_18_6
-        const activeEmergencyOverride =
-          getActiveGameStartPreflightOverride(
-            String(id.data),
-            gameStartPreflight.deviceId ??
-              "",
-          );
-
-        if (
-          !activeEmergencyOverride
-        ) {
-
-        return reply.code(409).send({
-          success: false,
-          error: {
-            code:
-              gameStartPreflight.code,
-            message:
-              gameStartPreflight.message,
-          },
-          data: {
-            preflight:
-              gameStartPreflight,
-          },
-        });
-        }
-      }
-
       const assignmentsResponse = await app.inject({
         method: "GET",
         url: "/scoreboard-devices/assignments",
@@ -683,10 +622,38 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
           assignedDeviceId =
             assignments.find(
               (item) =>
-                String(item.gameId) === String(id.data),
+                String(item.gameId) ===
+                String(id.data),
             )?.deviceId ?? null;
         } catch {
           assignedDeviceId = null;
+        }
+      }
+
+      const gameStartPreflight =
+        evaluateGameStartPreflight(
+          String(id.data),
+          assignedDeviceId,
+        );
+
+      if (!gameStartPreflight.allowed) {
+        const activeEmergencyOverride =
+          getActiveGameStartPreflightOverride(
+            String(id.data),
+            assignedDeviceId ?? "",
+          );
+
+        if (!activeEmergencyOverride) {
+          return reply.code(409).send({
+            success: false,
+            error: {
+              code: gameStartPreflight.code,
+              message: gameStartPreflight.message,
+            },
+            data: {
+              preflight: gameStartPreflight,
+            },
+          });
         }
       }
 
@@ -707,7 +674,28 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       }
     }
 
-        if (!game) return reply.code(404).send({ error: "Game not found" });
+    let result;
+    try {
+      result = await applyGameScoringAction(
+        id.data,
+        action,
+        parsed.data.commandId,
+      );
+    } catch (error) {
+      if (error instanceof IdempotencyConflictError) {
+        return reply.code(409).send({ error: error.message });
+      }
+      if (error instanceof GamePhaseError) {
+        return reply.code(400).send({ error: error.message });
+      }
+      throw error;
+    }
+
+    if (!result) {
+      if (parsed.data.commandId) {
+        const game = await findGameById(id.data);
+
+            if (!game) return reply.code(404).send({ error: "Game not found" });
 
         recordEngineTransition({
           source: "operator",

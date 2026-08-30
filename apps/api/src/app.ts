@@ -1,3 +1,4 @@
+import { registerOperationsStatusRoutes } from "./routes/operationsStatus.js";
 import Fastify, { type FastifyInstance } from "fastify";
 import jwt from "@fastify/jwt";
 import { config } from "@sportsos/config";
@@ -37,8 +38,37 @@ import { registerScoreboardControlPolicyRoutes } from "./routes/scoreboardContro
 import { startScoreboardReadinessIncidentMonitor } from "./services/scoreboardReadinessIncidentMonitor.js";
 import { registerScoreboardDeviceCommissioningRoutes } from "./routes/scoreboardDeviceCommissioning.js";
 import { registerGameDayHardwarePreflightRoutes } from "./routes/gameDayHardwarePreflight.js";
+import { registerBroadcastSessionProfileRoutes } from "./routes/broadcastSessionProfiles.js";
+import { registerStreamDestinationProfileRoutes } from "./routes/streamDestinationProfiles.js";
+import { registerEncoderSessionRoutes } from "./routes/encoderSessions.js";
+import { registerGoLiveSessionRoutes } from "./routes/goLiveSessions.js";
+import { startBroadcastCoordinatorSupervisor } from "./services/broadcastSessionCoordinatorSupervisor.js";
+import { listActiveBroadcastGameIds } from "./services/broadcastSessionCoordinator.js";
+import { registerBroadcastSessionCoordinatorRoutes } from "./routes/broadcastSessionCoordinator.js";
+import {
+  securityHeadersPlugin,
+} from "./plugins/securityHeaders.js";
+import {
+  resolveTrustedProxyConfig,
+} from "./services/trustedProxyConfig.js";
+import {
+  getReverseProxyRouteContract,
+} from "./services/reverseProxyRouteContract.js";
+import {
+  evaluateTlsCertificateReadiness,
+} from "./services/tlsCertificateReadiness.js";
+import {
+  evaluateExternalHealthReadiness,
+} from "./services/externalHealthReadiness.js";
+import {
+  evaluateExternalRealtimeReadiness,
+} from "./services/externalRealtimeReadiness.js";
+import {
+  evaluatePublicExposureReadiness,
+} from "./services/publicExposureReadiness.js";
 
 import { scoreboardDevicesRoutes } from "./routes/scoreboardDevices.js";
+import { registerOperationsIncidentRoutes } from "./routes/operationsIncidents.js";
 
 export interface BuildAppOptions {
   readonly logger?: boolean;
@@ -52,15 +82,85 @@ export interface BuildAppOptions {
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: options.logger ?? true,
+    trustProxy: resolveTrustedProxyConfig(process.env),
+  logger: options.logger ?? true,
     bodyLimit: 6 * 1024 * 1024,
-    trustProxy: true,
     requestIdHeader: "x-request-id",
   });
 
-  await registerPlatformPlugins(app);
+  
+await securityHeadersPlugin(
+  app,
+);
 
-  await app.register(scoreboardDevicesRoutes);
+await registerPlatformPlugins(app);
+
+  
+  
+  app.get(
+    "/deployment/public-exposure-readiness",
+    async () => {
+      return {
+        success: true,
+        data:
+          evaluatePublicExposureReadiness(
+            process.env,
+          ),
+      };
+    },
+  );
+
+app.get(
+    "/deployment/external-realtime-readiness",
+    async () => {
+      return {
+        success: true,
+        data:
+          evaluateExternalRealtimeReadiness(
+            process.env,
+          ),
+      };
+    },
+  );
+
+app.get(
+    "/deployment/external-health-readiness",
+    async () => {
+      return {
+        success: true,
+        data:
+          evaluateExternalHealthReadiness(
+            process.env,
+          ),
+      };
+    },
+  );
+
+app.get(
+    "/deployment/tls-certificate-readiness",
+    async () => {
+      return {
+        success: true,
+        data:
+          evaluateTlsCertificateReadiness(
+            process.env,
+          ),
+      };
+    },
+  );
+
+app.get(
+    "/deployment/reverse-proxy-route-contract",
+    async () => {
+      return {
+        success: true,
+        data:
+          getReverseProxyRouteContract(),
+      };
+    },
+  );
+
+await app.register(scoreboardDevicesRoutes);
   await app.register(jwt, {
     secret: config.auth.jwtSecret,
   });
@@ -73,6 +173,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     let stopClockExpirationService: (() => void) | undefined;
     let stopGameRuntimeSupervisor: (() => void) | undefined;
     let stopRealtimeOutboxDispatcher: (() => void) | undefined;
+    let stopBroadcastCoordinatorSupervisor: (() => void) | undefined;
 
     app.addHook("onReady", async () => {
       const recovered = await recoverGameClocksOnStartup();
@@ -92,12 +193,31 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
         onError: (error) =>
           app.log.error({ error }, "Game runtime supervisor failed"),
       });
+
+      stopBroadcastCoordinatorSupervisor =
+        startBroadcastCoordinatorSupervisor({
+          gameIds: () => listActiveBroadcastGameIds(),
+          intervalMs:
+            5000,
+          onError: (
+            error,
+            gameId,
+          ) =>
+            app.log.error(
+              {
+                error,
+                gameId,
+              },
+              "Broadcast coordinator supervisor tick failed",
+            ),
+        });
     });
 
     app.addHook("onClose", async () => {
       stopClockExpirationService?.();
       stopGameRuntimeSupervisor?.();
       stopRealtimeOutboxDispatcher?.();
+      stopBroadcastCoordinatorSupervisor?.();
     });
   }
 
@@ -122,9 +242,16 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     await app.register(simulationRoutes);
   await app.register(registerScoreboardDeviceCommissioningRoutes);
   await app.register(registerGameDayHardwarePreflightRoutes);
+  await app.register(registerBroadcastSessionProfileRoutes);
+  await app.register(registerStreamDestinationProfileRoutes);
+  await app.register(registerEncoderSessionRoutes);
+  await app.register(registerGoLiveSessionRoutes);
+  await app.register(registerBroadcastSessionCoordinatorRoutes);
+  await app.register(registerOperationsStatusRoutes);
   }
 
   await registerScoreboardDeviceEnrollmentRoutes(app);
+  await registerOperationsIncidentRoutes(app);
   await registerScoreboardFirmwareReleaseRoutes(app);
   await registerScoreboardFirmwareArtifactRoutes(app);
   await registerScoreboardFirmwareDeploymentStatusRoutes(app);

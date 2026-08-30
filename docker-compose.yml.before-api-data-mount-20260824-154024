@@ -1,0 +1,161 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: sportsos_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - sportsos_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: sportsos_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - sportsos_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: sportsos_mqtt
+    restart: unless-stopped
+    ports:
+      - "4012:1883"
+    volumes:
+      - ./docker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - sportsos_mqtt:/mosquitto/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mosquitto_sub -h localhost -t '$$SYS/broker/version' -C 1 -W 3 >/dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: sportsos_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "4013:9000"
+      - "4014:9001"
+    volumes:
+      - sportsos_minio:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: sportsos_api
+    restart: unless-stopped
+    environment:
+      PORT: 4001
+      HOST: 0.0.0.0
+      DASHBOARD_ORIGIN: ${SPORTSOS_DASHBOARD_URL}
+      PUBLIC_API_URL: ${SPORTSOS_API_URL}
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_URL: redis://redis:6379
+      MQTT_URL: mqtt://mqtt:1883
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "4001:4001"
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      mqtt: { condition: service_healthy }
+      minio: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:4001/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${SPORTSOS_API_URL}
+    container_name: sportsos_dashboard
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "4000:4000"
+    depends_on:
+      api: { condition: service_healthy }
+
+  scoreboard-simulator:
+    build:
+      context: .
+      dockerfile: apps/scoreboard-simulator/Dockerfile
+    container_name: sportsos_scoreboard_simulator
+    restart: unless-stopped
+    environment:
+      API_URL: http://api:4001
+      SCOREBOARD_DEVICE_ID: ${SCOREBOARD_DEVICE_ID:-0}
+      SCOREBOARD_DEVICE_KEY: ${SCOREBOARD_DEVICE_KEY:-}
+      PORT: 4020
+      HEARTBEAT_INTERVAL_MS: 30000
+      GAME_POLL_INTERVAL_MS: 2000
+    ports:
+      - "4020:4020"
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:4020/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  sportsos_mysql:
+  sportsos_redis:
+  sportsos_mqtt:
+  sportsos_minio:
