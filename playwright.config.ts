@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const dashboardUrl = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:4000";
+const dashboardPort = process.env.PLAYWRIGHT_PORT ?? "4000";
+const dashboardUrl = process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${dashboardPort}`;
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:4001";
 
 export default defineConfig({
@@ -23,12 +24,15 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev --workspace=@sportsos/dashboard",
+    command: process.env.CI
+      ? `npm exec --workspace=@sportsos/dashboard next -- start -p ${dashboardPort}`
+      : `npm exec --workspace=@sportsos/dashboard next -- dev -p ${dashboardPort}`,
     url: dashboardUrl,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {
       ...process.env,
+      NODE_ENV: process.env.CI ? "production" : (process.env.NODE_ENV ?? "development"),
       NEXT_PUBLIC_API_URL: apiUrl,
       NEXT_TELEMETRY_DISABLED: "1",
     },
