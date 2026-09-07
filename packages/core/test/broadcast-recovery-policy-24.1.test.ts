@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  evaluateBroadcastRecovery,
-} from "../../../apps/api/src/services/broadcastRecoveryPolicy";
+import { evaluateBroadcastRecovery } from "../../../apps/api/src/services/broadcastRecoveryPolicy";
 
 describe("Milestone 24.1 broadcast recovery policy", () => {
   it("does not restart a missing live runtime automatically", () => {

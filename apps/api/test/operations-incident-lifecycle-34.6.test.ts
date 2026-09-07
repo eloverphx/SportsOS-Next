@@ -62,8 +62,11 @@ describe("Milestone 34.6 incident lifecycle", () => {
     });
     expect(resolved?.status).toBe("resolved");
     expect(resolved?.resolvedBy).toBe("operator@example.test");
-    expect(resolved?.events.map((event) => event.type))
-      .toEqual(["opened", "acknowledged", "resolved"]);
+    expect(resolved?.events.map((event) => event.type)).toEqual([
+      "opened",
+      "acknowledged",
+      "resolved",
+    ]);
   });
 
   it("requires authorization for lifecycle routes", async () => {
@@ -132,17 +135,17 @@ describe("Milestone 34.6 incident lifecycle", () => {
   });
 
   it("keeps synthesis separate from operator lifecycle authority", async () => {
-    const synthesis = await import(
-      "../src/services/operationsIncidentSynthesis.js"
-    );
+    const synthesis = await import("../src/services/operationsIncidentSynthesis.js");
     expect(
       synthesis.synthesizeOperationsIncidentCandidates({
         recovery: {
-          services: [{
-            service: "api",
-            guardrailState: "budget-exhausted",
-            remainingBudget: 0,
-          }],
+          services: [
+            {
+              service: "api",
+              guardrailState: "budget-exhausted",
+              remainingBudget: 0,
+            },
+          ],
         },
       })[0]?.fingerprint,
     ).toBe("recovery:api:budget-exhausted");

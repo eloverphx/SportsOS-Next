@@ -1,11 +1,7 @@
 import { createGameEvent } from "../game-events/repository.js";
 import { applyGameScoringAction } from "../games/repository.js";
-import type {
-  SimulatedGame,
-} from "./tournament-simulator.js";
-import type {
-  TournamentRunnerAdapter,
-} from "./tournament-runner.js";
+import type { SimulatedGame } from "./tournament-simulator.js";
+import type { TournamentRunnerAdapter } from "./tournament-runner.js";
 
 export interface SportsOSSimulationGameBinding {
   simulatedGameId: number;
@@ -33,9 +29,7 @@ function safeRunId(value: string): string {
     .slice(0, 40);
 
   if (normalized.length < 4) {
-    throw new SimulationBindingError(
-      "Simulation runId must contain at least four safe characters",
-    );
+    throw new SimulationBindingError("Simulation runId must contain at least four safe characters");
   }
 
   return normalized;
@@ -47,9 +41,7 @@ export function createSportsOSSimulationAdapter(
   const runId = safeRunId(options.runId);
 
   if (!options.actorUserId.trim()) {
-    throw new SimulationBindingError(
-      "Simulation actorUserId is required",
-    );
+    throw new SimulationBindingError("Simulation actorUserId is required");
   }
 
   const bindingMap = new Map<number, SportsOSSimulationGameBinding>();
@@ -63,9 +55,7 @@ export function createSportsOSSimulationAdapter(
       !Number.isInteger(binding.organizationId) ||
       binding.organizationId <= 0
     ) {
-      throw new SimulationBindingError(
-        "Simulation game bindings must use positive integer ids",
-      );
+      throw new SimulationBindingError("Simulation game bindings must use positive integer ids");
     }
 
     if (bindingMap.has(binding.simulatedGameId)) {
@@ -79,9 +69,7 @@ export function createSportsOSSimulationAdapter(
 
   let commandSequence = 0;
 
-  const bindingFor = (
-    game: SimulatedGame,
-  ): SportsOSSimulationGameBinding => {
+  const bindingFor = (game: SimulatedGame): SportsOSSimulationGameBinding => {
     const binding = bindingMap.get(game.id);
 
     if (!binding) {
@@ -93,10 +81,7 @@ export function createSportsOSSimulationAdapter(
     return binding;
   };
 
-  const commandId = (
-    game: SimulatedGame,
-    action: string,
-  ): string => {
+  const commandId = (game: SimulatedGame, action: string): string => {
     commandSequence += 1;
     return `sim:${runId}:g${game.id}:${action}:${commandSequence}`;
   };
@@ -123,35 +108,21 @@ export function createSportsOSSimulationAdapter(
     // A null result is an idempotent replay in the existing scoring repository.
     // That is safe during simulation and should not be treated as a failure.
     if (result === undefined) {
-      throw new Error(
-        `SportsOS game ${binding.sportsOSGameId} was not found`,
-      );
+      throw new Error(`SportsOS game ${binding.sportsOSGameId} was not found`);
     }
   };
 
   return {
     async startGame(game) {
-      await scoringAction(
-        game,
-        { action: "startClock" },
-        "start-clock",
-      );
+      await scoringAction(game, { action: "startClock" }, "start-clock");
     },
 
     async pauseClock(game) {
-      await scoringAction(
-        game,
-        { action: "pauseClock" },
-        "pause-clock",
-      );
+      await scoringAction(game, { action: "pauseClock" }, "pause-clock");
     },
 
     async resumeClock(game) {
-      await scoringAction(
-        game,
-        { action: "startClock" },
-        "resume-clock",
-      );
+      await scoringAction(game, { action: "startClock" }, "resume-clock");
     },
 
     async recordGoal(game, side) {
@@ -193,17 +164,9 @@ export function createSportsOSSimulationAdapter(
     async beginIntermission(game) {
       // Accelerated simulations do not wait real period duration. Materialize
       // 0:00 first so the normal SportsOS phase validation remains authoritative.
-      await scoringAction(
-        game,
-        { action: "setClock", clockRemainingMs: 0 },
-        "period-clock-zero",
-      );
+      await scoringAction(game, { action: "setClock", clockRemainingMs: 0 }, "period-clock-zero");
 
-      await scoringAction(
-        game,
-        { action: "startIntermission" },
-        "start-intermission",
-      );
+      await scoringAction(game, { action: "startIntermission" }, "start-intermission");
     },
 
     async startNextPeriod(game) {
@@ -227,17 +190,9 @@ export function createSportsOSSimulationAdapter(
     async finishGame(game) {
       // Ensure the final simulated regulation period has reached 0:00 before
       // committing the authoritative FINAL transition.
-      await scoringAction(
-        game,
-        { action: "setClock", clockRemainingMs: 0 },
-        "final-clock-zero",
-      );
+      await scoringAction(game, { action: "setClock", clockRemainingMs: 0 }, "final-clock-zero");
 
-      await scoringAction(
-        game,
-        { action: "finishGame" },
-        "finish-game",
-      );
+      await scoringAction(game, { action: "finishGame" }, "finish-game");
     },
   };
 }

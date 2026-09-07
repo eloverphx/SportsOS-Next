@@ -13,9 +13,7 @@ import {
 const tempRoots: string[] = [];
 
 async function withTempJournal(): Promise<string> {
-  const root = await mkdtemp(
-    path.join(os.tmpdir(), "sportsos-incidents-"),
-  );
+  const root = await mkdtemp(path.join(os.tmpdir(), "sportsos-incidents-"));
   tempRoots.push(root);
   process.env.SPORTSOS_OPERATIONS_INCIDENT_DIR = root;
   return root;
@@ -23,11 +21,7 @@ async function withTempJournal(): Promise<string> {
 
 afterEach(async () => {
   delete process.env.SPORTSOS_OPERATIONS_INCIDENT_DIR;
-  await Promise.all(
-    tempRoots.splice(0).map((root) =>
-      rm(root, { recursive: true, force: true }),
-    ),
-  );
+  await Promise.all(tempRoots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
 describe("Milestone 34.2 operations incident journal", () => {
@@ -61,10 +55,7 @@ describe("Milestone 34.2 operations incident journal", () => {
     expect(incident.events).toHaveLength(1);
     expect(incident.events[0]?.type).toBe("opened");
 
-    const raw = await readFile(
-      path.join(root, "incidents.json"),
-      "utf8",
-    );
+    const raw = await readFile(path.join(root, "incidents.json"), "utf8");
     expect(raw).toContain("recovery:api:restart-failed");
 
     const stored = await findOperationsIncidentById(incident.id);

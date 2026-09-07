@@ -55,15 +55,10 @@ export function resolveLifecycleAction(
         throw new GameLifecycleError("The game is already in intermission");
       }
       if (game.clockRemainingMs > 0) {
-        throw new GameLifecycleError(
-          "The game clock must be at 0:00 before ending the period",
-        );
+        throw new GameLifecycleError("The game clock must be at 0:00 before ending the period");
       }
 
-      if (
-        game.gamePhase === "REGULATION" &&
-        game.period < game.regulationPeriods
-      ) {
+      if (game.gamePhase === "REGULATION" && game.period < game.regulationPeriods) {
         return { action: "startIntermission" };
       }
 
@@ -71,17 +66,13 @@ export function resolveLifecycleAction(
 
     case "beginIntermission":
       if (game.status === "FINAL" || game.gamePhase === "FINAL") {
-        throw new GameLifecycleError(
-          "Intermission cannot start after the game is final",
-        );
+        throw new GameLifecycleError("Intermission cannot start after the game is final");
       }
       if (game.gamePhase === "INTERMISSION") {
         throw new GameLifecycleError("The game is already in intermission");
       }
       if (game.clockRemainingMs > 0) {
-        throw new GameLifecycleError(
-          "Intermission can start only when the game clock is at 0:00",
-        );
+        throw new GameLifecycleError("Intermission can start only when the game clock is at 0:00");
       }
       return { action: "startIntermission" };
 

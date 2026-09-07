@@ -71,9 +71,7 @@ export function applyGameEngineAction(
         throw new GamePhaseError("A final game cannot be restarted");
       }
       if (state.gamePhase === "INTERMISSION") {
-        throw new GamePhaseError(
-          "Finish or skip intermission before starting the game clock",
-        );
+        throw new GamePhaseError("Finish or skip intermission before starting the game clock");
       }
       if (state.clockRemainingMs > 0) {
         state.clockRunning = true;
@@ -93,9 +91,7 @@ export function applyGameEngineAction(
         throw new GamePhaseError("Intermission cannot start after the game is final");
       }
       if (state.clockRemainingMs > 0) {
-        throw new GamePhaseError(
-          "Intermission can start only when the game clock is at 0:00",
-        );
+        throw new GamePhaseError("Intermission can start only when the game clock is at 0:00");
       }
       state.clockRunning = false;
       state.clockStartedAt = null;
@@ -129,8 +125,7 @@ export function applyGameEngineAction(
       state.intermissionRemainingMs = 0;
       state.intermissionRunning = false;
       state.intermissionStartedAt = null;
-      state.gamePhase =
-        state.period > state.regulationPeriods ? "OVERTIME" : "REGULATION";
+      state.gamePhase = state.period > state.regulationPeriods ? "OVERTIME" : "REGULATION";
       break;
 
     case "nextPeriod":
@@ -141,19 +136,13 @@ export function applyGameEngineAction(
         throw new GamePhaseError("A final game cannot advance to another period");
       }
       if (state.clockRemainingMs > 0) {
-        throw new GamePhaseError(
-          "The game clock must be at 0:00 before advancing periods",
-        );
+        throw new GamePhaseError("The game clock must be at 0:00 before advancing periods");
       }
       if (state.gamePhase === "INTERMISSION" && state.intermissionRemainingMs > 0) {
-        throw new GamePhaseError(
-          "Finish or skip intermission before advancing periods",
-        );
+        throw new GamePhaseError("Finish or skip intermission before advancing periods");
       }
       if (state.period >= state.regulationPeriods) {
-        throw new GamePhaseError(
-          "Choose overtime or final after regulation has ended",
-        );
+        throw new GamePhaseError("Choose overtime or final after regulation has ended");
       }
 
       state.period += 1;
@@ -182,9 +171,7 @@ export function applyGameEngineAction(
         throw new GamePhaseError("Regulation must reach 0:00 before overtime");
       }
       if (state.gamePhase === "INTERMISSION" && state.intermissionRemainingMs > 0) {
-        throw new GamePhaseError(
-          "Finish or skip intermission before starting overtime",
-        );
+        throw new GamePhaseError("Finish or skip intermission before starting overtime");
       }
 
       state.period = Math.max(state.period + 1, state.regulationPeriods + 1);
@@ -239,8 +226,7 @@ export function applyGameEngineAction(
       state.intermissionRemainingMs = 0;
       state.intermissionRunning = false;
       state.intermissionStartedAt = null;
-      state.gamePhase =
-        state.period > state.regulationPeriods ? "OVERTIME" : "REGULATION";
+      state.gamePhase = state.period > state.regulationPeriods ? "OVERTIME" : "REGULATION";
       state.clockStartedAt = state.clockRunning ? copyDate(now) : null;
       break;
 
@@ -261,8 +247,7 @@ export function applyGameEngineAction(
       } else if (state.status === "SCHEDULED") {
         state.gamePhase = "PREGAME";
       } else if (state.status === "LIVE" && state.gamePhase === "PREGAME") {
-        state.gamePhase =
-          state.period > state.regulationPeriods ? "OVERTIME" : "REGULATION";
+        state.gamePhase = state.period > state.regulationPeriods ? "OVERTIME" : "REGULATION";
       }
       break;
   }

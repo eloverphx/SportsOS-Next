@@ -40,8 +40,8 @@ export function TournamentScheduleConflicts({ games }: Props) {
           <span className="scheduleConflictEyebrow">Schedule validation</span>
           <h2 id="schedule-conflicts-heading">Tournament schedule conflicts</h2>
           <p>
-            Checks rink occupancy, duplicate team assignments, minimum turnaround,
-            and missing rink assignments before tournament operations begin.
+            Checks rink occupancy, duplicate team assignments, minimum turnaround, and missing rink
+            assignments before tournament operations begin.
           </p>
         </div>
 
@@ -84,9 +84,7 @@ export function TournamentScheduleConflicts({ games }: Props) {
               </div>
 
               <div className="scheduleConflictActions">
-                <Link href={`/games/${conflict.gameId}/control`}>
-                  Game #{conflict.gameId}
-                </Link>
+                <Link href={`/games/${conflict.gameId}/control`}>Game #{conflict.gameId}</Link>
                 {conflict.relatedGameId ? (
                   <Link href={`/games/${conflict.relatedGameId}/control`}>
                     Game #{conflict.relatedGameId}

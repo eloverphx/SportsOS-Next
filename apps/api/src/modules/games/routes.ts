@@ -25,10 +25,7 @@ import {
   resolveLifecycleAction,
 } from "./lifecycle.js";
 import { recordEngineTransition } from "./telemetry.js";
-import {
-  evaluateSchedulePreview,
-  parseScheduleOverride,
-} from "./schedule-enforcement.js";
+import { evaluateSchedulePreview, parseScheduleOverride } from "./schedule-enforcement.js";
 import {
   createGameWithScheduleTransaction,
   updateGameWithScheduleTransaction,
@@ -85,62 +82,56 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get("/games/schedule-audit/recent", async (request, reply) => {
-  const identity = await requirePermission(request, {
-    permission: PERMISSIONS.GAME_READ,
-  });
-
-  const query = request.query as {
-    decision?: "ALL" | "BLOCKED" | "OVERRIDDEN";
-    gameId?: string;
-    venue?: string;
-    actorUserId?: string;
-    organizationId?: string;
-    limit?: string;
-    offset?: string;
-  };
-
-  const gameId = query.gameId ? Number(query.gameId) : null;
-  const actorUserId = query.actorUserId ? Number(query.actorUserId) : null;
-  const requestedOrganizationId = query.organizationId
-    ? Number(query.organizationId)
-    : null;
-  const limit = query.limit ? Number(query.limit) : undefined;
-  const offset = query.offset ? Number(query.offset) : undefined;
-
-  if (
-    identity.role !== ROLES.SYSTEM_ADMIN &&
-    Number.isSafeInteger(requestedOrganizationId) &&
-    (requestedOrganizationId as number) > 0 &&
-    requestedOrganizationId !== identity.organizationId
-  ) {
-    return reply.code(403).send({
-      error: "Cannot read schedule audit events for another organization",
-      code: "AUDIT_ORGANIZATION_FORBIDDEN",
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.GAME_READ,
     });
-  }
 
-  return queryScheduleAuditEvents({
-    organizationId:
-      identity.role === ROLES.SYSTEM_ADMIN
-        ? Number.isSafeInteger(requestedOrganizationId) &&
-          (requestedOrganizationId as number) > 0
-          ? (requestedOrganizationId as number)
-          : null
-        : identity.organizationId,
-    decision: query.decision,
-    gameId:
-      Number.isSafeInteger(gameId) && (gameId as number) > 0
-        ? (gameId as number)
-        : null,
-    venue: query.venue?.trim() || null,
-    actorUserId:
-      Number.isSafeInteger(actorUserId) && (actorUserId as number) > 0
-        ? (actorUserId as number)
-        : null,
-    limit,
-    offset,
+    const query = request.query as {
+      decision?: "ALL" | "BLOCKED" | "OVERRIDDEN";
+      gameId?: string;
+      venue?: string;
+      actorUserId?: string;
+      organizationId?: string;
+      limit?: string;
+      offset?: string;
+    };
+
+    const gameId = query.gameId ? Number(query.gameId) : null;
+    const actorUserId = query.actorUserId ? Number(query.actorUserId) : null;
+    const requestedOrganizationId = query.organizationId ? Number(query.organizationId) : null;
+    const limit = query.limit ? Number(query.limit) : undefined;
+    const offset = query.offset ? Number(query.offset) : undefined;
+
+    if (
+      identity.role !== ROLES.SYSTEM_ADMIN &&
+      Number.isSafeInteger(requestedOrganizationId) &&
+      (requestedOrganizationId as number) > 0 &&
+      requestedOrganizationId !== identity.organizationId
+    ) {
+      return reply.code(403).send({
+        error: "Cannot read schedule audit events for another organization",
+        code: "AUDIT_ORGANIZATION_FORBIDDEN",
+      });
+    }
+
+    return queryScheduleAuditEvents({
+      organizationId:
+        identity.role === ROLES.SYSTEM_ADMIN
+          ? Number.isSafeInteger(requestedOrganizationId) && (requestedOrganizationId as number) > 0
+            ? (requestedOrganizationId as number)
+            : null
+          : identity.organizationId,
+      decision: query.decision,
+      gameId: Number.isSafeInteger(gameId) && (gameId as number) > 0 ? (gameId as number) : null,
+      venue: query.venue?.trim() || null,
+      actorUserId:
+        Number.isSafeInteger(actorUserId) && (actorUserId as number) > 0
+          ? (actorUserId as number)
+          : null,
+      limit,
+      offset,
+    });
   });
-});
 
   app.get("/games/:id", async (request, reply) => {
     const id = gameIdSchema.safeParse((request.params as { id: string }).id);
@@ -399,11 +390,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       venue: game.venue,
     });
 
-    if (
-      scheduleChanged &&
-      scheduleOverride.override &&
-      scheduleEvaluation.hardConflict
-    ) {
+    if (scheduleChanged && scheduleOverride.override && scheduleEvaluation.hardConflict) {
       await audit(identity.sub, "game.schedule_conflict_overridden", {
         gameId: game.id,
         organizationId: game.organizationId,
@@ -470,8 +457,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const scheduledStart = new Date(body.scheduledStart).toISOString();
-    const venue =
-      typeof body.venue === "string" ? body.venue.trim() || null : null;
+    const venue = typeof body.venue === "string" ? body.venue.trim() || null : null;
 
     const evaluation = await evaluateSchedulePreview(game, {
       scheduledStart,
@@ -596,10 +582,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
 
       let assignedDeviceId: string | null = null;
 
-      if (
-        assignmentsResponse.statusCode >= 200 &&
-        assignmentsResponse.statusCode < 300
-      ) {
+      if (assignmentsResponse.statusCode >= 200 && assignmentsResponse.statusCode < 300) {
         try {
           const assignmentBody = assignmentsResponse.json() as {
             data?: {
@@ -614,34 +597,22 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
             }>;
           };
 
-          const assignments =
-            assignmentBody.data?.assignments ??
-            assignmentBody.assignments ??
-            [];
+          const assignments = assignmentBody.data?.assignments ?? assignmentBody.assignments ?? [];
 
           assignedDeviceId =
-            assignments.find(
-              (item) =>
-                String(item.gameId) ===
-                String(id.data),
-            )?.deviceId ?? null;
+            assignments.find((item) => String(item.gameId) === String(id.data))?.deviceId ?? null;
         } catch {
           assignedDeviceId = null;
         }
       }
 
-      const gameStartPreflight =
-        evaluateGameStartPreflight(
-          String(id.data),
-          assignedDeviceId,
-        );
+      const gameStartPreflight = evaluateGameStartPreflight(String(id.data), assignedDeviceId);
 
       if (!gameStartPreflight.allowed) {
-        const activeEmergencyOverride =
-          getActiveGameStartPreflightOverride(
-            String(id.data),
-            assignedDeviceId ?? "",
-          );
+        const activeEmergencyOverride = getActiveGameStartPreflightOverride(
+          String(id.data),
+          assignedDeviceId ?? "",
+        );
 
         if (!activeEmergencyOverride) {
           return reply.code(409).send({
@@ -657,17 +628,14 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
         }
       }
 
-      const readinessGate =
-        evaluatePregameReadinessGate({
-          gameId: String(id.data),
-          deviceId: assignedDeviceId,
-        });
+      const readinessGate = evaluatePregameReadinessGate({
+        gameId: String(id.data),
+        deviceId: assignedDeviceId,
+      });
 
       if (!readinessGate.allowed) {
         return reply.code(409).send({
-          error:
-            readinessGate.reason ??
-            "Pregame scoreboard readiness gate blocked game start.",
+          error: readinessGate.reason ?? "Pregame scoreboard readiness gate blocked game start.",
           code: "PREGAME_SCOREBOARD_READINESS_BLOCKED",
           readinessGate,
         });
@@ -676,11 +644,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
 
     let result;
     try {
-      result = await applyGameScoringAction(
-        id.data,
-        action,
-        parsed.data.commandId,
-      );
+      result = await applyGameScoringAction(id.data, action, parsed.data.commandId);
     } catch (error) {
       if (error instanceof IdempotencyConflictError) {
         return reply.code(409).send({ error: error.message });
@@ -695,7 +659,7 @@ export async function gameRoutes(app: FastifyInstance): Promise<void> {
       if (parsed.data.commandId) {
         const game = await findGameById(id.data);
 
-            if (!game) return reply.code(404).send({ error: "Game not found" });
+        if (!game) return reply.code(404).send({ error: "Game not found" });
 
         recordEngineTransition({
           source: "operator",

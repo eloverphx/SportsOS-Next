@@ -9,15 +9,11 @@ import {
 
 describe("authentication model", () => {
   it("maps the legacy admin role to organization admin", () => {
-    expect(normalizeRole("admin")).toBe(
-      ROLES.ORGANIZATION_ADMIN,
-    );
+    expect(normalizeRole("admin")).toBe(ROLES.ORGANIZATION_ADMIN);
   });
 
   it("normalizes canonical roles", () => {
-    expect(normalizeRole("SCOREKEEPER")).toBe(
-      ROLES.SCOREKEEPER,
-    );
+    expect(normalizeRole("SCOREKEEPER")).toBe(ROLES.SCOREKEEPER);
   });
 
   it("falls back to viewer for unknown roles", () => {
@@ -38,27 +34,15 @@ describe("authentication model", () => {
       role: ROLES.ORGANIZATION_ADMIN,
     });
 
-    expect(identity.permissions).toContain(
-      PERMISSIONS.TEAM_CREATE,
-    );
+    expect(identity.permissions).toContain(PERMISSIONS.TEAM_CREATE);
   });
 
   it("allows scorekeepers to score games", () => {
-    expect(
-      roleHasPermission(
-        ROLES.SCOREKEEPER,
-        PERMISSIONS.GAME_SCORE,
-      ),
-    ).toBe(true);
+    expect(roleHasPermission(ROLES.SCOREKEEPER, PERMISSIONS.GAME_SCORE)).toBe(true);
   });
 
   it("does not allow viewers to manage games", () => {
-    expect(
-      roleHasPermission(
-        ROLES.VIEWER,
-        PERMISSIONS.GAME_MANAGE,
-      ),
-    ).toBe(false);
+    expect(roleHasPermission(ROLES.VIEWER, PERMISSIONS.GAME_MANAGE)).toBe(false);
   });
 
   it("rejects an invalid JWT subject", () => {

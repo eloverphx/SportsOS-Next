@@ -153,9 +153,6 @@ export function permissionsForRole(role: Role): readonly Permission[] {
   return ROLE_PERMISSIONS[role];
 }
 
-export function roleHasPermission(
-  role: Role,
-  permission: Permission,
-): boolean {
+export function roleHasPermission(role: Role, permission: Permission): boolean {
   return ROLE_PERMISSIONS[role].includes(permission);
 }

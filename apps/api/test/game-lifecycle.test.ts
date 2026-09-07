@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  GameLifecycleError,
-  resolveLifecycleAction,
-} from "../src/modules/games/lifecycle.js";
+import { GameLifecycleError, resolveLifecycleAction } from "../src/modules/games/lifecycle.js";
 
 function game(
   overrides: Partial<{
@@ -44,18 +41,15 @@ describe("game lifecycle command resolution", () => {
   });
 
   it("leaves final regulation at zero for explicit overtime or final", () => {
-    expect(
-      resolveLifecycleAction(
-        game({ period: 3, regulationPeriods: 3 }),
-        "endPeriod",
-      ),
-    ).toEqual({ action: "pauseClock" });
+    expect(resolveLifecycleAction(game({ period: 3, regulationPeriods: 3 }), "endPeriod")).toEqual({
+      action: "pauseClock",
+    });
   });
 
   it("rejects ending a period while time remains", () => {
-    expect(() =>
-      resolveLifecycleAction(game({ clockRemainingMs: 15_000 }), "endPeriod"),
-    ).toThrow("The game clock must be at 0:00 before ending the period");
+    expect(() => resolveLifecycleAction(game({ clockRemainingMs: 15_000 }), "endPeriod")).toThrow(
+      "The game clock must be at 0:00 before ending the period",
+    );
   });
 
   it("maps next-period, overtime, and finish commands", () => {
@@ -72,10 +66,7 @@ describe("game lifecycle command resolution", () => {
 
   it("rejects lifecycle changes after final", () => {
     expect(() =>
-      resolveLifecycleAction(
-        game({ status: "FINAL", gamePhase: "FINAL" }),
-        "startGame",
-      ),
+      resolveLifecycleAction(game({ status: "FINAL", gamePhase: "FINAL" }), "startGame"),
     ).toThrow(GameLifecycleError);
   });
 });

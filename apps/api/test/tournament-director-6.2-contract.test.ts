@@ -25,8 +25,7 @@ describe("Tournament Director 6.2 contract", () => {
     expect(page).toContain('api<{ devices: Device[] }>("/scoreboard-devices")');
     expect(page).toContain('api<EngineResponse>("/system/game-engine")');
     expect(page).toContain("`/games/${game.id}/penalties`");
-    expect(page).toContain('href={`/games/${game.id}/control`}');
-    expect(page).toContain('href={`/games/${game.id}/overlay`}');
+    expect(page).toContain("href={`/games/${game.id}/control`}");
+    expect(page).toContain("href={`/games/${game.id}/overlay`}");
   });
 });
-

@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  SCOREBOARD_DEVICE_PROTOCOL_VERSION,
-} from "../src/scoreboard-device-contract.js";
+import { SCOREBOARD_DEVICE_PROTOCOL_VERSION } from "../src/scoreboard-device-contract.js";
 import {
   SCOREBOARD_MQTT_ROOT,
   buildScoreboardMqttAcknowledgement,
@@ -14,43 +12,32 @@ import {
 
 describe("Milestone 10.2 MQTT device transport contract", () => {
   it("builds stable per-device MQTT topics", () => {
-    expect(
-      scoreboardMqttTopics("scoreboard-1"),
-    ).toEqual({
-      command:
-        `${SCOREBOARD_MQTT_ROOT}/scoreboard-1/command`,
-      acknowledgement:
-        `${SCOREBOARD_MQTT_ROOT}/scoreboard-1/ack`,
-      state:
-        `${SCOREBOARD_MQTT_ROOT}/scoreboard-1/state`,
-      telemetry:
-        `${SCOREBOARD_MQTT_ROOT}/scoreboard-1/telemetry`,
-      presence:
-        `${SCOREBOARD_MQTT_ROOT}/scoreboard-1/presence`,
+    expect(scoreboardMqttTopics("scoreboard-1")).toEqual({
+      command: `${SCOREBOARD_MQTT_ROOT}/scoreboard-1/command`,
+      acknowledgement: `${SCOREBOARD_MQTT_ROOT}/scoreboard-1/ack`,
+      state: `${SCOREBOARD_MQTT_ROOT}/scoreboard-1/state`,
+      telemetry: `${SCOREBOARD_MQTT_ROOT}/scoreboard-1/telemetry`,
+      presence: `${SCOREBOARD_MQTT_ROOT}/scoreboard-1/presence`,
     });
   });
 
   it("rejects unsafe device ids for MQTT topics", () => {
-    expect(() =>
-      scoreboardMqttTopics("scoreboard/1"),
-    ).toThrow(
+    expect(() => scoreboardMqttTopics("scoreboard/1")).toThrow(
       "deviceId contains unsupported MQTT topic characters.",
     );
   });
 
   it("wraps commands in a transport envelope", () => {
-    const envelope =
-      buildScoreboardMqttCommandEnvelope(
-        "scoreboard-1",
-        {
-          protocolVersion:
-            SCOREBOARD_DEVICE_PROTOCOL_VERSION,
-          commandId: "cmd-1",
-          type: "HORN",
-          active: true,
-        },
-        new Date("2026-08-17T20:00:00.000Z"),
-      );
+    const envelope = buildScoreboardMqttCommandEnvelope(
+      "scoreboard-1",
+      {
+        protocolVersion: SCOREBOARD_DEVICE_PROTOCOL_VERSION,
+        commandId: "cmd-1",
+        type: "HORN",
+        active: true,
+      },
+      new Date("2026-08-17T20:00:00.000Z"),
+    );
 
     expect(envelope).toMatchObject({
       deviceId: "scoreboard-1",
@@ -69,9 +56,7 @@ describe("Milestone 10.2 MQTT device transport contract", () => {
         commandId: "cmd-1",
         status: "APPLIED",
         message: null,
-        acknowledgedAt: new Date(
-          "2026-08-17T20:00:01.000Z",
-        ),
+        acknowledgedAt: new Date("2026-08-17T20:00:01.000Z"),
       }),
     ).toMatchObject({
       deviceId: "scoreboard-1",
@@ -82,11 +67,7 @@ describe("Milestone 10.2 MQTT device transport contract", () => {
 
   it("builds presence and telemetry payloads", () => {
     expect(
-      buildScoreboardMqttPresence(
-        "scoreboard-1",
-        true,
-        new Date("2026-08-17T20:00:02.000Z"),
-      ),
+      buildScoreboardMqttPresence("scoreboard-1", true, new Date("2026-08-17T20:00:02.000Z")),
     ).toEqual({
       deviceId: "scoreboard-1",
       online: true,
@@ -101,9 +82,7 @@ describe("Milestone 10.2 MQTT device transport contract", () => {
         wifiRssi: -55,
         uptimeSeconds: 3600,
         freeHeapBytes: 120000,
-        reportedAt: new Date(
-          "2026-08-17T20:00:03.000Z",
-        ),
+        reportedAt: new Date("2026-08-17T20:00:03.000Z"),
       }),
     ).toMatchObject({
       firmwareVersion: "1.0.0",
@@ -113,31 +92,21 @@ describe("Milestone 10.2 MQTT device transport contract", () => {
   });
 
   it("uses retained state/presence and ephemeral command/telemetry", () => {
-    const command =
-      buildScoreboardMqttCommandEnvelope(
-        "scoreboard-1",
-        {
-          protocolVersion:
-            SCOREBOARD_DEVICE_PROTOCOL_VERSION,
-          commandId: "cmd-2",
-          type: "SET_SCORE",
-          homeScore: 2,
-          awayScore: 1,
-        },
-      );
+    const command = buildScoreboardMqttCommandEnvelope("scoreboard-1", {
+      protocolVersion: SCOREBOARD_DEVICE_PROTOCOL_VERSION,
+      commandId: "cmd-2",
+      type: "SET_SCORE",
+      homeScore: 2,
+      awayScore: 1,
+    });
 
-    const presence =
-      buildScoreboardMqttPresence(
-        "scoreboard-1",
-        true,
-      );
+    const presence = buildScoreboardMqttPresence("scoreboard-1", true);
 
-    const publications =
-      buildScoreboardMqttPublications({
-        deviceId: "scoreboard-1",
-        command,
-        presence,
-      });
+    const publications = buildScoreboardMqttPublications({
+      deviceId: "scoreboard-1",
+      command,
+      presence,
+    });
 
     expect(publications).toEqual(
       expect.arrayContaining([

@@ -22,10 +22,7 @@ export type ScheduleOverride = {
 };
 
 export function parseScheduleOverride(body: unknown): ScheduleOverride {
-  const record =
-    body && typeof body === "object"
-      ? (body as Record<string, unknown>)
-      : {};
+  const record = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
 
   const override = record.scheduleConflictOverride === true;
   const rawReason =
@@ -40,10 +37,7 @@ export function parseScheduleOverride(body: unknown): ScheduleOverride {
   };
 }
 
-export function scheduleRelevantFieldsChanged(
-  existing: Game,
-  input: GameInput,
-): boolean {
+export function scheduleRelevantFieldsChanged(existing: Game, input: GameInput): boolean {
   return (
     existing.organizationId !== input.organizationId ||
     existing.scheduledStart !== input.scheduledStart ||
@@ -74,12 +68,12 @@ function resolveTeamNamesFromOptions(
   const homeTeamName =
     input.homeTeamId === null
       ? input.homeExternalName
-      : teams.find((team) => team.id === input.homeTeamId)?.name ?? null;
+      : (teams.find((team) => team.id === input.homeTeamId)?.name ?? null);
 
   const awayTeamName =
     input.awayTeamId === null
       ? input.awayExternalName
-      : teams.find((team) => team.id === input.awayTeamId)?.name ?? null;
+      : (teams.find((team) => team.id === input.awayTeamId)?.name ?? null);
 
   if (!homeTeamName || !awayTeamName) {
     throw new Error("Could not resolve team names for schedule validation");
@@ -136,9 +130,7 @@ export async function evaluateGameInputSchedule(
   });
 }
 
-export async function evaluateNewGameSchedule(
-  input: GameInput,
-): Promise<ScheduleEvaluation> {
+export async function evaluateNewGameSchedule(input: GameInput): Promise<ScheduleEvaluation> {
   return evaluateGameInputSchedule(0, input);
 }
 

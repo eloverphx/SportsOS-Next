@@ -1,27 +1,21 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const routes = readFileSync(
-  new URL("../src/modules/games/routes.ts", import.meta.url),
+const routes = readFileSync(new URL("../src/modules/games/routes.ts", import.meta.url), "utf8");
+
+const panel = readFileSync(
+  new URL("../../dashboard/components/tournament/TournamentScheduleAudit.tsx", import.meta.url),
   "utf8",
 );
 
-const panel = readFileSync(
-  new URL(
-    "../../dashboard/components/tournament/TournamentScheduleAudit.tsx",
-    import.meta.url,
-  ),
-  "utf8",
-);
+const compactPanel = panel.replace(/\s+/g, " ");
 
 describe("Tournament scheduling 6.24 server-wired audit filters and paging", () => {
   it("supports system-admin organization filtering with scoped-role protection", () => {
     expect(routes).toContain("organizationId?: string");
     expect(routes).toContain("const requestedOrganizationId");
     expect(routes).toContain('code: "AUDIT_ORGANIZATION_FORBIDDEN"');
-    expect(routes).toContain(
-      "requestedOrganizationId !== identity.organizationId",
-    );
+    expect(routes).toContain("requestedOrganizationId !== identity.organizationId");
   });
 
   it("builds server queries from active audit filters", () => {
@@ -35,10 +29,10 @@ describe("Tournament scheduling 6.24 server-wired audit filters and paging", () 
 
   it("avoids coupling the loader directly to the events array", () => {
     expect(panel).toContain("const selectedActorUserId = useMemo(");
-    expect(panel).toContain("selectedActorUserId,");
-    expect(panel).not.toContain("    events,\n    organizationId,");
+    expect(compactPanel).toContain(
+      "}, [debouncedGameId, decision, organizationId, pageOffset, rink, selectedActorUserId]);",
+    );
   });
-
   it("debounces game-id filtering and resets pagination", () => {
     expect(panel).toContain("setDebouncedGameId(gameId.trim())");
     expect(panel).toContain("300");

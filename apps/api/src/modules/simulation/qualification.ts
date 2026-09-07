@@ -8,8 +8,7 @@ import {
   type ProvisionSimulationRunInput,
 } from "./provisioner.js";
 
-export interface SimulationQualificationOptions
-  extends ProvisionSimulationRunInput {
+export interface SimulationQualificationOptions extends ProvisionSimulationRunInput {
   concurrency?: number;
   cleanupOnPass?: boolean;
 }
@@ -69,9 +68,7 @@ interface VerificationRow extends RowDataPacket {
   penalty_count: number;
 }
 
-async function verifySimulationRun(
-  runId: string,
-): Promise<SimulationQualificationGameResult[]> {
+async function verifySimulationRun(runId: string): Promise<SimulationQualificationGameResult[]> {
   const [rows] = await pool.execute<VerificationRow[]>(
     `SELECT
        b.game_id,
@@ -116,9 +113,7 @@ async function verifySimulationRun(
     }
 
     if (events < goals + penalties) {
-      failures.push(
-        `Event count ${events} is lower than goals + penalties ${goals + penalties}`,
-      );
+      failures.push(`Event count ${events} is lower than goals + penalties ${goals + penalties}`);
     }
 
     return {

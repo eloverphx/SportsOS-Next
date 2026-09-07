@@ -1,17 +1,11 @@
-export const SCOREBOARD_FIRMWARE_UPDATE_PROTOCOL_VERSION =
-  1 as const;
+export const SCOREBOARD_FIRMWARE_UPDATE_PROTOCOL_VERSION = 1 as const;
 
-export type FirmwareReleaseChannel =
-  | "stable"
-  | "beta"
-  | "development";
+export type FirmwareReleaseChannel = "stable" | "beta" | "development";
 
-export type FirmwareReleaseTarget =
-  "esp32dev";
+export type FirmwareReleaseTarget = "esp32dev";
 
 export type ScoreboardFirmwareRelease = {
-  protocolVersion:
-    typeof SCOREBOARD_FIRMWARE_UPDATE_PROTOCOL_VERSION;
+  protocolVersion: typeof SCOREBOARD_FIRMWARE_UPDATE_PROTOCOL_VERSION;
   releaseId: string;
   version: string;
   channel: FirmwareReleaseChannel;
@@ -52,11 +46,6 @@ export type ScoreboardFirmwareUpdateReport = {
   reportedAt: string;
 };
 
-export function isTerminalFirmwareUpdateStatus(
-  status: ScoreboardFirmwareUpdateStatus,
-): boolean {
-  return (
-    status === "SUCCEEDED" ||
-    status === "FAILED"
-  );
+export function isTerminalFirmwareUpdateStatus(status: ScoreboardFirmwareUpdateStatus): boolean {
+  return status === "SUCCEEDED" || status === "FAILED";
 }

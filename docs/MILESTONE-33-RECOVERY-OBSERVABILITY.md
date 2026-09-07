@@ -101,4 +101,3 @@ Milestone 33 closeout validates:
 - authenticated recovery telemetry response
 - public Operations Dashboard availability
 - exact release repository scope
-

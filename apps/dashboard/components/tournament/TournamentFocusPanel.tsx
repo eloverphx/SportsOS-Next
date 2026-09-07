@@ -52,10 +52,7 @@ export function TournamentFocusPanel({ games }: Props) {
   const now = Date.now();
 
   const activeGames = useMemo(
-    () =>
-      games.filter(
-        (game) => game.status !== "FINAL" && game.status !== "CANCELED",
-      ),
+    () => games.filter((game) => game.status !== "FINAL" && game.status !== "CANCELED"),
     [games],
   );
 
@@ -77,14 +74,7 @@ export function TournamentFocusPanel({ games }: Props) {
 
   const teams = useMemo(
     () =>
-      Array.from(
-        new Set(
-          activeGames.flatMap((game) => [
-            game.homeTeamName,
-            game.awayTeamName,
-          ]),
-        ),
-      )
+      Array.from(new Set(activeGames.flatMap((game) => [game.homeTeamName, game.awayTeamName])))
         .filter(Boolean)
         .sort((left, right) => left.localeCompare(right)),
     [activeGames],
@@ -98,17 +88,10 @@ export function TournamentFocusPanel({ games }: Props) {
           const gameUrgency = urgencyFor(game, now);
 
           if (rink !== "ALL" && gameRink !== rink) return false;
-          if (
-            organization !== "ALL" &&
-            game.organizationName !== organization
-          ) {
+          if (organization !== "ALL" && game.organizationName !== organization) {
             return false;
           }
-          if (
-            team !== "ALL" &&
-            game.homeTeamName !== team &&
-            game.awayTeamName !== team
-          ) {
+          if (team !== "ALL" && game.homeTeamName !== team && game.awayTeamName !== team) {
             return false;
           }
           if (urgency !== "ALL" && gameUrgency !== urgency) return false;
@@ -126,24 +109,17 @@ export function TournamentFocusPanel({ games }: Props) {
             NORMAL: 3,
           };
 
-          const urgencyDelta =
-            priority[leftUrgency] - priority[rightUrgency];
+          const urgencyDelta = priority[leftUrgency] - priority[rightUrgency];
 
           if (urgencyDelta !== 0) return urgencyDelta;
 
-          return (
-            new Date(left.scheduledStart).getTime() -
-            new Date(right.scheduledStart).getTime()
-          );
+          return new Date(left.scheduledStart).getTime() - new Date(right.scheduledStart).getTime();
         }),
     [activeGames, organization, rink, team, urgency, now],
   );
 
   const filtersActive =
-    rink !== "ALL" ||
-    organization !== "ALL" ||
-    team !== "ALL" ||
-    urgency !== "ALL";
+    rink !== "ALL" || organization !== "ALL" || team !== "ALL" || urgency !== "ALL";
 
   return (
     <section
@@ -157,8 +133,8 @@ export function TournamentFocusPanel({ games }: Props) {
           <span className="tournamentFocusEyebrow">Focus mode</span>
           <h2 id="tournament-focus-heading">Narrow tournament operations</h2>
           <p>
-            Filter active games by rink, organization, team, or urgency without
-            changing the underlying tournament schedule.
+            Filter active games by rink, organization, team, or urgency without changing the
+            underlying tournament schedule.
           </p>
         </div>
 
@@ -183,10 +159,7 @@ export function TournamentFocusPanel({ games }: Props) {
 
         <label>
           Organization
-          <select
-            value={organization}
-            onChange={(event) => setOrganization(event.target.value)}
-          >
+          <select value={organization} onChange={(event) => setOrganization(event.target.value)}>
             <option value="ALL">All organizations</option>
             {organizations.map((value) => (
               <option key={value} value={value}>
@@ -210,10 +183,7 @@ export function TournamentFocusPanel({ games }: Props) {
 
         <label>
           Urgency
-          <select
-            value={urgency}
-            onChange={(event) => setUrgency(event.target.value as Urgency)}
-          >
+          <select value={urgency} onChange={(event) => setUrgency(event.target.value as Urgency)}>
             <option value="ALL">All urgency</option>
             <option value="LATE">Late</option>
             <option value="STARTING_SOON">Starting soon</option>
@@ -237,9 +207,7 @@ export function TournamentFocusPanel({ games }: Props) {
       </div>
 
       {focusedGames.length === 0 ? (
-        <div className="tournamentFocusEmpty">
-          No active games match the current focus filters.
-        </div>
+        <div className="tournamentFocusEmpty">No active games match the current focus filters.</div>
       ) : (
         <div className="tournamentFocusGames" data-testid="director-focus-games">
           {focusedGames.map((game) => {
@@ -252,15 +220,12 @@ export function TournamentFocusPanel({ games }: Props) {
                 className={`tournamentFocusGame urgency-${gameUrgency.toLowerCase()}`}
               >
                 <div className="tournamentFocusGameMain">
-                  <span className="tournamentFocusUrgency">
-                    {gameUrgency.replaceAll("_", " ")}
-                  </span>
+                  <span className="tournamentFocusUrgency">{gameUrgency.replaceAll("_", " ")}</span>
                   <strong>
                     #{game.id} · {game.homeTeamName} vs {game.awayTeamName}
                   </strong>
                   <span>
-                    {game.organizationName} · {gameRink} ·{" "}
-                    {timeLabel(game.scheduledStart)}
+                    {game.organizationName} · {gameRink} · {timeLabel(game.scheduledStart)}
                   </span>
                 </div>
 

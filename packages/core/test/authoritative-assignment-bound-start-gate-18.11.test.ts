@@ -3,23 +3,14 @@ import fs from "node:fs";
 
 describe("Milestone 18.11 authoritative assignment-bound start gate", () => {
   const routes = fs.readFileSync(
-    new URL(
-      "../../../apps/api/src/modules/games/routes.ts",
-      import.meta.url,
-    ),
+    new URL("../../../apps/api/src/modules/games/routes.ts", import.meta.url),
     "utf8",
   );
 
   it("places the gate before lifecycle mutation", () => {
-    const gate =
-      routes.indexOf(
-        "AUTHORITATIVE_ASSIGNMENT_BOUND_START_GATE_18_11",
-      );
+    const gate = routes.indexOf("AUTHORITATIVE_ASSIGNMENT_BOUND_START_GATE_18_11");
 
-    const mutation =
-      routes.indexOf(
-        "result = await applyGameScoringAction(",
-      );
+    const mutation = routes.indexOf("result = await applyGameScoringAction(");
 
     expect(gate).toBeGreaterThanOrEqual(0);
     expect(mutation).toBeGreaterThan(gate);
@@ -42,15 +33,9 @@ describe("Milestone 18.11 authoritative assignment-bound start gate", () => {
   });
 
   it("keeps readiness enforcement before mutation", () => {
-    const readiness =
-      routes.indexOf(
-        "evaluatePregameReadinessGate({",
-      );
+    const readiness = routes.indexOf("evaluatePregameReadinessGate({");
 
-    const mutation =
-      routes.indexOf(
-        "result = await applyGameScoringAction(",
-      );
+    const mutation = routes.indexOf("result = await applyGameScoringAction(");
 
     expect(readiness).toBeGreaterThanOrEqual(0);
     expect(mutation).toBeGreaterThan(readiness);

@@ -30,9 +30,7 @@ describe("Milestone 32 runtime self-healing release contract", () => {
     expect(policy).toContain('"api:sportsos_api:auto"');
     expect(policy).toContain('"dashboard:sportsos_dashboard:auto"');
     expect(policy).toContain('"mqtt:sportsos_mqtt:auto"');
-    expect(policy).toContain(
-      '"scoreboard-simulator:sportsos_scoreboard_simulator:auto"',
-    );
+    expect(policy).toContain('"scoreboard-simulator:sportsos_scoreboard_simulator:auto"');
   });
 
   it("keeps stateful services monitor-only", () => {
@@ -45,9 +43,7 @@ describe("Milestone 32 runtime self-healing release contract", () => {
   });
 
   it("activates bounded recovery only in the scheduled Unraid recovery wrapper", () => {
-    const wrapper = repoFile(
-      "scripts/unraid-user-script-sportsos-recovery.sh",
-    );
+    const wrapper = repoFile("scripts/unraid-user-script-sportsos-recovery.sh");
 
     expect(wrapper).toContain("SPORTSOS_M32_7_SCHEDULED_SELF_HEALING");
     expect(wrapper).toContain("SPORTSOS_APPLY_RECOVERY=1");
@@ -57,17 +53,11 @@ describe("Milestone 32 runtime self-healing release contract", () => {
   });
 
   it("packages simulator runtime dependencies from its package manifest", () => {
-    const dockerfile = repoFile(
-      "apps/scoreboard-simulator/Dockerfile",
-    );
-    const pkg = JSON.parse(
-      repoFile("apps/scoreboard-simulator/package.json"),
-    );
+    const dockerfile = repoFile("apps/scoreboard-simulator/Dockerfile");
+    const pkg = JSON.parse(repoFile("apps/scoreboard-simulator/package.json"));
 
     expect(pkg.dependencies?.mqtt).toBeTruthy();
-    expect(dockerfile).toContain(
-      "COPY apps/scoreboard-simulator/package.json ./package.json",
-    );
+    expect(dockerfile).toContain("COPY apps/scoreboard-simulator/package.json ./package.json");
     expect(dockerfile).toContain("npm install --omit=dev");
   });
 });

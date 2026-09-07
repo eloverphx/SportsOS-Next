@@ -4,17 +4,12 @@ import { describe, expect, it } from "vitest";
 const root = JSON.parse(readFileSync("package.json", "utf8"));
 const api = JSON.parse(readFileSync("apps/api/package.json", "utf8"));
 const lock = JSON.parse(readFileSync("package-lock.json", "utf8"));
-const doc = readFileSync(
-  "docs/MILESTONE-36-MINIO-RESIDUAL-RISK.md",
-  "utf8",
-);
+const doc = readFileSync("docs/MILESTONE-36-MINIO-RESIDUAL-RISK.md", "utf8");
 
 const packages = lock.packages ?? {};
-const minio =
-  packages["apps/api/node_modules/minio"] ?? packages["node_modules/minio"];
+const minio = packages["apps/api/node_modules/minio"] ?? packages["node_modules/minio"];
 const query =
-  packages["apps/api/node_modules/query-string"] ??
-  packages["node_modules/query-string"];
+  packages["apps/api/node_modules/query-string"] ?? packages["node_modules/query-string"];
 const decode =
   packages["apps/api/node_modules/decode-uri-component"] ??
   packages["node_modules/decode-uri-component"];

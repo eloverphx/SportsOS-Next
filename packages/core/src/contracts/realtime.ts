@@ -122,10 +122,7 @@ export interface BroadcastSessionProfilePayload {
   sponsorUrl: string | null;
   showPowerPlay: boolean;
   showTeamLogos: boolean;
-  scenePreset:
-    | "STANDARD"
-    | "MINIMAL"
-    | "SPONSOR_FOCUS";
+  scenePreset: "STANDARD" | "MINIMAL" | "SPONSOR_FOCUS";
   sponsorUrls: string[];
   sponsorRotationSeconds: number;
   soundEnabled: boolean;

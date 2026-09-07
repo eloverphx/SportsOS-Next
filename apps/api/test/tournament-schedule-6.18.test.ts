@@ -7,10 +7,7 @@ const audit = readFileSync(
 );
 
 const panel = readFileSync(
-  new URL(
-    "../../dashboard/components/tournament/TournamentScheduleAudit.tsx",
-    import.meta.url,
-  ),
+  new URL("../../dashboard/components/tournament/TournamentScheduleAudit.tsx", import.meta.url),
   "utf8",
 );
 

@@ -62,9 +62,6 @@ export function areBothRostersLocked(state: RosterLockState): boolean {
   return state.home && state.away;
 }
 
-export function canLockRoster(
-  checkedIn: boolean,
-  testingOverrideEnabled: boolean,
-): boolean {
+export function canLockRoster(checkedIn: boolean, testingOverrideEnabled: boolean): boolean {
   return checkedIn || testingOverrideEnabled;
 }

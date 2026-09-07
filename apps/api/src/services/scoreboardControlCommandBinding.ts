@@ -1,6 +1,4 @@
-import type {
-  ScoreboardControlInputEvent,
-} from "@sportsos/core";
+import type { ScoreboardControlInputEvent } from "@sportsos/core";
 
 export type ScoreboardControlCommand =
   | {
@@ -10,10 +8,7 @@ export type ScoreboardControlCommand =
     }
   | {
       kind: "CLOCK";
-      action:
-        | "START"
-        | "PAUSE"
-        | "TOGGLE";
+      action: "START" | "PAUSE" | "TOGGLE";
     }
   | {
       kind: "PERIOD";

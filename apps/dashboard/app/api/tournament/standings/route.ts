@@ -4,10 +4,7 @@ import {
   type TournamentStandingGame,
   type TournamentStandingTeam,
 } from "../../../../lib/tournament-standings";
-import {
-  buildTournamentPoolStandings,
-  deriveDefaultPools,
-} from "../../../../lib/tournament-pools";
+import { buildTournamentPoolStandings, deriveDefaultPools } from "../../../../lib/tournament-pools";
 
 const API_BASE_URL =
   process.env.SPORTSOS_API_URL ??
@@ -18,25 +15,15 @@ const API_BASE_URL =
 type UnknownRecord = Record<string, unknown>;
 
 function record(value: unknown): UnknownRecord | null {
-  return value && typeof value === "object"
-    ? (value as UnknownRecord)
-    : null;
+  return value && typeof value === "object" ? (value as UnknownRecord) : null;
 }
 
-function stringValue(
-  value: unknown,
-  fallback = "",
-): string {
+function stringValue(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
 }
 
-function numberValue(
-  value: unknown,
-  fallback = 0,
-): number {
-  return typeof value === "number" && Number.isFinite(value)
-    ? value
-    : fallback;
+function numberValue(value: unknown, fallback = 0): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 function gamesFromPayload(payload: unknown): unknown[] {
@@ -63,9 +50,7 @@ function gamesFromPayload(payload: unknown): unknown[] {
   return [];
 }
 
-function normalizeGame(
-  value: unknown,
-): {
+function normalizeGame(value: unknown): {
   game: TournamentStandingGame;
   home: TournamentStandingTeam;
   away: TournamentStandingTeam;
@@ -85,14 +70,10 @@ function normalizeGame(
   }
 
   const homeTeamName =
-    stringValue(input.homeTeamName) ||
-    stringValue(record(input.homeTeam)?.name) ||
-    homeTeamId;
+    stringValue(input.homeTeamName) || stringValue(record(input.homeTeam)?.name) || homeTeamId;
 
   const awayTeamName =
-    stringValue(input.awayTeamName) ||
-    stringValue(record(input.awayTeam)?.name) ||
-    awayTeamId;
+    stringValue(input.awayTeamName) || stringValue(record(input.awayTeam)?.name) || awayTeamId;
 
   return {
     game: {
@@ -134,12 +115,7 @@ export async function GET() {
   const payload = (await response.json()) as unknown;
   const normalized = gamesFromPayload(payload)
     .map(normalizeGame)
-    .filter(
-      (
-        value,
-      ): value is NonNullable<ReturnType<typeof normalizeGame>> =>
-        value !== null,
-    );
+    .filter((value): value is NonNullable<ReturnType<typeof normalizeGame>> => value !== null);
 
   const teamsById = new Map<string, TournamentStandingTeam>();
 
@@ -157,10 +133,6 @@ export async function GET() {
     games,
     pools,
     standings: buildTournamentStandings(teams, games),
-    poolStandings: buildTournamentPoolStandings(
-      pools,
-      teams,
-      games,
-    ),
+    poolStandings: buildTournamentPoolStandings(pools, teams, games),
   });
 }

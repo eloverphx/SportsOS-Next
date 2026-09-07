@@ -42,41 +42,18 @@ type Store = {
   sessions: GoLiveSession[];
 };
 
-const DATA_DIR =
-  process.env.SPORTSOS_DATA_DIR ??
-  path.resolve(
-    process.cwd(),
-    "data",
-  );
+const DATA_DIR = process.env.SPORTSOS_DATA_DIR ?? path.resolve(process.cwd(), "data");
 
-const STORE_FILE =
-  path.join(
-    DATA_DIR,
-    "go-live-sessions.json",
-  );
+const STORE_FILE = path.join(DATA_DIR, "go-live-sessions.json");
 
-let store =
-  loadStore();
+let store = loadStore();
 
 function loadStore(): Store {
   try {
-    const parsed =
-      JSON.parse(
-        fs.readFileSync(
-          STORE_FILE,
-          "utf8",
-        ),
-      ) as Store;
+    const parsed = JSON.parse(fs.readFileSync(STORE_FILE, "utf8")) as Store;
 
-    if (
-      parsed.version !== 1 ||
-      !Array.isArray(
-        parsed.sessions,
-      )
-    ) {
-      throw new Error(
-        "Invalid go-live session store.",
-      );
+    if (parsed.version !== 1 || !Array.isArray(parsed.sessions)) {
+      throw new Error("Invalid go-live session store.");
     }
 
     return parsed;
@@ -89,45 +66,21 @@ function loadStore(): Store {
 }
 
 function persistStore(): void {
-  fs.mkdirSync(
-    DATA_DIR,
-    {
-      recursive: true,
-    },
-  );
+  fs.mkdirSync(DATA_DIR, {
+    recursive: true,
+  });
 
-  const temporary =
-    `${STORE_FILE}.tmp`;
+  const temporary = `${STORE_FILE}.tmp`;
 
-  fs.writeFileSync(
-    temporary,
-    JSON.stringify(
-      store,
-      null,
-      2,
-    ),
-    "utf8",
-  );
+  fs.writeFileSync(temporary, JSON.stringify(store, null, 2), "utf8");
 
-  fs.renameSync(
-    temporary,
-    STORE_FILE,
-  );
+  fs.renameSync(temporary, STORE_FILE);
 }
 
-function replaceSession(
-  session: GoLiveSession,
-): GoLiveSession {
-  store.sessions =
-    store.sessions.filter(
-      (item) =>
-        item.gameId !==
-        session.gameId,
-    );
+function replaceSession(session: GoLiveSession): GoLiveSession {
+  store.sessions = store.sessions.filter((item) => item.gameId !== session.gameId);
 
-  store.sessions.push(
-    session,
-  );
+  store.sessions.push(session);
 
   persistStore();
 
@@ -136,15 +89,8 @@ function replaceSession(
   };
 }
 
-export function getGoLiveSession(
-  gameId: string,
-): GoLiveSession {
-  const existing =
-    store.sessions.find(
-      (item) =>
-        item.gameId ===
-        gameId,
-    );
+export function getGoLiveSession(gameId: string): GoLiveSession {
+  const existing = store.sessions.find((item) => item.gameId === gameId);
 
   if (existing) {
     return {
@@ -152,53 +98,31 @@ export function getGoLiveSession(
     };
   }
 
-  const now =
-    new Date().toISOString();
+  const now = new Date().toISOString();
 
   return {
     gameId,
-    status:
-      "IDLE",
-    armedAt:
-      null,
-    startedAt:
-      null,
-    liveAt:
-      null,
-    stoppedAt:
-      null,
-    completedAt:
-      null,
-    lastTransitionAt:
-      now,
-    lastError:
-      null,
-    scheduledStartAt:
-      null,
-    startWindowEarlyMinutes:
-      15,
-    startWindowLateMinutes:
-      15,
-    autoArmEnabled:
-      false,
-    autoArmLeadMinutes:
-      30,
-    healthHoldSeconds:
-      10,
-    healthySinceAt:
-      null,
-    degradedAt:
-      null,
-    degradationReason:
-      null,
-    incidentAcknowledgedAt:
-      null,
-    incidentAcknowledgedBy:
-      null,
-    emergencyStoppedAt:
-      null,
-    emergencyStopReason:
-      null,
+    status: "IDLE",
+    armedAt: null,
+    startedAt: null,
+    liveAt: null,
+    stoppedAt: null,
+    completedAt: null,
+    lastTransitionAt: now,
+    lastError: null,
+    scheduledStartAt: null,
+    startWindowEarlyMinutes: 15,
+    startWindowLateMinutes: 15,
+    autoArmEnabled: false,
+    autoArmLeadMinutes: 30,
+    healthHoldSeconds: 10,
+    healthySinceAt: null,
+    degradedAt: null,
+    degradationReason: null,
+    incidentAcknowledgedAt: null,
+    incidentAcknowledgedBy: null,
+    emergencyStoppedAt: null,
+    emergencyStopReason: null,
   };
 }
 
@@ -208,61 +132,26 @@ export function configureGoLiveSchedule(input: {
   startWindowEarlyMinutes?: number;
   startWindowLateMinutes?: number;
 }): GoLiveSession {
-  const current =
-    getGoLiveSession(
-      input.gameId,
-    );
+  const current = getGoLiveSession(input.gameId);
 
-  const early =
-    Number.isFinite(
-      input.startWindowEarlyMinutes,
-    )
-      ? Math.max(
-          0,
-          Math.min(
-            120,
-            Math.floor(
-              Number(
-                input.startWindowEarlyMinutes,
-              ),
-            ),
-          ),
-        )
-      : current.startWindowEarlyMinutes;
+  const early = Number.isFinite(input.startWindowEarlyMinutes)
+    ? Math.max(0, Math.min(120, Math.floor(Number(input.startWindowEarlyMinutes))))
+    : current.startWindowEarlyMinutes;
 
-  const late =
-    Number.isFinite(
-      input.startWindowLateMinutes,
-    )
-      ? Math.max(
-          0,
-          Math.min(
-            120,
-            Math.floor(
-              Number(
-                input.startWindowLateMinutes,
-              ),
-            ),
-          ),
-        )
-      : current.startWindowLateMinutes;
+  const late = Number.isFinite(input.startWindowLateMinutes)
+    ? Math.max(0, Math.min(120, Math.floor(Number(input.startWindowLateMinutes))))
+    : current.startWindowLateMinutes;
 
-  const scheduledStartAt =
-    input.scheduledStartAt
-      ? new Date(
-          input.scheduledStartAt,
-        ).toISOString()
-      : null;
+  const scheduledStartAt = input.scheduledStartAt
+    ? new Date(input.scheduledStartAt).toISOString()
+    : null;
 
   return replaceSession({
     ...current,
     scheduledStartAt,
-    startWindowEarlyMinutes:
-      early,
-    startWindowLateMinutes:
-      late,
-    lastTransitionAt:
-      new Date().toISOString(),
+    startWindowEarlyMinutes: early,
+    startWindowLateMinutes: late,
+    lastTransitionAt: new Date().toISOString(),
   });
 }
 
@@ -270,34 +159,23 @@ export function configureGoLiveHealthHold(
   gameId: string,
   healthHoldSeconds: number,
 ): GoLiveSession {
-  const current =
-    getGoLiveSession(
-      gameId,
-    );
+  const current = getGoLiveSession(gameId);
 
-  const normalized =
-    Math.max(
-      0,
-      Math.min(
-        120,
-        Math.floor(
-          Number.isFinite(
-            healthHoldSeconds,
-          )
-            ? healthHoldSeconds
-            : current.healthHoldSeconds,
-        ),
+  const normalized = Math.max(
+    0,
+    Math.min(
+      120,
+      Math.floor(
+        Number.isFinite(healthHoldSeconds) ? healthHoldSeconds : current.healthHoldSeconds,
       ),
-    );
+    ),
+  );
 
   return replaceSession({
     ...current,
-    healthHoldSeconds:
-      normalized,
-    healthySinceAt:
-      null,
-    lastTransitionAt:
-      new Date().toISOString(),
+    healthHoldSeconds: normalized,
+    healthySinceAt: null,
+    lastTransitionAt: new Date().toISOString(),
   });
 }
 
@@ -313,112 +191,93 @@ export function evaluateGoLiveHealthHold(input: {
   healthyForSeconds: number;
   remainingSeconds: number;
 } {
-  const current =
-    getGoLiveSession(
-      input.gameId,
-    );
+  const current = getGoLiveSession(input.gameId);
 
-  const now =
-    input.now ??
-    new Date();
+  const now = input.now ?? new Date();
 
-  if (
-    !input.encoderLive ||
-    !input.publishHealthy
-  ) {
-    if (
-      current.healthySinceAt !==
-      null
-    ) {
+  if (!input.encoderLive || !input.publishHealthy) {
+    if (current.healthySinceAt !== null) {
       replaceSession({
         ...current,
-        healthySinceAt:
-          null,
+        healthySinceAt: null,
       });
     }
 
     return {
-      readyToConfirm:
-        false,
-      healthySinceAt:
-        null,
-      holdSeconds:
-        current.healthHoldSeconds,
-      healthyForSeconds:
-        0,
-      remainingSeconds:
-        current.healthHoldSeconds,
+      readyToConfirm: false,
+      healthySinceAt: null,
+      holdSeconds: current.healthHoldSeconds,
+      healthyForSeconds: 0,
+      remainingSeconds: current.healthHoldSeconds,
     };
   }
 
-  const healthySinceAt =
-    current.healthySinceAt ??
-    now.toISOString();
+  const healthySinceAt = current.healthySinceAt ?? now.toISOString();
 
-  if (
-    current.healthySinceAt ===
-    null
-  ) {
+  if (current.healthySinceAt === null) {
     replaceSession({
       ...current,
       healthySinceAt,
     });
   }
 
-  const elapsedMs =
-    Math.max(
-      0,
-      now.getTime() -
-        Date.parse(
-          healthySinceAt,
-        ),
-    );
+  const elapsedMs = Math.max(0, now.getTime() - Date.parse(healthySinceAt));
 
-  const healthyForSeconds =
-    Math.floor(
-      elapsedMs /
-        1000,
-    );
+  const healthyForSeconds = Math.floor(elapsedMs / 1000);
 
-  const remainingSeconds =
-    Math.max(
-      0,
-      current.healthHoldSeconds -
-        healthyForSeconds,
-    );
+  const remainingSeconds = Math.max(0, current.healthHoldSeconds - healthyForSeconds);
 
   return {
-    readyToConfirm:
-      elapsedMs >=
-      current.healthHoldSeconds *
-        1000,
+    readyToConfirm: elapsedMs >= current.healthHoldSeconds * 1000,
     healthySinceAt,
-    holdSeconds:
-      current.healthHoldSeconds,
+    holdSeconds: current.healthHoldSeconds,
     healthyForSeconds,
     remainingSeconds,
   };
 }
 
-export function configureGoLiveAutoArm(input: { gameId: string; enabled: boolean; leadMinutes?: number; }): GoLiveSession {
+export function configureGoLiveAutoArm(input: {
+  gameId: string;
+  enabled: boolean;
+  leadMinutes?: number;
+}): GoLiveSession {
   const current = getGoLiveSession(input.gameId);
-  const lead = Number.isFinite(input.leadMinutes) ? Math.max(0, Math.min(240, Math.floor(Number(input.leadMinutes)))) : current.autoArmLeadMinutes;
-  return replaceSession({ ...current, autoArmEnabled: input.enabled, autoArmLeadMinutes: lead, lastTransitionAt: new Date().toISOString() });
+  const lead = Number.isFinite(input.leadMinutes)
+    ? Math.max(0, Math.min(240, Math.floor(Number(input.leadMinutes))))
+    : current.autoArmLeadMinutes;
+  return replaceSession({
+    ...current,
+    autoArmEnabled: input.enabled,
+    autoArmLeadMinutes: lead,
+    lastTransitionAt: new Date().toISOString(),
+  });
 }
 
 export function evaluateGoLiveCountdown(gameId: string, now = new Date()) {
   const session = getGoLiveSession(gameId);
-  if (!session.scheduledStartAt) return { scheduled:false, scheduledStartAt:null, secondsUntilStart:null, autoArmAt:null, autoArmDue:false };
+  if (!session.scheduledStartAt)
+    return {
+      scheduled: false,
+      scheduledStartAt: null,
+      secondsUntilStart: null,
+      autoArmAt: null,
+      autoArmDue: false,
+    };
   const start = Date.parse(session.scheduledStartAt);
   const arm = start - session.autoArmLeadMinutes * 60000;
   const nowMs = now.getTime();
-  return { scheduled:true, scheduledStartAt:session.scheduledStartAt, secondsUntilStart:Math.ceil((start-nowMs)/1000), autoArmAt:new Date(arm).toISOString(), autoArmDue:session.autoArmEnabled && nowMs >= arm && nowMs <= start };
+  return {
+    scheduled: true,
+    scheduledStartAt: session.scheduledStartAt,
+    secondsUntilStart: Math.ceil((start - nowMs) / 1000),
+    autoArmAt: new Date(arm).toISOString(),
+    autoArmDue: session.autoArmEnabled && nowMs >= arm && nowMs <= start,
+  };
 }
 
 export function evaluateGoLiveStartWindow(
   gameId: string,
-  now =
-    new Date(),
+  now = new Date(),
 ): {
   scheduled: boolean;
   withinWindow: boolean;
@@ -427,14 +286,9 @@ export function evaluateGoLiveStartWindow(
   opensAt: string | null;
   closesAt: string | null;
 } {
-  const session =
-    getGoLiveSession(
-      gameId,
-    );
+  const session = getGoLiveSession(gameId);
 
-  if (
-    !session.scheduledStartAt
-  ) {
+  if (!session.scheduledStartAt) {
     return {
       scheduled: false,
       withinWindow: true,
@@ -445,393 +299,209 @@ export function evaluateGoLiveStartWindow(
     };
   }
 
-  const scheduledMs =
-    Date.parse(
-      session.scheduledStartAt,
-    );
+  const scheduledMs = Date.parse(session.scheduledStartAt);
 
-  const opensMs =
-    scheduledMs -
-    session.startWindowEarlyMinutes *
-      60_000;
+  const opensMs = scheduledMs - session.startWindowEarlyMinutes * 60_000;
 
-  const closesMs =
-    scheduledMs +
-    session.startWindowLateMinutes *
-      60_000;
+  const closesMs = scheduledMs + session.startWindowLateMinutes * 60_000;
 
-  const nowMs =
-    now.getTime();
+  const nowMs = now.getTime();
 
   return {
     scheduled: true,
-    withinWindow:
-      nowMs >=
-        opensMs &&
-      nowMs <=
-        closesMs,
-    tooEarly:
-      nowMs <
-      opensMs,
-    tooLate:
-      nowMs >
-      closesMs,
-    opensAt:
-      new Date(
-        opensMs,
-      ).toISOString(),
-    closesAt:
-      new Date(
-        closesMs,
-      ).toISOString(),
+    withinWindow: nowMs >= opensMs && nowMs <= closesMs,
+    tooEarly: nowMs < opensMs,
+    tooLate: nowMs > closesMs,
+    opensAt: new Date(opensMs).toISOString(),
+    closesAt: new Date(closesMs).toISOString(),
   };
 }
 
-export function armGoLiveSession(
-  gameId: string,
-): GoLiveSession {
-  const current =
-    getGoLiveSession(
-      gameId,
-    );
+export function armGoLiveSession(gameId: string): GoLiveSession {
+  const current = getGoLiveSession(gameId);
 
-  if (
-    current.status ===
-      "ARMED" ||
-    current.status ===
-      "STARTING" ||
-    current.status ===
-      "LIVE"
-  ) {
+  if (current.status === "ARMED" || current.status === "STARTING" || current.status === "LIVE") {
     return current;
   }
 
-  const now =
-    new Date().toISOString();
+  const now = new Date().toISOString();
 
   return replaceSession({
     ...current,
-    status:
-      "ARMED",
-    armedAt:
-      now,
-    startedAt:
-      null,
-    liveAt:
-      null,
-    stoppedAt:
-      null,
-    completedAt:
-      null,
-    lastTransitionAt:
-      now,
-    lastError:
-      null,
+    status: "ARMED",
+    armedAt: now,
+    startedAt: null,
+    liveAt: null,
+    stoppedAt: null,
+    completedAt: null,
+    lastTransitionAt: now,
+    lastError: null,
   });
 }
 
-export function markGoLiveStarting(
-  gameId: string,
-): GoLiveSession {
-  const current =
-    getGoLiveSession(
-      gameId,
-    );
+export function markGoLiveStarting(gameId: string): GoLiveSession {
+  const current = getGoLiveSession(gameId);
 
-  const now =
-    new Date().toISOString();
+  const now = new Date().toISOString();
 
   return replaceSession({
     ...current,
-    status:
-      "STARTING",
-    startedAt:
-      current.startedAt ??
-      now,
-    lastTransitionAt:
-      now,
-    lastError:
-      null,
+    status: "STARTING",
+    startedAt: current.startedAt ?? now,
+    lastTransitionAt: now,
+    lastError: null,
   });
 }
 
-export function markGoLiveLive(
-  gameId: string,
-): GoLiveSession {
-  const current =
-    getGoLiveSession(
-      gameId,
-    );
+export function markGoLiveLive(gameId: string): GoLiveSession {
+  const current = getGoLiveSession(gameId);
 
-  const now =
-    new Date().toISOString();
+  const now = new Date().toISOString();
 
   return replaceSession({
     ...current,
-    status:
-      "LIVE",
-    liveAt:
-      current.liveAt ??
-      now,
-    lastTransitionAt:
-      now,
-    lastError:
-      null,
+    status: "LIVE",
+    liveAt: current.liveAt ?? now,
+    lastTransitionAt: now,
+    lastError: null,
   });
 }
 
-export function markGoLiveDegraded(
-  gameId: string,
-  reason: string,
-): GoLiveSession {
-  const current =
-    getGoLiveSession(
-      gameId,
-    );
+export function markGoLiveDegraded(gameId: string, reason: string): GoLiveSession {
+  const current = getGoLiveSession(gameId);
 
-  const now =
-    new Date().toISOString();
+  const now = new Date().toISOString();
 
   return replaceSession({
     ...current,
-    status:
-      "DEGRADED",
-    degradedAt:
-      current.degradedAt ??
-      now,
-    degradationReason:
-      reason.trim() ||
-      "Live broadcast degraded.",
-    incidentAcknowledgedAt:
-      null,
-    incidentAcknowledgedBy:
-      null,
-    lastTransitionAt:
-      now,
-    lastError:
-      reason.trim() ||
-      "Live broadcast degraded.",
+    status: "DEGRADED",
+    degradedAt: current.degradedAt ?? now,
+    degradationReason: reason.trim() || "Live broadcast degraded.",
+    incidentAcknowledgedAt: null,
+    incidentAcknowledgedBy: null,
+    lastTransitionAt: now,
+    lastError: reason.trim() || "Live broadcast degraded.",
   });
 }
 
-export function acknowledgeGoLiveIncident(
-  gameId: string,
-  operator: string | null,
-): GoLiveSession {
-  const current =
-    getGoLiveSession(
-      gameId,
-    );
+export function acknowledgeGoLiveIncident(gameId: string, operator: string | null): GoLiveSession {
+  const current = getGoLiveSession(gameId);
 
-  if (
-    current.status !==
-    "DEGRADED"
-  ) {
+  if (current.status !== "DEGRADED") {
     return current;
   }
 
   return replaceSession({
     ...current,
-    incidentAcknowledgedAt:
-      new Date().toISOString(),
-    incidentAcknowledgedBy:
-      operator?.trim() ||
-      null,
+    incidentAcknowledgedAt: new Date().toISOString(),
+    incidentAcknowledgedBy: operator?.trim() || null,
   });
 }
 
-export function clearGoLiveIncidentAcknowledgement(
-  gameId: string,
-): GoLiveSession {
-  const current =
-    getGoLiveSession(
-      gameId,
-    );
+export function clearGoLiveIncidentAcknowledgement(gameId: string): GoLiveSession {
+  const current = getGoLiveSession(gameId);
 
   return replaceSession({
     ...current,
-    incidentAcknowledgedAt:
-      null,
-    incidentAcknowledgedBy:
-      null,
-    emergencyStoppedAt:
-      null,
-    emergencyStopReason:
-      null,
+    incidentAcknowledgedAt: null,
+    incidentAcknowledgedBy: null,
+    emergencyStoppedAt: null,
+    emergencyStopReason: null,
   });
 }
 
-export function clearGoLiveDegraded(
-  gameId: string,
-): GoLiveSession {
-  const current =
-    getGoLiveSession(
-      gameId,
-    );
+export function clearGoLiveDegraded(gameId: string): GoLiveSession {
+  const current = getGoLiveSession(gameId);
 
   return replaceSession({
     ...current,
-    status:
-      "LIVE",
-    degradedAt:
-      null,
-    degradationReason:
-      null,
-    lastTransitionAt:
-      new Date().toISOString(),
-    lastError:
-      null,
+    status: "LIVE",
+    degradedAt: null,
+    degradationReason: null,
+    lastTransitionAt: new Date().toISOString(),
+    lastError: null,
   });
 }
 
-export function markGoLiveStopping(
-  gameId: string,
-): GoLiveSession {
-  const current =
-    getGoLiveSession(
-      gameId,
-    );
+export function markGoLiveStopping(gameId: string): GoLiveSession {
+  const current = getGoLiveSession(gameId);
 
   return replaceSession({
     ...current,
-    status:
-      "STOPPING",
-    stoppedAt:
-      null,
-    lastTransitionAt:
-      new Date().toISOString(),
-    lastError:
-      null,
+    status: "STOPPING",
+    stoppedAt: null,
+    lastTransitionAt: new Date().toISOString(),
+    lastError: null,
   });
 }
 
-export function completeGoLiveSession(
-  gameId: string,
-): GoLiveSession {
-  const current =
-    getGoLiveSession(
-      gameId,
-    );
+export function completeGoLiveSession(gameId: string): GoLiveSession {
+  const current = getGoLiveSession(gameId);
 
-  const now =
-    new Date().toISOString();
+  const now = new Date().toISOString();
 
   return replaceSession({
     ...current,
-    status:
-      "COMPLETE",
-    stoppedAt:
-      now,
-    completedAt:
-      now,
-    lastTransitionAt:
-      now,
-    lastError:
-      null,
+    status: "COMPLETE",
+    stoppedAt: now,
+    completedAt: now,
+    lastTransitionAt: now,
+    lastError: null,
   });
 }
 
-export function markGoLiveError(
-  gameId: string,
-  message: string,
-): GoLiveSession {
-  const current =
-    getGoLiveSession(
-      gameId,
-    );
+export function markGoLiveError(gameId: string, message: string): GoLiveSession {
+  const current = getGoLiveSession(gameId);
 
   return replaceSession({
     ...current,
-    status:
-      "ERROR",
-    lastTransitionAt:
-      new Date().toISOString(),
-    lastError:
-      message.trim() ||
-      "Go-live session error.",
+    status: "ERROR",
+    lastTransitionAt: new Date().toISOString(),
+    lastError: message.trim() || "Go-live session error.",
   });
 }
 
-export function markGoLiveEmergencyStopped(
-  gameId: string,
-  reason: string | null,
-): GoLiveSession {
-  const current =
-    getGoLiveSession(
-      gameId,
-    );
+export function markGoLiveEmergencyStopped(gameId: string, reason: string | null): GoLiveSession {
+  const current = getGoLiveSession(gameId);
 
-  const now =
-    new Date().toISOString();
+  const now = new Date().toISOString();
 
   return replaceSession({
     ...current,
-    status:
-      "EMERGENCY_STOPPED",
-    stoppedAt:
-      now,
-    emergencyStoppedAt:
-      now,
-    emergencyStopReason:
-      reason?.trim() ||
-      "Emergency broadcast stop.",
-    lastTransitionAt:
-      now,
-    lastError:
-      reason?.trim() ||
-      "Emergency broadcast stop.",
+    status: "EMERGENCY_STOPPED",
+    stoppedAt: now,
+    emergencyStoppedAt: now,
+    emergencyStopReason: reason?.trim() || "Emergency broadcast stop.",
+    lastTransitionAt: now,
+    lastError: reason?.trim() || "Emergency broadcast stop.",
   });
 }
 
-export function resetGoLiveSession(
-  gameId: string,
-): GoLiveSession {
-  const now =
-    new Date().toISOString();
+export function resetGoLiveSession(gameId: string): GoLiveSession {
+  const now = new Date().toISOString();
 
   return replaceSession({
     gameId,
-    status:
-      "IDLE",
-    armedAt:
-      null,
-    startedAt:
-      null,
-    liveAt:
-      null,
-    stoppedAt:
-      null,
-    completedAt:
-      null,
-    lastTransitionAt:
-      now,
-    lastError:
-      null,
-    scheduledStartAt:
-      null,
-    startWindowEarlyMinutes:
-      15,
-    startWindowLateMinutes:
-      15,
-    autoArmEnabled:
-      false,
-    autoArmLeadMinutes:
-      30,
-    healthHoldSeconds:
-      10,
-    healthySinceAt:
-      null,
-    degradedAt:
-      null,
-    degradationReason:
-      null,
-    incidentAcknowledgedAt:
-      null,
-    incidentAcknowledgedBy:
-      null,
-    emergencyStoppedAt:
-      null,
-    emergencyStopReason:
-      null,
+    status: "IDLE",
+    armedAt: null,
+    startedAt: null,
+    liveAt: null,
+    stoppedAt: null,
+    completedAt: null,
+    lastTransitionAt: now,
+    lastError: null,
+    scheduledStartAt: null,
+    startWindowEarlyMinutes: 15,
+    startWindowLateMinutes: 15,
+    autoArmEnabled: false,
+    autoArmLeadMinutes: 30,
+    healthHoldSeconds: 10,
+    healthySinceAt: null,
+    degradedAt: null,
+    degradationReason: null,
+    incidentAcknowledgedAt: null,
+    incidentAcknowledgedBy: null,
+    emergencyStoppedAt: null,
+    emergencyStopReason: null,
   });
 }

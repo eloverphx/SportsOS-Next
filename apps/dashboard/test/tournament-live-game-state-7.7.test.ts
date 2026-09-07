@@ -4,10 +4,7 @@ import fs from "node:fs";
 describe("Milestone 7.7 live game state integration", () => {
   it("uses the real lifecycle endpoint and startGame command", () => {
     const route = fs.readFileSync(
-      new URL(
-        "../app/api/tournament/game-operations/[gameId]/start/route.ts",
-        import.meta.url,
-      ),
+      new URL("../app/api/tournament/game-operations/[gameId]/start/route.ts", import.meta.url),
       "utf8",
     );
 
@@ -18,10 +15,7 @@ describe("Milestone 7.7 live game state integration", () => {
 
   it("forwards authentication context", () => {
     const route = fs.readFileSync(
-      new URL(
-        "../app/api/tournament/game-operations/[gameId]/start/route.ts",
-        import.meta.url,
-      ),
+      new URL("../app/api/tournament/game-operations/[gameId]/start/route.ts", import.meta.url),
       "utf8",
     );
 
@@ -31,10 +25,7 @@ describe("Milestone 7.7 live game state integration", () => {
 
   it("does not forward testing override as server authority", () => {
     const route = fs.readFileSync(
-      new URL(
-        "../app/api/tournament/game-operations/[gameId]/start/route.ts",
-        import.meta.url,
-      ),
+      new URL("../app/api/tournament/game-operations/[gameId]/start/route.ts", import.meta.url),
       "utf8",
     );
 

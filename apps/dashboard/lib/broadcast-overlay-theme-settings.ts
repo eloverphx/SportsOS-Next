@@ -1,13 +1,7 @@
-import type {
-  BroadcastOverlayDensity,
-  BroadcastOverlayTheme,
-} from "./broadcast-overlay-theme";
-import {
-  buildBroadcastOverlayTheme,
-} from "./broadcast-overlay-theme";
+import type { BroadcastOverlayDensity, BroadcastOverlayTheme } from "./broadcast-overlay-theme";
+import { buildBroadcastOverlayTheme } from "./broadcast-overlay-theme";
 
-export const BROADCAST_THEME_STORAGE_KEY =
-  "sportsos:broadcast-overlay-theme";
+export const BROADCAST_THEME_STORAGE_KEY = "sportsos:broadcast-overlay-theme";
 
 export type BroadcastOverlayThemeSettings = {
   homeAccent: string;

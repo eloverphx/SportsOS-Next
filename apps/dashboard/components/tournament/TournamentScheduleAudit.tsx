@@ -61,10 +61,7 @@ type CurrentIncidentStatus =
   | "GAME_NOT_CREATED"
   | "GAME_NOT_FOUND";
 
-function conflictTouchesGame(
-  conflict: ScheduleConflict,
-  gameId: number,
-): boolean {
+function conflictTouchesGame(conflict: ScheduleConflict, gameId: number): boolean {
   return conflict.gameId === gameId || conflict.relatedGameId === gameId;
 }
 
@@ -81,9 +78,7 @@ function currentIncidentStatus(
     return "GAME_NOT_FOUND";
   }
 
-  return currentConflicts.some((conflict) =>
-    conflictTouchesGame(conflict, event.gameId as number),
-  )
+  return currentConflicts.some((conflict) => conflictTouchesGame(conflict, event.gameId as number))
     ? "CURRENT_CONFLICT"
     : "RESOLVED";
 }
@@ -110,14 +105,10 @@ function eventTitle(event: ScheduleAuditEvent): string {
   const kind = eventKind(event.action);
 
   if (kind === "OVERRIDDEN") {
-    return create
-      ? "Conflicting game creation overridden"
-      : "Schedule conflict overridden";
+    return create ? "Conflicting game creation overridden" : "Schedule conflict overridden";
   }
 
-  return create
-    ? "Conflicting game creation blocked"
-    : "Schedule change blocked";
+  return create ? "Conflicting game creation blocked" : "Schedule change blocked";
 }
 
 function formatWhen(value: string): string {
@@ -141,16 +132,10 @@ export function TournamentScheduleAudit({ games }: Props) {
   const [pageOffset, setPageOffset] = useState(0);
   const [debouncedGameId, setDebouncedGameId] = useState("");
 
-  const currentConflicts = useMemo(
-    () => detectScheduleConflicts(games),
-    [games],
-  );
+  const currentConflicts = useMemo(() => detectScheduleConflicts(games), [games]);
 
   useEffect(() => {
-    const timer = window.setTimeout(
-      () => setDebouncedGameId(gameId.trim()),
-      300,
-    );
+    const timer = window.setTimeout(() => setDebouncedGameId(gameId.trim()), 300);
 
     return () => window.clearTimeout(timer);
   }, [gameId]);
@@ -158,9 +143,7 @@ export function TournamentScheduleAudit({ games }: Props) {
   const selectedActorUserId = useMemo(() => {
     if (actor === "ALL") return null;
 
-    return (
-      events.find((event) => event.actorName === actor)?.actorUserId ?? null
-    );
+    return events.find((event) => event.actorName === actor)?.actorUserId ?? null;
   }, [actor, events]);
 
   const load = useCallback(async () => {
@@ -206,14 +189,7 @@ export function TournamentScheduleAudit({ games }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [
-    debouncedGameId,
-    decision,
-    organizationId,
-    pageOffset,
-    rink,
-    selectedActorUserId,
-  ]);
+  }, [debouncedGameId, decision, organizationId, pageOffset, rink, selectedActorUserId]);
 
   useEffect(() => {
     void load();
@@ -239,13 +215,11 @@ export function TournamentScheduleAudit({ games }: Props) {
 
   const actorOptions = useMemo(
     () =>
-      Array.from(
-        new Set(events.map((event) => event.actorName).filter(Boolean)),
-      ).sort((left, right) => left.localeCompare(right)),
+      Array.from(new Set(events.map((event) => event.actorName).filter(Boolean))).sort(
+        (left, right) => left.localeCompare(right),
+      ),
     [events],
   );
-
-
 
   const organizationOptions = useMemo(
     () =>
@@ -308,8 +282,8 @@ export function TournamentScheduleAudit({ games }: Props) {
           <span className="scheduleAuditEyebrow">Schedule governance</span>
           <h2 id="schedule-audit-heading">Schedule decision history</h2>
           <p>
-            Recent hard-conflict blocks and approved overrides, including who
-            made the decision and the recorded reason.
+            Recent hard-conflict blocks and approved overrides, including who made the decision and
+            the recorded reason.
           </p>
         </div>
 
@@ -318,10 +292,7 @@ export function TournamentScheduleAudit({ games }: Props) {
         </button>
       </div>
 
-      <div
-        className="scheduleAuditMetrics"
-        data-testid="director-audit-summary-metrics"
-      >
+      <div className="scheduleAuditMetrics" data-testid="director-audit-summary-metrics">
         <article>
           <span>Total decisions</span>
           <strong>{incidentSummary.total}</strong>
@@ -349,9 +320,7 @@ export function TournamentScheduleAudit({ games }: Props) {
           Decision
           <select
             value={decision}
-            onChange={(event) =>
-              setDecision(event.target.value as DecisionFilter)
-            }
+            onChange={(event) => setDecision(event.target.value as DecisionFilter)}
           >
             <option value="ALL">All decisions</option>
             <option value="BLOCKED">Blocked only</option>
@@ -384,10 +353,7 @@ export function TournamentScheduleAudit({ games }: Props) {
 
         <label>
           Actor
-          <select
-            value={actor}
-            onChange={(event) => setActor(event.target.value)}
-          >
+          <select value={actor} onChange={(event) => setActor(event.target.value)}>
             <option value="ALL">All actors</option>
             {actorOptions.map((value) => (
               <option key={value} value={value}>
@@ -435,10 +401,7 @@ export function TournamentScheduleAudit({ games }: Props) {
           matching decision{serverTotal === 1 ? "" : "s"}
           {filtersActive ? " after filters" : ""}
           {serverTotal > 0
-            ? ` · showing ${pageOffset + 1}-${Math.min(
-                pageOffset + events.length,
-                serverTotal,
-              )}`
+            ? ` · showing ${pageOffset + 1}-${Math.min(pageOffset + events.length, serverTotal)}`
             : ""}
         </span>
       </div>
@@ -457,21 +420,12 @@ export function TournamentScheduleAudit({ games }: Props) {
         <div className="scheduleAuditList" data-testid="director-audit-events">
           {filteredEvents.map((event) => {
             const kind = eventKind(event.action);
-            const currentStatus = currentIncidentStatus(
-              event,
-              games,
-              currentConflicts,
-            );
+            const currentStatus = currentIncidentStatus(event, games, currentConflicts);
 
             return (
-              <article
-                key={event.id}
-                className={`scheduleAuditEvent ${kind.toLowerCase()}`}
-              >
+              <article key={event.id} className={`scheduleAuditEvent ${kind.toLowerCase()}`}>
                 <div className="scheduleAuditEventTop">
-                  <span className={`scheduleAuditBadge ${kind.toLowerCase()}`}>
-                    {kind}
-                  </span>
+                  <span className={`scheduleAuditBadge ${kind.toLowerCase()}`}>{kind}</span>
                   <strong>{eventTitle(event)}</strong>
                   <time>{formatWhen(event.createdAt)}</time>
                 </div>
@@ -489,9 +443,7 @@ export function TournamentScheduleAudit({ games }: Props) {
                     Actor: <strong>{event.actorName}</strong>
                     {event.actorRole ? ` · ${event.actorRole.replaceAll("_", " ")}` : ""}
                   </span>
-                  {event.organizationId ? (
-                    <span>Organization #{event.organizationId}</span>
-                  ) : null}
+                  {event.organizationId ? <span>Organization #{event.organizationId}</span> : null}
                   {event.gameId ? (
                     <span>
                       Game <strong>#{event.gameId}</strong>
@@ -516,9 +468,7 @@ export function TournamentScheduleAudit({ games }: Props) {
 
                 {event.conflicts.length > 0 ? (
                   <details className="scheduleAuditEvidence">
-                    <summary>
-                      View conflict evidence ({event.conflicts.length})
-                    </summary>
+                    <summary>View conflict evidence ({event.conflicts.length})</summary>
 
                     <div className="scheduleAuditEvidenceList">
                       {event.conflicts.map((conflict, index) => (
@@ -537,21 +487,15 @@ export function TournamentScheduleAudit({ games }: Props) {
                             {conflict.gameId ? (
                               <>
                                 <span>Game #{conflict.gameId}</span>
-                                <a
-                                  href={`#director-timeline-game-${conflict.gameId}`}
-                                >
+                                <a href={`#director-timeline-game-${conflict.gameId}`}>
                                   View game in timeline
                                 </a>
                               </>
                             ) : null}
                             {conflict.relatedGameId ? (
                               <>
-                                <span>
-                                  Related game #{conflict.relatedGameId}
-                                </span>
-                                <a
-                                  href={`#director-timeline-game-${conflict.relatedGameId}`}
-                                >
+                                <span>Related game #{conflict.relatedGameId}</span>
+                                <a href={`#director-timeline-game-${conflict.relatedGameId}`}>
                                   View related game in timeline
                                 </a>
                               </>
@@ -568,15 +512,9 @@ export function TournamentScheduleAudit({ games }: Props) {
                     className="scheduleAuditActions"
                     data-testid={`director-audit-actions-${event.id}`}
                   >
-                    <Link href={`/games/${event.gameId}/control`}>
-                      Open scorekeeper
-                    </Link>
-                    <Link href={`/games/${event.gameId}/scoreboard`}>
-                      Open scoreboard
-                    </Link>
-                    <Link href={`/games/${event.gameId}/overlay`}>
-                      Open overlay
-                    </Link>
+                    <Link href={`/games/${event.gameId}/control`}>Open scorekeeper</Link>
+                    <Link href={`/games/${event.gameId}/scoreboard`}>Open scoreboard</Link>
+                    <Link href={`/games/${event.gameId}/overlay`}>Open overlay</Link>
                     <a href={`#director-timeline-game-${event.gameId}`}>
                       View in schedule timeline
                     </a>
@@ -592,19 +530,12 @@ export function TournamentScheduleAudit({ games }: Props) {
         </div>
       ) : null}
 
-      <div
-        className="scheduleAuditPagination"
-        data-testid="director-audit-pagination"
-      >
+      <div className="scheduleAuditPagination" data-testid="director-audit-pagination">
         <button
           type="button"
           className="secondary"
           disabled={pageOffset === 0 || loading}
-          onClick={() =>
-            setPageOffset((current) =>
-              Math.max(0, current - AUDIT_PAGE_SIZE),
-            )
-          }
+          onClick={() => setPageOffset((current) => Math.max(0, current - AUDIT_PAGE_SIZE))}
         >
           Previous
         </button>
@@ -621,13 +552,8 @@ export function TournamentScheduleAudit({ games }: Props) {
         <button
           type="button"
           className="secondary"
-          disabled={
-            loading ||
-            pageOffset + AUDIT_PAGE_SIZE >= serverTotal
-          }
-          onClick={() =>
-            setPageOffset((current) => current + AUDIT_PAGE_SIZE)
-          }
+          disabled={loading || pageOffset + AUDIT_PAGE_SIZE >= serverTotal}
+          onClick={() => setPageOffset((current) => current + AUDIT_PAGE_SIZE)}
         >
           Next
         </button>

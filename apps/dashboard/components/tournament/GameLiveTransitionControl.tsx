@@ -2,10 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { GameStartAuthorizationRecord } from "../../lib/tournament-game-start-authorization";
-import {
-  computeGameStartTiming,
-  formatDelayLabel,
-} from "../../lib/tournament-game-start-tracking";
+import { computeGameStartTiming, formatDelayLabel } from "../../lib/tournament-game-start-tracking";
 
 type Props = {
   gameId: string;
@@ -32,11 +29,7 @@ function formatTimestamp(value: string | null): string {
   return date.toLocaleString();
 }
 
-export function GameLiveTransitionControl({
-  gameId,
-  scheduledStart,
-  authorization,
-}: Props) {
+export function GameLiveTransitionControl({ gameId, scheduledStart, authorization }: Props) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actualStart, setActualStart] = useState<string | null>(null);
@@ -66,9 +59,7 @@ export function GameLiveTransitionControl({
       const body = await response.text();
 
       if (!response.ok) {
-        throw new Error(
-          body || `Game start request failed (${response.status}).`,
-        );
+        throw new Error(body || `Game start request failed (${response.status}).`);
       }
 
       let parsed: LifecycleStartResponse = {};
@@ -76,28 +67,19 @@ export function GameLiveTransitionControl({
       try {
         parsed = body ? JSON.parse(body) : {};
       } catch {
-        throw new Error(
-          "Game start was accepted but the API response could not be parsed.",
-        );
+        throw new Error("Game start was accepted but the API response could not be parsed.");
       }
 
-      const authoritativeActualStart =
-        parsed.game?.clockStartedAt ?? null;
+      const authoritativeActualStart = parsed.game?.clockStartedAt ?? null;
 
       if (!authoritativeActualStart) {
-        throw new Error(
-          "Game start response did not include authoritative clockStartedAt.",
-        );
+        throw new Error("Game start response did not include authoritative clockStartedAt.");
       }
 
       setActualStart(authoritativeActualStart);
       setStartAccepted(true);
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Game start request failed.",
-      );
+      setError(cause instanceof Error ? cause.message : "Game start request failed.");
     } finally {
       setPending(false);
     }
@@ -110,9 +92,7 @@ export function GameLiveTransitionControl({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold text-slate-100">
-            Live game state
-          </h2>
+          <h2 className="font-semibold text-slate-100">Live game state</h2>
           <p className="mt-1 text-xs leading-5 text-slate-500">
             Start the game through the authenticated SportsOS lifecycle API.
           </p>
@@ -130,10 +110,7 @@ export function GameLiveTransitionControl({
         </span>
       </div>
 
-      <div
-        data-testid="game-start-timing"
-        className="mt-4 grid gap-3 md:grid-cols-3"
-      >
+      <div data-testid="game-start-timing" className="mt-4 grid gap-3 md:grid-cols-3">
         <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
             Scheduled
@@ -178,16 +155,13 @@ export function GameLiveTransitionControl({
 
       {!authorization ? (
         <div className="mt-4 rounded-lg border border-amber-900/60 bg-amber-950/20 px-3 py-3 text-sm text-amber-300">
-          Game-start authorization is required before a live transition can be
-          requested.
+          Game-start authorization is required before a live transition can be requested.
         </div>
       ) : (
         <div className="mt-4">
           <div className="rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-3 text-xs text-slate-400">
             Authorized by{" "}
-            <span className="font-semibold text-slate-200">
-              {authorization.authorizedBy}
-            </span>
+            <span className="font-semibold text-slate-200">{authorization.authorizedBy}</span>
             {" · "}
             {authorization.mode === "normal"
               ? "normal readiness"
@@ -220,9 +194,8 @@ export function GameLiveTransitionControl({
       ) : null}
 
       <p className="mt-3 text-xs leading-5 text-slate-500">
-        Actual start comes from the API's authoritative clockStartedAt value.
-        Delay is derived from actual start minus scheduled start; the browser
-        does not invent the game-start timestamp.
+        Actual start comes from the API's authoritative clockStartedAt value. Delay is derived from
+        actual start minus scheduled start; the browser does not invent the game-start timestamp.
       </p>
     </section>
   );

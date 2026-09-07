@@ -56,9 +56,7 @@ export interface OperationsIncidentCandidate {
   readonly metadata: Record<string, unknown>;
 }
 
-function normalizeSeverity(
-  value: string | undefined,
-): OperationsIncidentSeverity | null {
+function normalizeSeverity(value: string | undefined): OperationsIncidentSeverity | null {
   const normalized = value?.trim().toLowerCase();
   if (normalized === "critical") {
     return "critical";
@@ -78,10 +76,7 @@ function slug(value: string): string {
     .slice(0, 120);
 }
 
-function stableReasonFingerprint(
-  severity: OperationsIncidentSeverity,
-  reason: string,
-): string {
+function stableReasonFingerprint(severity: OperationsIncidentSeverity, reason: string): string {
   return `reliability:${severity}:${slug(reason) || "unspecified"}`;
 }
 
@@ -118,19 +113,14 @@ export function synthesizeOperationsIncidentCandidates(
       summary,
       service: null,
       metadata: {
-        overallStatus:
-          status.overallStatus ??
-          status.severity?.status ??
-          "unknown",
+        overallStatus: status.overallStatus ?? status.severity?.status ?? "unknown",
       },
     });
   }
 
   const recovery = status.recovery;
   const recentFailed = Number(
-    recovery?.summary?.recentFailedRecoveries ??
-      recovery?.summary?.totalFailedRecoveries ??
-      0,
+    recovery?.summary?.recentFailedRecoveries ?? recovery?.summary?.totalFailedRecoveries ?? 0,
   );
 
   if (Number.isFinite(recentFailed) && recentFailed > 0) {
@@ -169,31 +159,25 @@ export function synthesizeOperationsIncidentCandidates(
         metadata: {
           policy: service.policy ?? null,
           blockedReason: service.blockedReason ?? null,
-          successfulActionsInWindow:
-            service.successfulActionsInWindow ?? 0,
+          successfulActionsInWindow: service.successfulActionsInWindow ?? 0,
           remainingBudget: service.remainingBudget ?? 0,
         },
       });
       continue;
     }
 
-    if (
-      state === "cooldown" &&
-      Number(service.cooldownRemainingSeconds ?? 0) > 0
-    ) {
+    if (state === "cooldown" && Number(service.cooldownRemainingSeconds ?? 0) > 0) {
       add({
         fingerprint: `recovery:${slug(serviceName)}:cooldown`,
         source: "recovery",
         severity: "warning",
         title: `Recovery cooldown active for ${serviceName}`,
-        summary:
-          "Automatic recovery is temporarily blocked by the bounded recovery cooldown.",
+        summary: "Automatic recovery is temporarily blocked by the bounded recovery cooldown.",
         service: serviceName,
         metadata: {
           policy: service.policy ?? null,
           blockedReason: service.blockedReason ?? null,
-          cooldownRemainingSeconds:
-            service.cooldownRemainingSeconds ?? 0,
+          cooldownRemainingSeconds: service.cooldownRemainingSeconds ?? 0,
           remainingBudget: service.remainingBudget ?? null,
         },
       });
@@ -201,18 +185,13 @@ export function synthesizeOperationsIncidentCandidates(
   }
 
   const failedRuns = Number(status.recent?.failedRuns ?? 0);
-  if (
-    Number.isFinite(failedRuns) &&
-    failedRuns > 0 &&
-    candidates.length === 0
-  ) {
+  if (Number.isFinite(failedRuns) && failedRuns > 0 && candidates.length === 0) {
     add({
       fingerprint: "operations:recent-run-failure",
       source: "operations",
       severity: "warning",
       title: "Recent production operation failed",
-      summary:
-        "One or more recent scheduled production operations reported failure.",
+      summary: "One or more recent scheduled production operations reported failure.",
       service: null,
       metadata: {
         totalRuns: status.recent?.totalRuns ?? 0,
@@ -222,17 +201,14 @@ export function synthesizeOperationsIncidentCandidates(
     });
   }
 
-  return candidates.sort((left, right) =>
-    left.fingerprint.localeCompare(right.fingerprint),
-  );
+  return candidates.sort((left, right) => left.fingerprint.localeCompare(right.fingerprint));
 }
 
 export async function persistSynthesizedOperationsIncidents(
   status: OperationsStatusForIncidentSynthesis,
   observedAt?: string,
 ): Promise<readonly string[]> {
-  const candidates =
-    synthesizeOperationsIncidentCandidates(status);
+  const candidates = synthesizeOperationsIncidentCandidates(status);
   const incidentIds: string[] = [];
 
   for (const candidate of candidates) {

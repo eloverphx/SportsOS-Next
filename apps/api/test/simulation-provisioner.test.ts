@@ -23,11 +23,8 @@ vi.mock("../src/modules/simulation/sportsos-adapter.js", () => ({
   createSportsOSSimulationAdapter,
 }));
 
-const {
-  cleanupSimulationRun,
-  executeProvisionedSimulationRun,
-  provisionSimulationRun,
-} = await import("../src/modules/simulation/provisioner.js");
+const { cleanupSimulationRun, executeProvisionedSimulationRun, provisionSimulationRun } =
+  await import("../src/modules/simulation/provisioner.js");
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -88,9 +85,7 @@ describe("isolated simulation provisioning", () => {
         seasonId: 999,
         actorUserId: "7",
       }),
-    ).rejects.toThrow(
-      "Simulation season was not found in the requested organization",
-    );
+    ).rejects.toThrow("Simulation season was not found in the requested organization");
 
     expect(createGame).not.toHaveBeenCalled();
   });
@@ -141,11 +136,7 @@ describe("isolated simulation provisioning", () => {
       results: [],
     });
 
-    const result = await executeProvisionedSimulationRun(
-      "stress-002",
-      "7",
-      2,
-    );
+    const result = await executeProvisionedSimulationRun("stress-002", "7", 2);
 
     expect(createSportsOSSimulationAdapter).toHaveBeenCalledWith({
       bindings: [
@@ -187,14 +178,8 @@ describe("isolated simulation provisioning", () => {
 
     expect(result.deletedGames).toBe(2);
 
-    expect(poolExecute).toHaveBeenCalledWith(
-      "DELETE FROM games WHERE id = ?",
-      [1001],
-    );
-    expect(poolExecute).toHaveBeenCalledWith(
-      "DELETE FROM games WHERE id = ?",
-      [1002],
-    );
+    expect(poolExecute).toHaveBeenCalledWith("DELETE FROM games WHERE id = ?", [1001]);
+    expect(poolExecute).toHaveBeenCalledWith("DELETE FROM games WHERE id = ?", [1002]);
 
     expect(
       poolExecute.mock.calls.some(([sql]) =>

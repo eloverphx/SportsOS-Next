@@ -2,10 +2,7 @@ import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("Milestone 29.9.1 operations dashboard page repair", () => {
-  const page = fs.readFileSync(
-    "apps/dashboard/app/dashboard/operations/page.tsx",
-    "utf8",
-  );
+  const page = fs.readFileSync("apps/dashboard/app/dashboard/operations/page.tsx", "utf8");
 
   it("uses the colocated server helper", () => {
     expect(page).toContain('from "./operationsStatus"');

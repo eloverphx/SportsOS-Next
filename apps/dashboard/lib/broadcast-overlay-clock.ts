@@ -4,27 +4,19 @@ export type OverlayClockAnchor = {
   capturedAtMs: number;
 };
 
-export function deriveSmoothedRemainingMs(
-  anchor: OverlayClockAnchor,
-  nowMs: number,
-): number {
+export function deriveSmoothedRemainingMs(anchor: OverlayClockAnchor, nowMs: number): number {
   const remaining = Math.max(0, anchor.remainingMs);
 
   if (!anchor.running) {
     return remaining;
   }
 
-  const elapsed = Math.max(
-    0,
-    nowMs - anchor.capturedAtMs,
-  );
+  const elapsed = Math.max(0, nowMs - anchor.capturedAtMs);
 
   return Math.max(0, remaining - elapsed);
 }
 
-export function formatOverlayClock(
-  remainingMs: number,
-): string {
+export function formatOverlayClock(remainingMs: number): string {
   const clamped = Math.max(0, remainingMs);
 
   if (clamped < 60_000) {

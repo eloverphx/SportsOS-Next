@@ -1,7 +1,4 @@
-export type BroadcastOverlayDensity =
-  | "COMPACT"
-  | "STANDARD"
-  | "LARGE";
+export type BroadcastOverlayDensity = "COMPACT" | "STANDARD" | "LARGE";
 
 export type BroadcastOverlayTheme = {
   id: string;
@@ -15,27 +12,20 @@ export type BroadcastOverlayTheme = {
   density: BroadcastOverlayDensity;
 };
 
-export const DEFAULT_BROADCAST_OVERLAY_THEME:
-  BroadcastOverlayTheme = {
-    id: "sportsos-dark",
-    name: "SportsOS Dark",
-    homeAccent: "#2563eb",
-    awayAccent: "#dc2626",
-    panelBackground: "rgba(2, 6, 23, 0.92)",
-    textColor: "#ffffff",
-    mutedTextColor: "#94a3b8",
-    showLogos: true,
-    density: "STANDARD",
-  };
+export const DEFAULT_BROADCAST_OVERLAY_THEME: BroadcastOverlayTheme = {
+  id: "sportsos-dark",
+  name: "SportsOS Dark",
+  homeAccent: "#2563eb",
+  awayAccent: "#dc2626",
+  panelBackground: "rgba(2, 6, 23, 0.92)",
+  textColor: "#ffffff",
+  mutedTextColor: "#94a3b8",
+  showLogos: true,
+  density: "STANDARD",
+};
 
-function normalizeHexColor(
-  value: string | null | undefined,
-  fallback: string,
-): string {
-  if (
-    typeof value === "string" &&
-    /^#[0-9a-fA-F]{6}$/.test(value)
-  ) {
+function normalizeHexColor(value: string | null | undefined, fallback: string): string {
+  if (typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value)) {
     return value;
   }
 
@@ -48,21 +38,11 @@ export function buildBroadcastOverlayTheme(
   return {
     ...DEFAULT_BROADCAST_OVERLAY_THEME,
     ...input,
-    homeAccent: normalizeHexColor(
-      input?.homeAccent,
-      DEFAULT_BROADCAST_OVERLAY_THEME.homeAccent,
-    ),
-    awayAccent: normalizeHexColor(
-      input?.awayAccent,
-      DEFAULT_BROADCAST_OVERLAY_THEME.awayAccent,
-    ),
+    homeAccent: normalizeHexColor(input?.homeAccent, DEFAULT_BROADCAST_OVERLAY_THEME.homeAccent),
+    awayAccent: normalizeHexColor(input?.awayAccent, DEFAULT_BROADCAST_OVERLAY_THEME.awayAccent),
     panelBackground:
-      input?.panelBackground?.trim() ||
-      DEFAULT_BROADCAST_OVERLAY_THEME.panelBackground,
-    textColor: normalizeHexColor(
-      input?.textColor,
-      DEFAULT_BROADCAST_OVERLAY_THEME.textColor,
-    ),
+      input?.panelBackground?.trim() || DEFAULT_BROADCAST_OVERLAY_THEME.panelBackground,
+    textColor: normalizeHexColor(input?.textColor, DEFAULT_BROADCAST_OVERLAY_THEME.textColor),
     mutedTextColor: normalizeHexColor(
       input?.mutedTextColor,
       DEFAULT_BROADCAST_OVERLAY_THEME.mutedTextColor,
@@ -70,9 +50,7 @@ export function buildBroadcastOverlayTheme(
   };
 }
 
-export function overlayDensityClasses(
-  density: BroadcastOverlayDensity,
-): {
+export function overlayDensityClasses(density: BroadcastOverlayDensity): {
   score: string;
   team: string;
   clock: string;

@@ -4,10 +4,7 @@ import fs from "node:fs";
 describe("Milestone 10.4 API scoreboard device gateway", () => {
   it("defines the MQTT-backed scoreboard gateway", () => {
     const source = fs.readFileSync(
-      new URL(
-        "../src/services/scoreboardDeviceGateway.ts",
-        import.meta.url,
-      ),
+      new URL("../src/services/scoreboardDeviceGateway.ts", import.meta.url),
       "utf8",
     );
 
@@ -20,29 +17,16 @@ describe("Milestone 10.4 API scoreboard device gateway", () => {
 
   it("exposes device HTTP routes", () => {
     const route = fs.readFileSync(
-      new URL(
-        "../src/routes/scoreboardDevices.ts",
-        import.meta.url,
-      ),
+      new URL("../src/routes/scoreboardDevices.ts", import.meta.url),
       "utf8",
     );
 
-    expect(route).toContain(
-      '"/scoreboard-devices/:deviceId/commands"',
-    );
+    expect(route).toContain('"/scoreboard-devices/:deviceId/commands"');
   });
 
   it("registers the device routes in the discovered API file", () => {
-    const source = fs.readFileSync(
-      new URL(
-        "../src/app.ts",
-        import.meta.url,
-      ),
-      "utf8",
-    );
+    const source = fs.readFileSync(new URL("../src/app.ts", import.meta.url), "utf8");
 
-    expect(source).toContain(
-      "scoreboardDevicesRoutes",
-    );
+    expect(source).toContain("scoreboardDevicesRoutes");
   });
 });

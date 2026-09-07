@@ -6,10 +6,7 @@ const dashboard = JSON.parse(readFileSync("apps/dashboard/package.json", "utf8")
 const api = JSON.parse(readFileSync("apps/api/package.json", "utf8"));
 const lock = JSON.parse(readFileSync("package-lock.json", "utf8"));
 const dockerE2E = readFileSync("scripts/test-e2e-docker.sh", "utf8");
-const documentation = readFileSync(
-  "docs/MILESTONE-36-PLAYWRIGHT-SECURITY-REMEDIATION.md",
-  "utf8",
-);
+const documentation = readFileSync("docs/MILESTONE-36-PLAYWRIGHT-SECURITY-REMEDIATION.md", "utf8");
 
 describe("Milestone 36.6 Playwright security remediation", () => {
   it("pins @playwright/test to 1.62.1", () => {
@@ -23,12 +20,8 @@ describe("Milestone 36.6 Playwright security remediation", () => {
   });
 
   it("keeps Docker E2E synchronized with the installed Playwright version", () => {
-    expect(dockerE2E).toContain(
-      'node -p "require(\'@playwright/test/package.json\').version"',
-    );
-    expect(dockerE2E).toContain(
-      '"mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble"',
-    );
+    expect(dockerE2E).toContain("node -p \"require('@playwright/test/package.json').version\"");
+    expect(dockerE2E).toContain('"mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble"');
   });
 
   it("does not bundle the Next.js 16 migration", () => {

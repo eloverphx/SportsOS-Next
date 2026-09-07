@@ -6,10 +6,7 @@ export type BroadcastRecoveryRuntimeState =
   | "failed"
   | "unknown";
 
-export type BroadcastRecoveryCoordinatorIntent =
-  | "idle"
-  | "live"
-  | "stopped";
+export type BroadcastRecoveryCoordinatorIntent = "idle" | "live" | "stopped";
 
 export type BroadcastRecoveryAction =
   | "none"
@@ -49,10 +46,8 @@ const DEFAULT_TRANSITION_TIMEOUT_MS = 45_000;
 export function evaluateBroadcastRecovery(
   input: BroadcastRecoveryInput,
 ): BroadcastRecoveryDecision {
-  const startupGraceMs =
-    input.startupGraceMs ?? DEFAULT_STARTUP_GRACE_MS;
-  const transitionTimeoutMs =
-    input.transitionTimeoutMs ?? DEFAULT_TRANSITION_TIMEOUT_MS;
+  const startupGraceMs = input.startupGraceMs ?? DEFAULT_STARTUP_GRACE_MS;
+  const transitionTimeoutMs = input.transitionTimeoutMs ?? DEFAULT_TRANSITION_TIMEOUT_MS;
 
   if (!Number.isFinite(input.stateAgeMs) || input.stateAgeMs < 0) {
     return {
@@ -82,8 +77,7 @@ export function evaluateBroadcastRecovery(
   }
 
   if (
-    (input.runtimeState === "starting" ||
-      input.runtimeState === "stopping") &&
+    (input.runtimeState === "starting" || input.runtimeState === "stopping") &&
     input.stateAgeMs > transitionTimeoutMs
   ) {
     return {
@@ -103,10 +97,7 @@ export function evaluateBroadcastRecovery(
     };
   }
 
-  if (
-    input.coordinatorIntent === "live" &&
-    input.runtimeState === "idle"
-  ) {
+  if (input.coordinatorIntent === "live" && input.runtimeState === "idle") {
     return {
       action: "request-controlled-start",
       reason: "runtime-missing",
@@ -115,10 +106,7 @@ export function evaluateBroadcastRecovery(
     };
   }
 
-  if (
-    input.coordinatorIntent !== "live" &&
-    input.runtimeState === "live"
-  ) {
+  if (input.coordinatorIntent !== "live" && input.runtimeState === "live") {
     return {
       action: "request-controlled-stop",
       reason: "unexpected-runtime",
@@ -127,10 +115,7 @@ export function evaluateBroadcastRecovery(
     };
   }
 
-  if (
-    input.coordinatorIntent === "stopped" &&
-    input.runtimeState === "idle"
-  ) {
+  if (input.coordinatorIntent === "stopped" && input.runtimeState === "idle") {
     return {
       action: "reconcile-to-idle",
       reason: "state-consistent",

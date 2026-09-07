@@ -26,8 +26,7 @@ export async function GET() {
     return new NextResponse(text, {
       status: response.status,
       headers: {
-        "content-type":
-          response.headers.get("content-type") ?? "application/json",
+        "content-type": response.headers.get("content-type") ?? "application/json",
       },
     });
   } catch (error) {
@@ -35,10 +34,7 @@ export async function GET() {
       {
         success: false,
         error: "GAME_OPERATIONS_UPSTREAM_UNAVAILABLE",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to reach the SportsOS API.",
+        message: error instanceof Error ? error.message : "Unable to reach the SportsOS API.",
       },
       { status: 502 },
     );

@@ -1,17 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-  advanceBracketRound,
-} from "../lib/tournament-bracket-advancement";
-import type {
-  BracketMatchup,
-  BracketSeed,
-} from "../lib/tournament-bracket-seeding";
+import { advanceBracketRound } from "../lib/tournament-bracket-advancement";
+import type { BracketMatchup, BracketSeed } from "../lib/tournament-bracket-seeding";
 
-function seed(
-  seedNumber: number,
-  teamId: string,
-  teamName: string,
-): BracketSeed {
+function seed(seedNumber: number, teamId: string, teamName: string): BracketSeed {
   return {
     seed: seedNumber,
     teamId,
@@ -39,18 +30,8 @@ function matchup(
 describe("Milestone 8.6 bracket advancement / winner propagation", () => {
   it("advances a finalized home winner", () => {
     const round = [
-      matchup(
-        "m1",
-        1,
-        seed(1, "a", "A"),
-        seed(4, "d", "D"),
-      ),
-      matchup(
-        "m2",
-        2,
-        seed(2, "b", "B"),
-        seed(3, "c", "C"),
-      ),
+      matchup("m1", 1, seed(1, "a", "A"), seed(4, "d", "D")),
+      matchup("m2", 2, seed(2, "b", "B"), seed(3, "c", "C")),
     ];
 
     const result = advanceBracketRound(round, [
@@ -85,19 +66,8 @@ describe("Milestone 8.6 bracket advancement / winner propagation", () => {
 
   it("automatically advances a bye", () => {
     const round = [
-      matchup(
-        "m1",
-        1,
-        seed(1, "a", "A"),
-        null,
-        true,
-      ),
-      matchup(
-        "m2",
-        2,
-        seed(2, "b", "B"),
-        seed(3, "c", "C"),
-      ),
+      matchup("m1", 1, seed(1, "a", "A"), null, true),
+      matchup("m2", 2, seed(2, "b", "B"), seed(3, "c", "C")),
     ];
 
     const result = advanceBracketRound(round, [
@@ -123,18 +93,8 @@ describe("Milestone 8.6 bracket advancement / winner propagation", () => {
 
   it("does not advance an unfinished matchup", () => {
     const round = [
-      matchup(
-        "m1",
-        1,
-        seed(1, "a", "A"),
-        seed(4, "d", "D"),
-      ),
-      matchup(
-        "m2",
-        2,
-        seed(2, "b", "B"),
-        seed(3, "c", "C"),
-      ),
+      matchup("m1", 1, seed(1, "a", "A"), seed(4, "d", "D")),
+      matchup("m2", 2, seed(2, "b", "B"), seed(3, "c", "C")),
     ];
 
     const result = advanceBracketRound(round, [
@@ -151,14 +111,7 @@ describe("Milestone 8.6 bracket advancement / winner propagation", () => {
   });
 
   it("does not choose a winner for a tied final", () => {
-    const round = [
-      matchup(
-        "m1",
-        1,
-        seed(1, "a", "A"),
-        seed(4, "d", "D"),
-      ),
-    ];
+    const round = [matchup("m1", 1, seed(1, "a", "A"), seed(4, "d", "D"))];
 
     const result = advanceBracketRound(round, [
       {
@@ -175,14 +128,7 @@ describe("Milestone 8.6 bracket advancement / winner propagation", () => {
   it("rejects invalid finalized scores", () => {
     expect(() =>
       advanceBracketRound(
-        [
-          matchup(
-            "m1",
-            1,
-            seed(1, "a", "A"),
-            seed(4, "d", "D"),
-          ),
-        ],
+        [matchup("m1", 1, seed(1, "a", "A"), seed(4, "d", "D"))],
         [
           {
             matchupId: "m1",
@@ -197,14 +143,7 @@ describe("Milestone 8.6 bracket advancement / winner propagation", () => {
 
   it("returns no next round when resolving a championship matchup", () => {
     const result = advanceBracketRound(
-      [
-        matchup(
-          "championship",
-          1,
-          seed(1, "a", "A"),
-          seed(2, "b", "B"),
-        ),
-      ],
+      [matchup("championship", 1, seed(1, "a", "A"), seed(2, "b", "B"))],
       [
         {
           matchupId: "championship",

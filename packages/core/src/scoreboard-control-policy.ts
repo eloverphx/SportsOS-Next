@@ -1,6 +1,4 @@
-export type ScoreboardPhysicalControlPolicyMode =
-  | "ENABLED"
-  | "LOCKED";
+export type ScoreboardPhysicalControlPolicyMode = "ENABLED" | "LOCKED";
 
 export type ScoreboardPhysicalControlPolicyScope =
   | {
@@ -19,22 +17,15 @@ export type ScoreboardPhysicalControlPolicyScope =
       deviceId: string;
     };
 
-export type ScoreboardPhysicalControlPolicy =
-  ScoreboardPhysicalControlPolicyScope & {
-    mode:
-      ScoreboardPhysicalControlPolicyMode;
-    reason:
-      string | null;
-    updatedAt:
-      string;
-  };
+export type ScoreboardPhysicalControlPolicy = ScoreboardPhysicalControlPolicyScope & {
+  mode: ScoreboardPhysicalControlPolicyMode;
+  reason: string | null;
+  updatedAt: string;
+};
 
 export type ScoreboardPhysicalControlPolicyDecision = {
   allowed: boolean;
-  effectiveMode:
-    ScoreboardPhysicalControlPolicyMode;
-  matchedPolicy:
-    ScoreboardPhysicalControlPolicy | null;
-  reason:
-    string | null;
+  effectiveMode: ScoreboardPhysicalControlPolicyMode;
+  matchedPolicy: ScoreboardPhysicalControlPolicy | null;
+  reason: string | null;
 };

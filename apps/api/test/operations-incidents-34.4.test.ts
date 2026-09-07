@@ -4,23 +4,18 @@ import os from "node:os";
 import path from "node:path";
 import Fastify from "fastify";
 
-import {
-  openOrUpdateOperationsIncident,
-} from "../src/services/operationsIncidentJournal.js";
+import { openOrUpdateOperationsIncident } from "../src/services/operationsIncidentJournal.js";
 import {
   OPERATIONS_INCIDENTS_PATH,
   registerOperationsIncidentRoutes,
 } from "../src/routes/operationsIncidents.js";
 
-const TOKEN =
-  "sportsos-operations-incident-test-token-0123456789";
+const TOKEN = "sportsos-operations-incident-test-token-0123456789";
 
 let tempRoot = "";
 
 beforeEach(async () => {
-  tempRoot = await mkdtemp(
-    path.join(os.tmpdir(), "sportsos-incidents-api-"),
-  );
+  tempRoot = await mkdtemp(path.join(os.tmpdir(), "sportsos-incidents-api-"));
   process.env.SPORTSOS_OPERATIONS_INCIDENT_DIR = tempRoot;
   process.env.SPORTSOS_OPERATIONS_STATUS_API_ENABLED = "true";
   process.env.SPORTSOS_OPERATIONS_STATUS_TOKEN = TOKEN;
@@ -141,8 +136,7 @@ describe("Milestone 34.4 protected operations incident API", () => {
     });
 
     expect(missing.statusCode).toBe(404);
-    expect(missing.json().error.code)
-      .toBe("OPERATIONS_INCIDENT_NOT_FOUND");
+    expect(missing.json().error.code).toBe("OPERATIONS_INCIDENT_NOT_FOUND");
 
     await app.close();
   });

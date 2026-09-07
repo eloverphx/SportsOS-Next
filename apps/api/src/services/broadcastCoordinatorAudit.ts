@@ -42,41 +42,18 @@ type Store = {
   events: BroadcastCoordinatorAuditEvent[];
 };
 
-const DATA_DIR =
-  process.env.SPORTSOS_DATA_DIR ??
-  path.resolve(
-    process.cwd(),
-    "data",
-  );
+const DATA_DIR = process.env.SPORTSOS_DATA_DIR ?? path.resolve(process.cwd(), "data");
 
-const STORE_FILE =
-  path.join(
-    DATA_DIR,
-    "broadcast-coordinator-audit.json",
-  );
+const STORE_FILE = path.join(DATA_DIR, "broadcast-coordinator-audit.json");
 
-let store =
-  loadStore();
+let store = loadStore();
 
 function loadStore(): Store {
   try {
-    const parsed =
-      JSON.parse(
-        fs.readFileSync(
-          STORE_FILE,
-          "utf8",
-        ),
-      ) as Store;
+    const parsed = JSON.parse(fs.readFileSync(STORE_FILE, "utf8")) as Store;
 
-    if (
-      parsed.version !== 1 ||
-      !Array.isArray(
-        parsed.events,
-      )
-    ) {
-      throw new Error(
-        "Invalid coordinator audit store.",
-      );
+    if (parsed.version !== 1 || !Array.isArray(parsed.events)) {
+      throw new Error("Invalid coordinator audit store.");
     }
 
     return parsed;
@@ -89,22 +66,11 @@ function loadStore(): Store {
 }
 
 function persistStore(): void {
-  fs.mkdirSync(
-    DATA_DIR,
-    {
-      recursive: true,
-    },
-  );
+  fs.mkdirSync(DATA_DIR, {
+    recursive: true,
+  });
 
-  fs.writeFileSync(
-    STORE_FILE,
-    JSON.stringify(
-      store,
-      null,
-      2,
-    ),
-    "utf8",
-  );
+  fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2), "utf8");
 }
 
 export function recordBroadcastCoordinatorAudit(input: {
@@ -114,36 +80,20 @@ export function recordBroadcastCoordinatorAudit(input: {
   detail?: string | null;
 }): BroadcastCoordinatorAuditEvent {
   const event: BroadcastCoordinatorAuditEvent = {
-    id:
-      `broadcast-coordinator-audit-${input.gameId}-${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 8)}`,
-    gameId:
-      input.gameId,
-    type:
-      input.type,
-    timestamp:
-      new Date().toISOString(),
-    correlationId:
-      input.correlationId ??
-      null,
-    detail:
-      input.detail ??
-      null,
+    id: `broadcast-coordinator-audit-${input.gameId}-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`,
+    gameId: input.gameId,
+    type: input.type,
+    timestamp: new Date().toISOString(),
+    correlationId: input.correlationId ?? null,
+    detail: input.detail ?? null,
   };
 
-  store.events.push(
-    event,
-  );
+  store.events.push(event);
 
-  if (
-    store.events.length >
-    2500
-  ) {
-    store.events =
-      store.events.slice(
-        -2500,
-      );
+  if (store.events.length > 2500) {
+    store.events = store.events.slice(-2500);
   }
 
   persistStore();
@@ -157,30 +107,13 @@ export function listBroadcastCoordinatorAudit(
   gameId: string,
   limit = 100,
 ): BroadcastCoordinatorAuditEvent[] {
-  const safeLimit =
-    Math.max(
-      1,
-      Math.min(
-        Math.floor(
-          limit,
-        ),
-        250,
-      ),
-    );
+  const safeLimit = Math.max(1, Math.min(Math.floor(limit), 250));
 
   return store.events
-    .filter(
-      (event) =>
-        event.gameId ===
-        gameId,
-    )
-    .slice(
-      -safeLimit,
-    )
+    .filter((event) => event.gameId === gameId)
+    .slice(-safeLimit)
     .reverse()
-    .map(
-      (event) => ({
-        ...event,
-      }),
-    );
+    .map((event) => ({
+      ...event,
+    }));
 }

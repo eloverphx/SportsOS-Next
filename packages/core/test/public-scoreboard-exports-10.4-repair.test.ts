@@ -24,32 +24,23 @@ describe("Milestone 10.4 core public scoreboard exports", () => {
       awayScore: 0,
     };
 
-    expect(
-      validateScoreboardDeviceCommand(command),
-    ).toEqual(command);
+    expect(validateScoreboardDeviceCommand(command)).toEqual(command);
   });
 
   it("exports the MQTT transport contract", () => {
-    expect(SCOREBOARD_MQTT_ROOT).toBe(
-      "sportsos/scoreboards",
-    );
+    expect(SCOREBOARD_MQTT_ROOT).toBe("sportsos/scoreboards");
 
-    expect(
-      scoreboardMqttTopics("scoreboard-1").command,
-    ).toBe(
+    expect(scoreboardMqttTopics("scoreboard-1").command).toBe(
       "sportsos/scoreboards/scoreboard-1/command",
     );
 
     expect(
-      buildScoreboardMqttCommandEnvelope(
-        "scoreboard-1",
-        {
-          protocolVersion: 1,
-          commandId: "cmd-mqtt-public",
-          type: "HORN",
-          active: true,
-        },
-      ).deviceId,
+      buildScoreboardMqttCommandEnvelope("scoreboard-1", {
+        protocolVersion: 1,
+        commandId: "cmd-mqtt-public",
+        type: "HORN",
+        active: true,
+      }).deviceId,
     ).toBe("scoreboard-1");
   });
 

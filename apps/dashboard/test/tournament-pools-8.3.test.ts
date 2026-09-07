@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildTournamentPoolStandings,
-  deriveDefaultPools,
-} from "../lib/tournament-pools";
+import { buildTournamentPoolStandings, deriveDefaultPools } from "../lib/tournament-pools";
 
 describe("Milestone 8.3 tournament pools / divisions", () => {
   const teams = [
@@ -63,21 +60,13 @@ describe("Milestone 8.3 tournament pools / divisions", () => {
       },
     ];
 
-    const result = buildTournamentPoolStandings(
-      pools,
-      teams,
-      games,
-    );
+    const result = buildTournamentPoolStandings(pools, teams, games);
 
     expect(result).toHaveLength(2);
     expect(result[0]?.standings[0]?.teamId).toBe("a");
     expect(result[1]?.standings[0]?.teamId).toBe("d");
 
-    expect(
-      result[0]?.standings.find(
-        (row) => row.teamId === "a",
-      )?.gamesPlayed,
-    ).toBe(1);
+    expect(result[0]?.standings.find((row) => row.teamId === "a")?.gamesPlayed).toBe(1);
   });
 
   it("ignores unknown team ids inside a pool", () => {

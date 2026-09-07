@@ -32,21 +32,16 @@ export type TournamentStandingsRules = {
   lossPoints: number;
 };
 
-export const DEFAULT_TOURNAMENT_STANDINGS_RULES:
-  TournamentStandingsRules = Object.freeze({
-    winPoints: 2,
-    tiePoints: 1,
-    lossPoints: 0,
-  });
+export const DEFAULT_TOURNAMENT_STANDINGS_RULES: TournamentStandingsRules = Object.freeze({
+  winPoints: 2,
+  tiePoints: 1,
+  lossPoints: 0,
+});
 
 function isFinalStatus(status: string): boolean {
   const normalized = status.trim().toUpperCase();
 
-  return (
-    normalized === "FINAL" ||
-    normalized === "COMPLETED" ||
-    normalized === "COMPLETE"
-  );
+  return normalized === "FINAL" || normalized === "COMPLETED" || normalized === "COMPLETE";
 }
 
 function assertScore(score: number, label: string): void {
@@ -58,8 +53,7 @@ function assertScore(score: number, label: string): void {
 export function buildTournamentStandings(
   teams: TournamentStandingTeam[],
   games: TournamentStandingGame[],
-  rules: TournamentStandingsRules =
-    DEFAULT_TOURNAMENT_STANDINGS_RULES,
+  rules: TournamentStandingsRules = DEFAULT_TOURNAMENT_STANDINGS_RULES,
 ): TournamentStandingRow[] {
   const teamMap = new Map(
     teams.map((team) => [

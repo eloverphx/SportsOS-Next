@@ -55,14 +55,12 @@ describe("automatic multi-game lifecycle supervision", () => {
   });
 
   it("prepares next regulation periods after intermission expiration", async () => {
-    poolExecute
-      .mockResolvedValueOnce([[]])
-      .mockResolvedValueOnce([
-        [
-          { id: 31, period: 1 },
-          { id: 32, period: 2 },
-        ],
-      ]);
+    poolExecute.mockResolvedValueOnce([[]]).mockResolvedValueOnce([
+      [
+        { id: 31, period: 1 },
+        { id: 32, period: 2 },
+      ],
+    ]);
 
     applyGameScoringAction.mockResolvedValue({
       game: {},
@@ -101,9 +99,7 @@ describe("automatic multi-game lifecycle supervision", () => {
   });
 
   it("does not count idempotent replays as new transitions", async () => {
-    poolExecute
-      .mockResolvedValueOnce([[{ id: 41, period: 1 }]])
-      .mockResolvedValueOnce([[]]);
+    poolExecute.mockResolvedValueOnce([[{ id: 41, period: 1 }]]).mockResolvedValueOnce([[]]);
 
     applyGameScoringAction.mockResolvedValue(null);
 

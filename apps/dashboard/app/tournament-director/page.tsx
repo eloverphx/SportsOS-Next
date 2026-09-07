@@ -296,9 +296,7 @@ export default function TournamentDirectorPage() {
       groups.set(rink, current);
     }
 
-    return Array.from(groups.entries()).sort(([left], [right]) =>
-      left.localeCompare(right),
-    );
+    return Array.from(groups.entries()).sort(([left], [right]) => left.localeCompare(right));
   }, [rows]);
 
   const liveGames = games.filter((game) => game.status === "LIVE").length;
@@ -307,8 +305,7 @@ export default function TournamentDirectorPage() {
   const offlineAssignedDevices = devices.filter(
     (device) => device.gameId !== null && device.status === "OFFLINE",
   ).length;
-  const attentionGames =
-    engine?.games.filter((game) => game.state !== "HEALTHY").length ?? 0;
+  const attentionGames = engine?.games.filter((game) => game.state !== "HEALTHY").length ?? 0;
 
   return (
     <AuthGate>
@@ -319,8 +316,8 @@ export default function TournamentDirectorPage() {
               <span className={styles.eyebrow}>Milestone 6 · Tournament operations</span>
               <h1>Tournament Director</h1>
               <p>
-                Multi-rink command center for live games, upcoming starts, devices,
-                penalties, and engine warnings.
+                Multi-rink command center for live games, upcoming starts, devices, penalties, and
+                engine warnings.
               </p>
             </div>
 
@@ -382,9 +379,7 @@ export default function TournamentDirectorPage() {
               Status
               <select
                 value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value as "ALL" | GameStatus)
-                }
+                onChange={(event) => setStatusFilter(event.target.value as "ALL" | GameStatus)}
               >
                 <option value="ALL">All active games</option>
                 <option value="LIVE">Live</option>
@@ -419,167 +414,171 @@ export default function TournamentDirectorPage() {
                     <span className={styles.eyebrow}>Rink</span>
                     <h2>{rink}</h2>
                   </div>
-                  <strong>{rinkRows.length} game{rinkRows.length === 1 ? "" : "s"}</strong>
+                  <strong>
+                    {rinkRows.length} game{rinkRows.length === 1 ? "" : "s"}
+                  </strong>
                 </div>
 
                 <div className={styles.board}>
                   {rinkRows.map(({ game, assignedDevices, engineGame, penalties }) => {
-              const clock = formatClock(
-                effectiveClock(
-                  game.clockRemainingMs,
-                  game.clockRunning,
-                  game.clockStartedAt,
-                  now,
-                ),
-              );
-              const onlineDevices = assignedDevices.filter(
-                (device) => device.status === "ONLINE",
-              ).length;
-              const engineAttention =
-                engineGame !== undefined && engineGame.state !== "HEALTHY";
-              const urgency = startUrgency(game, now);
-              const urgencyText = urgencyLabel(urgency);
+                    const clock = formatClock(
+                      effectiveClock(
+                        game.clockRemainingMs,
+                        game.clockRunning,
+                        game.clockStartedAt,
+                        now,
+                      ),
+                    );
+                    const onlineDevices = assignedDevices.filter(
+                      (device) => device.status === "ONLINE",
+                    ).length;
+                    const engineAttention =
+                      engineGame !== undefined && engineGame.state !== "HEALTHY";
+                    const urgency = startUrgency(game, now);
+                    const urgencyText = urgencyLabel(urgency);
 
-              return (
-                <article
-                  key={game.id}
-                  className={`${styles.gameCard} ${
-                    engineAttention ? styles.attentionCard : ""
-                  }`}
-                >
-                  <div className={styles.cardTop}>
-                    <div>
-                      <div className={styles.badges}>
-                        <span className={styles.status}>{game.status}</span>
-                        {urgencyText ? (
-                          <span
-                            className={`${styles.urgency} ${
-                              urgency === "LATE"
-                                ? styles.urgencyLate
-                                : urgency === "STARTING_SOON"
-                                  ? styles.urgencySoon
-                                  : styles.urgencyUpcoming
-                            }`}
-                          >
-                            {urgencyText}
-                          </span>
-                        ) : null}
-                      </div>
-                      <strong>{game.venue || "Rink not assigned"}</strong>
-                      <small>{game.seasonName}</small>
-                    </div>
-
-                    <div className={styles.clockBlock}>
-                      <strong>{game.status === "LIVE" ? clock : `P${game.period}`}</strong>
-                      <span>
-                        {game.status === "LIVE"
-                          ? `Period ${game.period}`
-                          : new Date(game.scheduledStart).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className={styles.matchup}>
-                    <div>
-                      <span>{game.homeTeamName}</span>
-                      <strong>{game.homeScore}</strong>
-                    </div>
-                    <div>
-                      <span>{game.awayTeamName}</span>
-                      <strong>{game.awayScore}</strong>
-                    </div>
-                  </div>
-
-                  <div className={styles.healthGrid}>
-                    <div>
-                      <span>Engine</span>
-                      <strong
-                        className={
-                          engineGame?.state === "HEALTHY"
-                            ? styles.good
-                            : engineGame
-                              ? styles.bad
-                              : styles.neutral
-                        }
+                    return (
+                      <article
+                        key={game.id}
+                        className={`${styles.gameCard} ${
+                          engineAttention ? styles.attentionCard : ""
+                        }`}
                       >
-                        {stateLabel(engineGame?.state)}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>Scoreboards</span>
-                      <strong>
-                        {assignedDevices.length === 0
-                          ? "None assigned"
-                          : `${onlineDevices}/${assignedDevices.length} online`}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>Active penalties</span>
-                      <strong>{penalties.length}</strong>
-                    </div>
-                  </div>
+                        <div className={styles.cardTop}>
+                          <div>
+                            <div className={styles.badges}>
+                              <span className={styles.status}>{game.status}</span>
+                              {urgencyText ? (
+                                <span
+                                  className={`${styles.urgency} ${
+                                    urgency === "LATE"
+                                      ? styles.urgencyLate
+                                      : urgency === "STARTING_SOON"
+                                        ? styles.urgencySoon
+                                        : styles.urgencyUpcoming
+                                  }`}
+                                >
+                                  {urgencyText}
+                                </span>
+                              ) : null}
+                            </div>
+                            <strong>{game.venue || "Rink not assigned"}</strong>
+                            <small>{game.seasonName}</small>
+                          </div>
 
-                  {engineGame?.actionRequired ? (
-                    <div className={styles.operatorAlert}>
-                      <strong>Operator action:</strong> {engineGame.actionRequired}
-                    </div>
-                  ) : null}
-
-                  {engineGame?.warnings.length ? (
-                    <div className={styles.warningList}>
-                      {engineGame.warnings.map((warning) => (
-                        <div key={`${game.id}-${warning.code}`}>
-                          <strong>{warning.code}</strong>
-                          <span>{warning.message}</span>
+                          <div className={styles.clockBlock}>
+                            <strong>{game.status === "LIVE" ? clock : `P${game.period}`}</strong>
+                            <span>
+                              {game.status === "LIVE"
+                                ? `Period ${game.period}`
+                                : new Date(game.scheduledStart).toLocaleString()}
+                            </span>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : null}
 
-                  {penalties.length > 0 ? (
-                    <div className={styles.penalties}>
-                      {penalties.map((penalty) => (
-                        <span key={penalty.id}>
-                          {penalty.side === "home" ? "HOME" : "AWAY"} ·{" "}
-                          {penalty.jerseyNumber ? `#${penalty.jerseyNumber} ` : ""}
-                          {penalty.playerName || "Team"} · {penalty.infraction} ·{" "}
-                          {formatClock(
-                            effectiveClock(
-                              penalty.remainingMs,
-                              penalty.running,
-                              penalty.startedAt,
-                              now,
-                            ),
-                          )}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
+                        <div className={styles.matchup}>
+                          <div>
+                            <span>{game.homeTeamName}</span>
+                            <strong>{game.homeScore}</strong>
+                          </div>
+                          <div>
+                            <span>{game.awayTeamName}</span>
+                            <strong>{game.awayScore}</strong>
+                          </div>
+                        </div>
 
-                  {assignedDevices.length > 0 ? (
-                    <div className={styles.devices}>
-                      {assignedDevices.map((device) => (
-                        <span
-                          key={device.id}
-                          className={
-                            device.status === "ONLINE" ? styles.deviceOnline : styles.deviceOffline
-                          }
-                        >
-                          {device.name}
-                          {device.location ? ` · ${device.location}` : ""} · {device.status}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
+                        <div className={styles.healthGrid}>
+                          <div>
+                            <span>Engine</span>
+                            <strong
+                              className={
+                                engineGame?.state === "HEALTHY"
+                                  ? styles.good
+                                  : engineGame
+                                    ? styles.bad
+                                    : styles.neutral
+                              }
+                            >
+                              {stateLabel(engineGame?.state)}
+                            </strong>
+                          </div>
+                          <div>
+                            <span>Scoreboards</span>
+                            <strong>
+                              {assignedDevices.length === 0
+                                ? "None assigned"
+                                : `${onlineDevices}/${assignedDevices.length} online`}
+                            </strong>
+                          </div>
+                          <div>
+                            <span>Active penalties</span>
+                            <strong>{penalties.length}</strong>
+                          </div>
+                        </div>
 
-                  <div className={styles.actions}>
-                    <Link href={`/games/${game.id}/control`}>Open Scorekeeper</Link>
-                    <Link href={`/games/${game.id}/scoreboard`}>Public Scoreboard</Link>
-                    <Link href={`/games/${game.id}/overlay`}>Broadcast Overlay</Link>
-                    <Link href={`/system-health?gameId=${game.id}`}>Engine Health</Link>
-                  </div>
-                </article>
-              );
+                        {engineGame?.actionRequired ? (
+                          <div className={styles.operatorAlert}>
+                            <strong>Operator action:</strong> {engineGame.actionRequired}
+                          </div>
+                        ) : null}
+
+                        {engineGame?.warnings.length ? (
+                          <div className={styles.warningList}>
+                            {engineGame.warnings.map((warning) => (
+                              <div key={`${game.id}-${warning.code}`}>
+                                <strong>{warning.code}</strong>
+                                <span>{warning.message}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+
+                        {penalties.length > 0 ? (
+                          <div className={styles.penalties}>
+                            {penalties.map((penalty) => (
+                              <span key={penalty.id}>
+                                {penalty.side === "home" ? "HOME" : "AWAY"} ·{" "}
+                                {penalty.jerseyNumber ? `#${penalty.jerseyNumber} ` : ""}
+                                {penalty.playerName || "Team"} · {penalty.infraction} ·{" "}
+                                {formatClock(
+                                  effectiveClock(
+                                    penalty.remainingMs,
+                                    penalty.running,
+                                    penalty.startedAt,
+                                    now,
+                                  ),
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+
+                        {assignedDevices.length > 0 ? (
+                          <div className={styles.devices}>
+                            {assignedDevices.map((device) => (
+                              <span
+                                key={device.id}
+                                className={
+                                  device.status === "ONLINE"
+                                    ? styles.deviceOnline
+                                    : styles.deviceOffline
+                                }
+                              >
+                                {device.name}
+                                {device.location ? ` · ${device.location}` : ""} · {device.status}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+
+                        <div className={styles.actions}>
+                          <Link href={`/games/${game.id}/control`}>Open Scorekeeper</Link>
+                          <Link href={`/games/${game.id}/scoreboard`}>Public Scoreboard</Link>
+                          <Link href={`/games/${game.id}/overlay`}>Broadcast Overlay</Link>
+                          <Link href={`/system-health?gameId=${game.id}`}>Engine Health</Link>
+                        </div>
+                      </article>
+                    );
                   })}
                 </div>
               </section>

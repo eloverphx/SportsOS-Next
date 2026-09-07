@@ -2,10 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const timeline = readFileSync(
-  new URL(
-    "../../dashboard/components/tournament/TournamentScheduleTimeline.tsx",
-    import.meta.url,
-  ),
+  new URL("../../dashboard/components/tournament/TournamentScheduleTimeline.tsx", import.meta.url),
   "utf8",
 );
 
@@ -20,9 +17,7 @@ const css = readFileSync(
 describe("Tournament scheduling 6.20 cross-day incident navigation", () => {
   it("parses only stable timeline game hashes", () => {
     expect(timeline).toContain("function timelineGameIdFromHash(");
-    expect(timeline).toContain(
-      "/^#director-timeline-game-(\\d+)$/",
-    );
+    expect(timeline).toContain("/^#director-timeline-game-(\\d+)$/");
   });
 
   it("switches the selected tournament day to the target game's current day", () => {
@@ -34,17 +29,13 @@ describe("Tournament scheduling 6.20 cross-day incident navigation", () => {
 
   it("scrolls to the target only after its day is rendered", () => {
     expect(timeline).toContain("window.requestAnimationFrame");
-    expect(timeline).toContain(
-      "`director-timeline-game-${targetGameId}`",
-    );
+    expect(timeline).toContain("`director-timeline-game-${targetGameId}`");
     expect(timeline).toContain("scrollIntoView({");
     expect(timeline).toContain('block: "center"');
   });
 
   it("visually identifies the audit target", () => {
-    expect(timeline).toContain(
-      'targetGameId === game.id ? "audit-target" : ""',
-    );
+    expect(timeline).toContain('targetGameId === game.id ? "audit-target" : ""');
     expect(css).toContain(".tournamentTimelineGame.audit-target");
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
   });

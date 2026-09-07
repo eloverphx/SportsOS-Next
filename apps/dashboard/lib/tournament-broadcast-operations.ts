@@ -1,8 +1,4 @@
-export type BroadcastOperationsStage =
-  | "NOT_READY"
-  | "READY"
-  | "LIVE"
-  | "DEGRADED";
+export type BroadcastOperationsStage = "NOT_READY" | "READY" | "LIVE" | "DEGRADED";
 
 export type BroadcastOperationsInput = {
   sessionReady: boolean;
@@ -42,24 +38,11 @@ export function buildBroadcastOperationsSummary(
 
   let stage: BroadcastOperationsStage = "NOT_READY";
 
-  if (
-    input.gameLive &&
-    input.transportLive &&
-    input.sessionReady
-  ) {
-    stage = input.realtimeConnected
-      ? "LIVE"
-      : "DEGRADED";
-  } else if (
-    input.sessionReady &&
-    input.canGoLive
-  ) {
+  if (input.gameLive && input.transportLive && input.sessionReady) {
+    stage = input.realtimeConnected ? "LIVE" : "DEGRADED";
+  } else if (input.sessionReady && input.canGoLive) {
     stage = "READY";
-  } else if (
-    input.sessionReady ||
-    input.gameLive ||
-    input.transportLive
-  ) {
+  } else if (input.sessionReady || input.gameLive || input.transportLive) {
     stage = "DEGRADED";
   }
 
@@ -70,9 +53,7 @@ export function buildBroadcastOperationsSummary(
     input.gameLive === input.transportLive,
   ];
 
-  const progressPercent = Math.round(
-    (checks.filter(Boolean).length / checks.length) * 100,
-  );
+  const progressPercent = Math.round((checks.filter(Boolean).length / checks.length) * 100);
 
   return {
     stage,

@@ -3,42 +3,27 @@ import fs from "node:fs";
 
 describe("Milestone 20.10 streaming operations acceptance", () => {
   const acceptance = fs.readFileSync(
-    new URL(
-      "../../../docs/STREAMING-OPERATIONS-ACCEPTANCE.md",
-      import.meta.url,
-    ),
+    new URL("../../../docs/STREAMING-OPERATIONS-ACCEPTANCE.md", import.meta.url),
     "utf8",
   );
 
   const destination = fs.readFileSync(
-    new URL(
-      "../../../apps/api/src/services/streamDestinationProfile.ts",
-      import.meta.url,
-    ),
+    new URL("../../../apps/api/src/services/streamDestinationProfile.ts", import.meta.url),
     "utf8",
   );
 
   const runtime = fs.readFileSync(
-    new URL(
-      "../../../apps/api/src/services/encoderRuntime.ts",
-      import.meta.url,
-    ),
+    new URL("../../../apps/api/src/services/encoderRuntime.ts", import.meta.url),
     "utf8",
   );
 
   const audit = fs.readFileSync(
-    new URL(
-      "../../../apps/api/src/services/encoderRuntimeAudit.ts",
-      import.meta.url,
-    ),
+    new URL("../../../apps/api/src/services/encoderRuntimeAudit.ts", import.meta.url),
     "utf8",
   );
 
   const preflight = fs.readFileSync(
-    new URL(
-      "../../../apps/api/src/services/streamingReadinessPreflight.ts",
-      import.meta.url,
-    ),
+    new URL("../../../apps/api/src/services/streamingReadinessPreflight.ts", import.meta.url),
     "utf8",
   );
 

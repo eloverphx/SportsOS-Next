@@ -1,6 +1,4 @@
-import type {
-  FastifyInstance,
-} from "fastify";
+import type { FastifyInstance } from "fastify";
 
 import type {
   AutomaticGameScoreboardSync,
@@ -15,19 +13,10 @@ export type PhysicalControlReconciliationResult = {
   responseBody: unknown;
 };
 
-function gameSnapshotUrls(
-  gameId: string,
-): string[] {
-  const encoded =
-    encodeURIComponent(
-      gameId,
-    );
+function gameSnapshotUrls(gameId: string): string[] {
+  const encoded = encodeURIComponent(gameId);
 
-  return [
-    `/games/${encoded}`,
-    `/games/${encoded}/snapshot`,
-    `/games/${encoded}/state`,
-  ];
+  return [`/games/${encoded}`, `/games/${encoded}/snapshot`, `/games/${encoded}/state`];
 }
 
 export async function reconcilePhysicalControlResult(
@@ -35,51 +24,35 @@ export async function reconcilePhysicalControlResult(
   automaticSync: AutomaticGameScoreboardSync,
   assignment: GameScoreboardAssignment,
 ): Promise<PhysicalControlReconciliationResult> {
-  let lastBody: unknown =
-    null;
+  let lastBody: unknown = null;
 
-  for (
-    const url of gameSnapshotUrls(
-      assignment.gameId,
-    )
-  ) {
-    const response =
-      await app.inject({
-        method: "GET",
-        url,
-      });
+  for (const url of gameSnapshotUrls(assignment.gameId)) {
+    const response = await app.inject({
+      method: "GET",
+      url,
+    });
 
     if (response.statusCode === 404) {
       continue;
     }
 
-    let body: unknown =
-      response.body;
+    let body: unknown = response.body;
 
     try {
-      body =
-        response.json();
+      body = response.json();
     } catch {
       // Keep raw body for diagnostics.
     }
 
-    lastBody =
-      body;
+    lastBody = body;
 
-    if (
-      response.statusCode < 200 ||
-      response.statusCode >= 300
-    ) {
+    if (response.statusCode < 200 || response.statusCode >= 300) {
       return {
         reconciled: false,
-        authoritativeGameId:
-          assignment.gameId,
-        deviceId:
-          assignment.deviceId,
-        reason:
-          "Authoritative game snapshot request was rejected.",
-        responseBody:
-          body,
+        authoritativeGameId: assignment.gameId,
+        deviceId: assignment.deviceId,
+        reason: "Authoritative game snapshot request was rejected.",
+        responseBody: body,
       };
     }
 
@@ -90,20 +63,14 @@ export async function reconcilePhysicalControlResult(
      * step intentionally invalidates the dedupe fingerprint so the next
      * authoritative snapshot is guaranteed to reach the physical scoreboard.
      */
-    automaticSync.invalidate(
-      assignment.gameId,
-    );
+    automaticSync.invalidate(assignment.gameId);
 
     return {
       reconciled: true,
-      authoritativeGameId:
-        assignment.gameId,
-      deviceId:
-        assignment.deviceId,
-      reason:
-        null,
-      responseBody:
-        body,
+      authoritativeGameId: assignment.gameId,
+      deviceId: assignment.deviceId,
+      reason: null,
+      responseBody: body,
     };
   }
 
@@ -112,19 +79,13 @@ export async function reconcilePhysicalControlResult(
    * existing sync fingerprint is safe and ensures the next authoritative
    * game-state publication will not be deduplicated.
    */
-  automaticSync.invalidate(
-    assignment.gameId,
-  );
+  automaticSync.invalidate(assignment.gameId);
 
   return {
     reconciled: true,
-    authoritativeGameId:
-      assignment.gameId,
-    deviceId:
-      assignment.deviceId,
-    reason:
-      "No direct game snapshot route found; realtime sync cache invalidated.",
-    responseBody:
-      lastBody,
+    authoritativeGameId: assignment.gameId,
+    deviceId: assignment.deviceId,
+    reason: "No direct game snapshot route found; realtime sync cache invalidated.",
+    responseBody: lastBody,
   };
 }

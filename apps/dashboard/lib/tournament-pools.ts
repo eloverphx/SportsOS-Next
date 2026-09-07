@@ -3,9 +3,7 @@ import type {
   TournamentStandingRow,
   TournamentStandingTeam,
 } from "./tournament-standings";
-import {
-  buildTournamentStandings,
-} from "./tournament-standings";
+import { buildTournamentStandings } from "./tournament-standings";
 
 export type TournamentPool = {
   id: string;
@@ -29,33 +27,23 @@ export function buildTournamentPoolStandings(
   return pools.map((pool) => {
     const poolTeams = pool.teamIds
       .map((teamId) => teamsById.get(teamId))
-      .filter(
-        (team): team is TournamentStandingTeam =>
-          Boolean(team),
-      );
+      .filter((team): team is TournamentStandingTeam => Boolean(team));
 
     const poolTeamIds = new Set(poolTeams.map((team) => team.id));
 
     const poolGames = games.filter(
-      (game) =>
-        poolTeamIds.has(game.homeTeamId) &&
-        poolTeamIds.has(game.awayTeamId),
+      (game) => poolTeamIds.has(game.homeTeamId) && poolTeamIds.has(game.awayTeamId),
     );
 
     return {
       poolId: pool.id,
       poolName: pool.name,
-      standings: buildTournamentStandings(
-        poolTeams,
-        poolGames,
-      ),
+      standings: buildTournamentStandings(poolTeams, poolGames),
     };
   });
 }
 
-export function deriveDefaultPools(
-  teams: TournamentStandingTeam[],
-): TournamentPool[] {
+export function deriveDefaultPools(teams: TournamentStandingTeam[]): TournamentPool[] {
   if (teams.length === 0) {
     return [];
   }

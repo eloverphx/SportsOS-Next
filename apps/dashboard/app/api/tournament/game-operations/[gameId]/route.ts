@@ -9,10 +9,7 @@ function apiBaseUrl(): string {
   ).replace(/\/+$/, "");
 }
 
-export async function GET(
-  _request: Request,
-  context: { params: Promise<{ gameId: string }> },
-) {
+export async function GET(_request: Request, context: { params: Promise<{ gameId: string }> }) {
   const { gameId } = await context.params;
   const normalizedGameId = gameId.trim();
 
@@ -26,10 +23,7 @@ export async function GET(
     );
   }
 
-  const upstream = new URL(
-    `/games/${encodeURIComponent(normalizedGameId)}`,
-    apiBaseUrl(),
-  );
+  const upstream = new URL(`/games/${encodeURIComponent(normalizedGameId)}`, apiBaseUrl());
 
   try {
     const response = await fetch(upstream, {
@@ -44,8 +38,7 @@ export async function GET(
     return new NextResponse(text, {
       status: response.status,
       headers: {
-        "content-type":
-          response.headers.get("content-type") ?? "application/json",
+        "content-type": response.headers.get("content-type") ?? "application/json",
       },
     });
   } catch (error) {
@@ -53,10 +46,7 @@ export async function GET(
       {
         success: false,
         error: "GAME_OPERATIONS_UPSTREAM_UNAVAILABLE",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Unable to reach the SportsOS API.",
+        message: error instanceof Error ? error.message : "Unable to reach the SportsOS API.",
       },
       { status: 502 },
     );

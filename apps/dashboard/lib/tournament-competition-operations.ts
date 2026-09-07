@@ -34,63 +34,41 @@ export function buildTournamentCompetitionOperationsSummary(
     alerts.push("No tournament games are scheduled.");
   }
 
-  if (
-    input.seededTeams > 0 &&
-    input.seededTeams < input.totalTeams
-  ) {
+  if (input.seededTeams > 0 && input.seededTeams < input.totalTeams) {
     alerts.push("Bracket seeding is incomplete.");
   }
 
   if (
     input.totalBracketMatchups > 0 &&
-    input.resolvedBracketMatchups <
-      input.totalBracketMatchups &&
+    input.resolvedBracketMatchups < input.totalBracketMatchups &&
     input.finalizedGames > 0
   ) {
     alerts.push("Bracket progression is still active.");
   }
 
-  let stage: TournamentCompetitionStage =
-    "NOT_STARTED";
+  let stage: TournamentCompetitionStage = "NOT_STARTED";
 
   if (input.championResolved) {
     stage = "COMPLETE";
-  } else if (
-    input.totalBracketMatchups > 0 &&
-    input.resolvedBracketMatchups > 0
-  ) {
+  } else if (input.totalBracketMatchups > 0 && input.resolvedBracketMatchups > 0) {
     stage = "BRACKET_ACTIVE";
-  } else if (
-    input.seededTeams > 0 &&
-    input.seededTeams === input.totalTeams
-  ) {
+  } else if (input.seededTeams > 0 && input.seededTeams === input.totalTeams) {
     stage = "BRACKET_READY";
   } else if (input.finalizedGames > 0) {
     stage = "POOL_PLAY";
   }
 
   const gameProgress =
-    input.scheduledGames > 0
-      ? Math.min(
-          1,
-          input.finalizedGames / input.scheduledGames,
-        )
-      : 0;
+    input.scheduledGames > 0 ? Math.min(1, input.finalizedGames / input.scheduledGames) : 0;
 
   const bracketProgress =
     input.totalBracketMatchups > 0
-      ? Math.min(
-          1,
-          input.resolvedBracketMatchups /
-            input.totalBracketMatchups,
-        )
+      ? Math.min(1, input.resolvedBracketMatchups / input.totalBracketMatchups)
       : 0;
 
   const progressPercent = input.championResolved
     ? 100
-    : Math.round(
-        Math.max(gameProgress, bracketProgress) * 100,
-      );
+    : Math.round(Math.max(gameProgress, bracketProgress) * 100);
 
   return {
     stage,

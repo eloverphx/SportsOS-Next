@@ -44,10 +44,7 @@ export function applySimulatorCommand(state, envelope) {
 
   const command = envelope.command;
 
-  if (
-    !command ||
-    command.protocolVersion !== PROTOCOL_VERSION
-  ) {
+  if (!command || command.protocolVersion !== PROTOCOL_VERSION) {
     throw new Error("Unsupported command protocol version.");
   }
 
@@ -77,10 +74,7 @@ export function applySimulatorCommand(state, envelope) {
       break;
 
     case "SET_CLOCK":
-      if (
-        !Number.isFinite(command.remainingMs) ||
-        command.remainingMs < 0
-      ) {
+      if (!Number.isFinite(command.remainingMs) || command.remainingMs < 0) {
         throw new Error("Invalid clock command.");
       }
 
@@ -91,13 +85,7 @@ export function applySimulatorCommand(state, envelope) {
       break;
 
     case "SET_PERIOD":
-      if (
-        command.period !== null &&
-        (
-          !Number.isInteger(command.period) ||
-          command.period < 1
-        )
-      ) {
+      if (command.period !== null && (!Number.isInteger(command.period) || command.period < 1)) {
         throw new Error("Invalid period command.");
       }
 
@@ -115,19 +103,13 @@ export function applySimulatorCommand(state, envelope) {
       next.period = command.snapshot.period;
       next.clock = {
         remainingMs: command.snapshot.clock.remainingMs,
-        running: Boolean(
-          command.snapshot.clock.running,
-        ),
+        running: Boolean(command.snapshot.clock.running),
       };
-      next.hornActive = Boolean(
-        command.snapshot.hornActive,
-      );
+      next.hornActive = Boolean(command.snapshot.hornActive);
       break;
 
     default:
-      throw new Error(
-        `Unsupported simulator command: ${command.type}`,
-      );
+      throw new Error(`Unsupported simulator command: ${command.type}`);
   }
 
   next.updatedAt = new Date().toISOString();
@@ -135,38 +117,21 @@ export function applySimulatorCommand(state, envelope) {
   return next;
 }
 
-function publishJson(
-  client,
-  topic,
-  payload,
-  options,
-) {
-  client.publish(
-    topic,
-    JSON.stringify(payload),
-    options,
-  );
+function publishJson(client, topic, payload, options) {
+  client.publish(topic, JSON.stringify(payload), options);
 }
 
 export function startScoreboardMqttAdapter(options = {}) {
-  const deviceId =
-    options.deviceId ??
-    process.env.SCOREBOARD_DEVICE_ID ??
-    "scoreboard-simulator-1";
+  const deviceId = options.deviceId ?? process.env.SCOREBOARD_DEVICE_ID ?? "scoreboard-simulator-1";
 
-  const mqttUrl =
-    options.mqttUrl ??
-    process.env.MQTT_URL ??
-    "mqtt://sportsos_mqtt:1883";
+  const mqttUrl = options.mqttUrl ?? process.env.MQTT_URL ?? "mqtt://sportsos_mqtt:1883";
 
   const mqttTopics = topics(deviceId);
 
   let state = createInitialSimulatorState(deviceId);
 
   const client = mqtt.connect(mqttUrl, {
-    clientId: `${deviceId}-${Math.random()
-      .toString(16)
-      .slice(2, 10)}`,
+    clientId: `${deviceId}-${Math.random().toString(16).slice(2, 10)}`,
     reconnectPeriod: 2000,
     will: {
       topic: mqttTopics.presence,
@@ -181,15 +146,10 @@ export function startScoreboardMqttAdapter(options = {}) {
   });
 
   const publishState = () => {
-    publishJson(
-      client,
-      mqttTopics.state,
-      state,
-      {
-        qos: 1,
-        retain: true,
-      },
-    );
+    publishJson(client, mqttTopics.state, state, {
+      qos: 1,
+      retain: true,
+    });
   };
 
   const publishPresence = (online) => {
@@ -217,11 +177,8 @@ export function startScoreboardMqttAdapter(options = {}) {
         firmwareVersion: "simulator-10.3",
         ipAddress: null,
         wifiRssi: null,
-        uptimeSeconds: Math.floor(
-          process.uptime(),
-        ),
-        freeHeapBytes:
-          process.memoryUsage().heapUsed,
+        uptimeSeconds: Math.floor(process.uptime()),
+        freeHeapBytes: process.memoryUsage().heapUsed,
         reportedAt: new Date().toISOString(),
       },
       {
@@ -235,12 +192,9 @@ export function startScoreboardMqttAdapter(options = {}) {
     state.connectionState = "ONLINE";
     state.updatedAt = new Date().toISOString();
 
-    client.subscribe(
-      mqttTopics.command,
-      {
-        qos: 1,
-      },
-    );
+    client.subscribe(mqttTopics.command, {
+      qos: 1,
+    });
 
     publishPresence(true);
     publishState();
@@ -257,93 +211,71 @@ export function startScoreboardMqttAdapter(options = {}) {
     state.updatedAt = new Date().toISOString();
   });
 
-  client.on(
-    "message",
-    (topic, payloadBuffer) => {
-      if (topic !== mqttTopics.command) {
-        return;
-      }
+  client.on("message", (topic, payloadBuffer) => {
+    if (topic !== mqttTopics.command) {
+      return;
+    }
 
-      let envelope;
+    let envelope;
 
-      try {
-        envelope = JSON.parse(
-          payloadBuffer.toString("utf8"),
-        );
+    try {
+      envelope = JSON.parse(payloadBuffer.toString("utf8"));
 
-        publishJson(
-          client,
-          mqttTopics.acknowledgement,
-          {
-            deviceId,
-            commandId:
-              envelope?.command?.commandId ??
-              "unknown",
-            status: "ACCEPTED",
-            message: null,
-            acknowledgedAt:
-              new Date().toISOString(),
-          },
-          {
-            qos: 1,
-            retain: false,
-          },
-        );
+      publishJson(
+        client,
+        mqttTopics.acknowledgement,
+        {
+          deviceId,
+          commandId: envelope?.command?.commandId ?? "unknown",
+          status: "ACCEPTED",
+          message: null,
+          acknowledgedAt: new Date().toISOString(),
+        },
+        {
+          qos: 1,
+          retain: false,
+        },
+      );
 
-        state = applySimulatorCommand(
-          state,
-          envelope,
-        );
+      state = applySimulatorCommand(state, envelope);
 
-        publishState();
+      publishState();
 
-        publishJson(
-          client,
-          mqttTopics.acknowledgement,
-          {
-            deviceId,
-            commandId:
-              envelope.command.commandId,
-            status: "APPLIED",
-            message: null,
-            acknowledgedAt:
-              new Date().toISOString(),
-          },
-          {
-            qos: 1,
-            retain: false,
-          },
-        );
-      } catch (error) {
-        publishJson(
-          client,
-          mqttTopics.acknowledgement,
-          {
-            deviceId,
-            commandId:
-              envelope?.command?.commandId ??
-              "unknown",
-            status: "REJECTED",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Unknown simulator command error.",
-            acknowledgedAt:
-              new Date().toISOString(),
-          },
-          {
-            qos: 1,
-            retain: false,
-          },
-        );
-      }
-    },
-  );
+      publishJson(
+        client,
+        mqttTopics.acknowledgement,
+        {
+          deviceId,
+          commandId: envelope.command.commandId,
+          status: "APPLIED",
+          message: null,
+          acknowledgedAt: new Date().toISOString(),
+        },
+        {
+          qos: 1,
+          retain: false,
+        },
+      );
+    } catch (error) {
+      publishJson(
+        client,
+        mqttTopics.acknowledgement,
+        {
+          deviceId,
+          commandId: envelope?.command?.commandId ?? "unknown",
+          status: "REJECTED",
+          message: error instanceof Error ? error.message : "Unknown simulator command error.",
+          acknowledgedAt: new Date().toISOString(),
+        },
+        {
+          qos: 1,
+          retain: false,
+        },
+      );
+    }
+  });
 
-  const telemetryTimer = setInterval(
-    publishTelemetry,
-    30000,
-  );
+  const telemetryTimer = setInterval(publishTelemetry, 30000);
 
   return {
     client,
@@ -355,11 +287,7 @@ export function startScoreboardMqttAdapter(options = {}) {
       publishPresence(false);
 
       await new Promise((resolve) => {
-        client.end(
-          false,
-          {},
-          resolve,
-        );
+        client.end(false, {}, resolve);
       });
     },
   };

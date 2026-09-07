@@ -33,17 +33,12 @@ export function buildFinalizedGameResult(input: {
     homeScore: input.homeScore,
     awayScore: input.awayScore,
     status: input.status,
-    gamePhase:
-      typeof input.gamePhase === "string"
-        ? input.gamePhase
-        : null,
+    gamePhase: typeof input.gamePhase === "string" ? input.gamePhase : null,
     finalizedAt: (input.finalizedAt ?? new Date()).toISOString(),
   };
 }
 
-export function resultLabel(
-  result: FinalizedGameResult,
-): string {
+export function resultLabel(result: FinalizedGameResult): string {
   if (result.homeScore > result.awayScore) return "Home win";
   if (result.awayScore > result.homeScore) return "Away win";
   return "Tie";

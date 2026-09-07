@@ -5,10 +5,7 @@ const root = JSON.parse(readFileSync("package.json", "utf8"));
 const dashboard = JSON.parse(readFileSync("apps/dashboard/package.json", "utf8"));
 const api = JSON.parse(readFileSync("apps/api/package.json", "utf8"));
 const lock = JSON.parse(readFileSync("package-lock.json", "utf8"));
-const doc = readFileSync(
-  "docs/MILESTONE-36-NEXTJS-15-SECURITY-REMEDIATION.md",
-  "utf8",
-);
+const doc = readFileSync("docs/MILESTONE-36-NEXTJS-15-SECURITY-REMEDIATION.md", "utf8");
 
 describe("Milestone 36.5 Next.js 15 security remediation", () => {
   it("updates the dashboard to Next.js 15.5.24", () => {

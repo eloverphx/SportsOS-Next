@@ -1,11 +1,7 @@
-import type {
-  FastifyInstance,
-} from "fastify";
+import type { FastifyInstance } from "fastify";
 import { triggerPhysicalHornOutput } from "./scoreboardPhysicalHornOutput.js";
 
-import type {
-  ScoreboardControlInputEvent,
-} from "@sportsos/core";
+import type { ScoreboardControlInputEvent } from "@sportsos/core";
 
 import {
   mapScoreboardControlInputToCommand,
@@ -24,30 +20,16 @@ export type PhysicalControlExecutionResult = {
 type RouteCandidate = {
   method: "POST" | "PUT" | "PATCH";
   route: string;
-  payload:
-    | Record<string, unknown>
-    | null;
+  payload: Record<string, unknown> | null;
 };
 
-function routeUrl(
-  route: string,
-  gameId: string,
-): string {
+function routeUrl(route: string, gameId: string): string {
   return route
-    .replace(
-      ":gameId",
-      encodeURIComponent(gameId),
-    )
-    .replace(
-      ":id",
-      encodeURIComponent(gameId),
-    );
+    .replace(":gameId", encodeURIComponent(gameId))
+    .replace(":id", encodeURIComponent(gameId));
 }
 
-function candidatesFor(
-  gameId: string,
-  command: ScoreboardControlCommand,
-): RouteCandidate[] {
+function candidatesFor(gameId: string, command: ScoreboardControlCommand): RouteCandidate[] {
   /*
    * These candidate contracts are intentionally limited to the existing
    * SportsOS game API shapes used across prior milestones. The adapter never
@@ -60,19 +42,15 @@ function candidatesFor(
     return [
       {
         method: "POST",
-        route:
-          "/games/:gameId/score",
+        route: "/games/:gameId/score",
         payload: {
-          side:
-            command.side.toLowerCase(),
-          delta:
-            command.delta,
+          side: command.side.toLowerCase(),
+          delta: command.delta,
         },
       },
       {
         method: "POST",
-        route:
-          "/games/:gameId/command",
+        route: "/games/:gameId/command",
         payload: {
           command:
             command.delta > 0
@@ -86,8 +64,7 @@ function candidatesFor(
       },
       {
         method: "POST",
-        route:
-          "/games/:gameId/commands",
+        route: "/games/:gameId/commands",
         payload: {
           command:
             command.delta > 0
@@ -113,29 +90,23 @@ function candidatesFor(
     return [
       {
         method: "POST",
-        route:
-          "/games/:gameId/clock",
+        route: "/games/:gameId/clock",
         payload: {
-          command:
-            commandName,
+          command: commandName,
         },
       },
       {
         method: "POST",
-        route:
-          "/games/:gameId/command",
+        route: "/games/:gameId/command",
         payload: {
-          command:
-            commandName,
+          command: commandName,
         },
       },
       {
         method: "POST",
-        route:
-          "/games/:gameId/commands",
+        route: "/games/:gameId/commands",
         payload: {
-          command:
-            commandName,
+          command: commandName,
         },
       },
     ];
@@ -145,33 +116,23 @@ function candidatesFor(
     return [
       {
         method: "POST",
-        route:
-          "/games/:gameId/period",
+        route: "/games/:gameId/period",
         payload: {
-          delta:
-            command.delta,
+          delta: command.delta,
         },
       },
       {
         method: "POST",
-        route:
-          "/games/:gameId/command",
+        route: "/games/:gameId/command",
         payload: {
-          command:
-            command.delta > 0
-              ? "incrementPeriod"
-              : "decrementPeriod",
+          command: command.delta > 0 ? "incrementPeriod" : "decrementPeriod",
         },
       },
       {
         method: "POST",
-        route:
-          "/games/:gameId/commands",
+        route: "/games/:gameId/commands",
         payload: {
-          command:
-            command.delta > 0
-              ? "incrementPeriod"
-              : "decrementPeriod",
+          command: command.delta > 0 ? "incrementPeriod" : "decrementPeriod",
         },
       },
     ];
@@ -190,10 +151,7 @@ export async function executePhysicalScoreboardControl(
   gameId: string,
   event: ScoreboardControlInputEvent,
 ): Promise<PhysicalControlExecutionResult> {
-  const command =
-    mapScoreboardControlInputToCommand(
-      event,
-    );
+  const command = mapScoreboardControlInputToCommand(event);
 
   if (command.kind === "HORN") {
     /*
@@ -201,133 +159,86 @@ export async function executePhysicalScoreboardControl(
      * Resolve the live device assignment and re-enter the existing scoreboard
      * device command API so MQTT/device authorization stays centralized.
      */
-    const assignment =
-      (
-        await app.inject({
-          method: "GET",
-          url:
-            "/scoreboard-devices/assignments",
-        })
-      );
+    const assignment = await app.inject({
+      method: "GET",
+      url: "/scoreboard-devices/assignments",
+    });
 
-    let deviceId:
-      string | null =
-        null;
+    let deviceId: string | null = null;
 
     try {
-      const payload =
-        assignment.json() as {
-          data?: {
-            assignments?: Array<{
-              gameId?: string;
-              deviceId?: string;
-            }>;
-          };
+      const payload = assignment.json() as {
+        data?: {
           assignments?: Array<{
             gameId?: string;
             deviceId?: string;
           }>;
         };
+        assignments?: Array<{
+          gameId?: string;
+          deviceId?: string;
+        }>;
+      };
 
-      const assignments =
-        payload.data?.assignments ??
-        payload.assignments ??
-        [];
+      const assignments = payload.data?.assignments ?? payload.assignments ?? [];
 
-      deviceId =
-        assignments.find(
-          (item) =>
-            item.gameId ===
-            gameId,
-        )?.deviceId ??
-        null;
+      deviceId = assignments.find((item) => item.gameId === gameId)?.deviceId ?? null;
     } catch {
-      deviceId =
-        null;
+      deviceId = null;
     }
 
     if (!deviceId) {
       return {
         executed: false,
         statusCode: 409,
-        authoritativeGameId:
-          gameId,
+        authoritativeGameId: gameId,
         command,
         responseBody: null,
-        reason:
-          "No scoreboard device assignment is available for horn output.",
+        reason: "No scoreboard device assignment is available for horn output.",
       };
     }
 
-    const horn =
-      await triggerPhysicalHornOutput(
-        app,
-        deviceId,
-      );
+    const horn = await triggerPhysicalHornOutput(app, deviceId);
 
     return {
-      executed:
-        horn.triggered,
-      statusCode:
-        horn.statusCode,
-      authoritativeGameId:
-        gameId,
+      executed: horn.triggered,
+      statusCode: horn.statusCode,
+      authoritativeGameId: gameId,
       command,
-      responseBody:
-        horn.responseBody,
-      reason:
-        horn.reason,
+      responseBody: horn.responseBody,
+      reason: horn.reason,
     };
   }
 
-  const candidates =
-    candidatesFor(
-      gameId,
-      command,
-    );
+  const candidates = candidatesFor(gameId, command);
 
   for (const candidate of candidates) {
-    const response =
-      await app.inject({
-        method:
-          candidate.method,
-        url:
-          routeUrl(
-            candidate.route,
-            gameId,
-          ),
-        payload:
-          candidate.payload ??
-          undefined,
-      });
+    const response = await app.inject({
+      method: candidate.method,
+      url: routeUrl(candidate.route, gameId),
+      payload: candidate.payload ?? undefined,
+    });
 
     if (response.statusCode === 404) {
       continue;
     }
 
-    let responseBody: unknown =
-      response.body;
+    let responseBody: unknown = response.body;
 
     try {
-      responseBody =
-        response.json();
+      responseBody = response.json();
     } catch {
       // Keep raw response body.
     }
 
     return {
-      executed:
-        response.statusCode >= 200 &&
-        response.statusCode < 300,
-      statusCode:
-        response.statusCode,
-      authoritativeGameId:
-        gameId,
+      executed: response.statusCode >= 200 && response.statusCode < 300,
+      statusCode: response.statusCode,
+      authoritativeGameId: gameId,
       command,
       responseBody,
       reason:
-        response.statusCode >= 200 &&
-        response.statusCode < 300
+        response.statusCode >= 200 && response.statusCode < 300
           ? null
           : "Authoritative game mutation rejected.",
     };
@@ -336,11 +247,9 @@ export async function executePhysicalScoreboardControl(
   return {
     executed: false,
     statusCode: 501,
-    authoritativeGameId:
-      gameId,
+    authoritativeGameId: gameId,
     command,
     responseBody: null,
-    reason:
-      "No compatible authoritative game mutation route was found.",
+    reason: "No compatible authoritative game mutation route was found.",
   };
 }

@@ -16,10 +16,7 @@ export function IncidentActions({
   incidentId: string;
   status: "open" | "acknowledged" | "resolved";
 }) {
-  const [ackState, ackAction, ackPending] = useActionState(
-    acknowledgeIncidentAction,
-    initialState,
-  );
+  const [ackState, ackAction, ackPending] = useActionState(acknowledgeIncidentAction, initialState);
   const [resolveState, resolveAction, resolvePending] = useActionState(
     resolveIncidentAction,
     initialState,

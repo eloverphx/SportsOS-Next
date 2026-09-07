@@ -1,4 +1,3 @@
-
 /* SPORTSOS_M35_5_ESCALATION_STATUS_TYPES */
 export type IncidentEscalationEvent = {
   observedAt: string | null;
@@ -100,11 +99,8 @@ type OperationsStatusResponse = {
   error?: string;
 };
 
-export async function getOperationsStatus(): Promise<
-  OperationsStatusResponse
-> {
-  const enabled =
-    process.env.SPORTSOS_OPERATIONS_DASHBOARD_ENABLED === "true";
+export async function getOperationsStatus(): Promise<OperationsStatusResponse> {
+  const enabled = process.env.SPORTSOS_OPERATIONS_DASHBOARD_ENABLED === "true";
 
   if (!enabled) {
     return {
@@ -113,8 +109,7 @@ export async function getOperationsStatus(): Promise<
     };
   }
 
-  const token =
-    process.env.SPORTSOS_OPERATIONS_STATUS_TOKEN ?? "";
+  const token = process.env.SPORTSOS_OPERATIONS_STATUS_TOKEN ?? "";
 
   if (token.length < 32) {
     return {
@@ -124,27 +119,21 @@ export async function getOperationsStatus(): Promise<
   }
 
   const apiBase =
-    process.env.SPORTSOS_API_INTERNAL_URL ??
-    process.env.SPORTSOS_API_URL ??
-    "http://api:4001";
+    process.env.SPORTSOS_API_INTERNAL_URL ?? process.env.SPORTSOS_API_URL ?? "http://api:4001";
 
-  const response = await fetch(
-    `${apiBase.replace(/\/$/, "")}/deployment/operations/status`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-      cache: "no-store",
+  const response = await fetch(`${apiBase.replace(/\/$/, "")}/deployment/operations/status`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
     },
-  );
+    cache: "no-store",
+  });
 
   let body: OperationsStatusResponse | null = null;
 
   try {
-    body =
-      (await response.json()) as OperationsStatusResponse;
+    body = (await response.json()) as OperationsStatusResponse;
   } catch {
     body = null;
   }
@@ -152,15 +141,12 @@ export async function getOperationsStatus(): Promise<
   if (!response.ok || !body?.success || !body.data) {
     return {
       success: false,
-      error:
-        body?.error ??
-        `Operations status request failed (${response.status}).`,
+      error: body?.error ?? `Operations status request failed (${response.status}).`,
     };
   }
 
   return body;
 }
-
 
 // SPORTSOS_M33_3_RECOVERY_TYPES
 export type OperationsRecoveryAction = {
@@ -205,7 +191,6 @@ export type OperationsRecoveryStatus = {
   services: OperationsRecoveryService[];
   recentActions: OperationsRecoveryAction[];
 };
-
 
 // SPORTSOS_M34_5_INCIDENT_FETCH
 export interface OperationsIncidentEventView {
@@ -260,8 +245,7 @@ export interface OperationsIncidentsResponse {
 
 export async function getOperationsIncidents(): Promise<OperationsIncidentsResponse> {
   const enabled =
-    process.env.SPORTSOS_OPERATIONS_DASHBOARD_ENABLED?.trim().toLowerCase() ===
-    "true";
+    process.env.SPORTSOS_OPERATIONS_DASHBOARD_ENABLED?.trim().toLowerCase() === "true";
 
   if (!enabled) {
     return {
@@ -285,21 +269,17 @@ export async function getOperationsIncidents(): Promise<OperationsIncidentsRespo
   }
 
   const baseUrl =
-    process.env.SPORTSOS_API_INTERNAL_URL?.trim().replace(/\/$/, "") ||
-    "http://api:4001";
+    process.env.SPORTSOS_API_INTERNAL_URL?.trim().replace(/\/$/, "") || "http://api:4001";
 
   try {
-    const response = await fetch(
-      `${baseUrl}/deployment/operations/incidents`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-        cache: "no-store",
+    const response = await fetch(`${baseUrl}/deployment/operations/incidents`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
       },
-    );
+      cache: "no-store",
+    });
 
     const body = (await response.json()) as OperationsIncidentsResponse;
 
@@ -319,10 +299,7 @@ export async function getOperationsIncidents(): Promise<OperationsIncidentsRespo
       success: false,
       error: {
         code: "OPERATIONS_INCIDENTS_UNAVAILABLE",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Operations incident API request failed.",
+        message: error instanceof Error ? error.message : "Operations incident API request failed.",
       },
     };
   }

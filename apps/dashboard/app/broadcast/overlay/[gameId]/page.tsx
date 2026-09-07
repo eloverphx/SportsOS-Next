@@ -9,7 +9,5 @@ export default async function BroadcastOverlayPage({
 }) {
   const { gameId } = await params;
 
-  return (
-    <BroadcastOverlayClient gameId={gameId} />
-  );
+  return <BroadcastOverlayClient gameId={gameId} />;
 }

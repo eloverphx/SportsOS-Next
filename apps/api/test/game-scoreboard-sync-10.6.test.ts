@@ -1,26 +1,23 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
-import {
-  buildGameScoreboardSyncCommand,
-} from "../src/services/gameScoreboardSync.js";
+import { buildGameScoreboardSyncCommand } from "../src/services/gameScoreboardSync.js";
 
 describe("Milestone 10.6 game-to-scoreboard synchronization", () => {
   it("builds a full SYNC_STATE command from authoritative game state", () => {
-    const command =
-      buildGameScoreboardSyncCommand(
-        {
-          gameId: "game-1",
-          homeScore: 4,
-          awayScore: 3,
-          period: 2,
-          clock: {
-            remainingMs: 88500,
-            running: true,
-          },
+    const command = buildGameScoreboardSyncCommand(
+      {
+        gameId: "game-1",
+        homeScore: 4,
+        awayScore: 3,
+        period: 2,
+        clock: {
+          remainingMs: 88500,
+          running: true,
         },
-        "scoreboard-1",
-        "cmd-sync-game",
-      );
+      },
+      "scoreboard-1",
+      "cmd-sync-game",
+    );
 
     expect(command).toEqual({
       protocolVersion: 1,
@@ -58,9 +55,7 @@ describe("Milestone 10.6 game-to-scoreboard synchronization", () => {
         "scoreboard-1",
         "cmd-invalid",
       ),
-    ).toThrow(
-      "homeScore must be a non-negative integer.",
-    );
+    ).toThrow("homeScore must be a non-negative integer.");
   });
 
   it("rejects invalid clock values", () => {
@@ -79,28 +74,17 @@ describe("Milestone 10.6 game-to-scoreboard synchronization", () => {
         "scoreboard-1",
         "cmd-invalid-clock",
       ),
-    ).toThrow(
-      "remainingMs must be a non-negative number.",
-    );
+    ).toThrow("remainingMs must be a non-negative number.");
   });
 
   it("exposes the sync-game API endpoint", () => {
     const route = fs.readFileSync(
-      new URL(
-        "../src/routes/scoreboardDevices.ts",
-        import.meta.url,
-      ),
+      new URL("../src/routes/scoreboardDevices.ts", import.meta.url),
       "utf8",
     );
 
-    expect(route).toContain(
-      '"/scoreboard-devices/:deviceId/sync-game"',
-    );
-    expect(route).toContain(
-      "GameScoreboardSyncService",
-    );
-    expect(route).toContain(
-      "await syncService.sync",
-    );
+    expect(route).toContain('"/scoreboard-devices/:deviceId/sync-game"');
+    expect(route).toContain("GameScoreboardSyncService");
+    expect(route).toContain("await syncService.sync");
   });
 });

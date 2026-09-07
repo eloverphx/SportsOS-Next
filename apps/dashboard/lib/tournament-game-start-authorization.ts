@@ -1,9 +1,7 @@
 export const SPORTSOS_GAME_START_AUTH_STORAGE_PREFIX =
   "sportsos:tournament-game-operations:start-authorization";
 
-export type GameStartAuthorizationMode =
-  | "normal"
-  | "testing-override";
+export type GameStartAuthorizationMode = "normal" | "testing-override";
 
 export type GameStartAuthorizationRecord = {
   gameId: string;
@@ -59,8 +57,7 @@ export function createGameStartAuthorization(
     throw new Error("Game start authorization requirements are not satisfied.");
   }
 
-  const mode: GameStartAuthorizationMode =
-    input.actualReady ? "normal" : "testing-override";
+  const mode: GameStartAuthorizationMode = input.actualReady ? "normal" : "testing-override";
 
   return {
     gameId: input.gameId,
@@ -70,9 +67,7 @@ export function createGameStartAuthorization(
     actualReadyAtAuthorization: input.actualReady,
     effectiveReadyAtAuthorization: input.effectiveReady,
     overrideReason:
-      mode === "testing-override"
-        ? normalizeAuthorizationText(input.overrideReason ?? "")
-        : null,
+      mode === "testing-override" ? normalizeAuthorizationText(input.overrideReason ?? "") : null,
   };
 }
 
@@ -100,8 +95,7 @@ export function readGameStartAuthorization(
       parsed.gameId !== gameId ||
       typeof parsed.authorizedAt !== "string" ||
       typeof parsed.authorizedBy !== "string" ||
-      (parsed.mode !== "normal" &&
-        parsed.mode !== "testing-override") ||
+      (parsed.mode !== "normal" && parsed.mode !== "testing-override") ||
       typeof parsed.actualReadyAtAuthorization !== "boolean" ||
       typeof parsed.effectiveReadyAtAuthorization !== "boolean"
     ) {
@@ -113,10 +107,8 @@ export function readGameStartAuthorization(
       authorizedAt: parsed.authorizedAt,
       authorizedBy: normalizeAuthorizationText(parsed.authorizedBy),
       mode: parsed.mode,
-      actualReadyAtAuthorization:
-        parsed.actualReadyAtAuthorization,
-      effectiveReadyAtAuthorization:
-        parsed.effectiveReadyAtAuthorization,
+      actualReadyAtAuthorization: parsed.actualReadyAtAuthorization,
+      effectiveReadyAtAuthorization: parsed.effectiveReadyAtAuthorization,
       overrideReason:
         parsed.mode === "testing-override"
           ? normalizeAuthorizationText(parsed.overrideReason ?? "")

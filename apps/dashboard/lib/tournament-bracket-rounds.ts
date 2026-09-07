@@ -1,14 +1,6 @@
-import type {
-  BracketMatchup,
-  BracketSeed,
-  BracketSeedResult,
-} from "./tournament-bracket-seeding";
-import type {
-  BracketMatchupResult,
-} from "./tournament-bracket-advancement";
-import {
-  advanceBracketRound,
-} from "./tournament-bracket-advancement";
+import type { BracketMatchup, BracketSeed, BracketSeedResult } from "./tournament-bracket-seeding";
+import type { BracketMatchupResult } from "./tournament-bracket-advancement";
+import { advanceBracketRound } from "./tournament-bracket-advancement";
 
 export type TournamentBracketRound = {
   round: number;
@@ -23,10 +15,7 @@ export type TournamentBracketTree = {
   champion: BracketSeed | null;
 };
 
-function roundName(
-  round: number,
-  totalRounds: number,
-): string {
+function roundName(round: number, totalRounds: number): string {
   const remaining = totalRounds - round + 1;
 
   if (remaining === 1) return "Championship";
@@ -36,9 +25,7 @@ function roundName(
   return `Round ${round}`;
 }
 
-function totalRoundsForBracketSize(
-  bracketSize: number,
-): number {
+function totalRoundsForBracketSize(bracketSize: number): number {
   if (bracketSize <= 1) {
     return bracketSize === 1 ? 1 : 0;
   }
@@ -59,18 +46,13 @@ export function buildTournamentBracketTree(
     };
   }
 
-  const totalRounds =
-    totalRoundsForBracketSize(seedResult.bracketSize);
+  const totalRounds = totalRoundsForBracketSize(seedResult.bracketSize);
 
   const rounds: TournamentBracketRound[] = [];
   let currentRound = seedResult.firstRound;
   let champion: BracketSeed | null = null;
 
-  for (
-    let roundNumber = 1;
-    roundNumber <= totalRounds;
-    roundNumber += 1
-  ) {
+  for (let roundNumber = 1; roundNumber <= totalRounds; roundNumber += 1) {
     rounds.push({
       round: roundNumber,
       name: roundName(roundNumber, totalRounds),
@@ -81,14 +63,10 @@ export function buildTournamentBracketTree(
       break;
     }
 
-    const advancement = advanceBracketRound(
-      currentRound,
-      results,
-    );
+    const advancement = advanceBracketRound(currentRound, results);
 
     if (currentRound.length === 1) {
-      champion =
-        advancement.resolvedRound[0]?.winner ?? null;
+      champion = advancement.resolvedRound[0]?.winner ?? null;
       break;
     }
 

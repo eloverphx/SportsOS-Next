@@ -8,13 +8,11 @@ export default function TournamentCompetitionOperationsPage() {
           SportsOS Tournament Operations
         </div>
 
-        <h1 className="mt-2 text-3xl font-bold text-slate-100">
-          Tournament Competition Dashboard
-        </h1>
+        <h1 className="mt-2 text-3xl font-bold text-slate-100">Tournament Competition Dashboard</h1>
 
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-          Monitor standings, seeding, bracket progression, and tournament
-          completion from one operational surface.
+          Monitor standings, seeding, bracket progression, and tournament completion from one
+          operational surface.
         </p>
       </div>
 

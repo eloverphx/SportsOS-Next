@@ -2,10 +2,7 @@ import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("Milestone 29.10.1 runner function ordering", () => {
-  const runner = fs.readFileSync(
-    "scripts/run-production-operations.sh",
-    "utf8",
-  );
+  const runner = fs.readFileSync("scripts/run-production-operations.sh", "utf8");
 
   it("defines run_step before the dispatcher", () => {
     const runStep = runner.indexOf("run_step() {");
@@ -24,8 +21,6 @@ describe("Milestone 29.10.1 runner function ordering", () => {
 
   it("preserves observability refresh mode", () => {
     expect(runner).toContain("observability-refresh)");
-    expect(runner).toContain(
-      "refresh-operations-observability.sh",
-    );
+    expect(runner).toContain("refresh-operations-observability.sh");
   });
 });

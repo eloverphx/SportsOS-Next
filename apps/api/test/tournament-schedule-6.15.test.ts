@@ -1,13 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import {
-  SCHEDULE_AUDIT_ACTIONS,
-} from "../src/modules/games/schedule-audit.js";
+import { SCHEDULE_AUDIT_ACTIONS } from "../src/modules/games/schedule-audit.js";
 
-const routes = readFileSync(
-  new URL("../src/modules/games/routes.ts", import.meta.url),
-  "utf8",
-);
+const routes = readFileSync(new URL("../src/modules/games/routes.ts", import.meta.url), "utf8");
 
 const audit = readFileSync(
   new URL("../src/modules/games/schedule-audit.ts", import.meta.url),
@@ -15,10 +10,7 @@ const audit = readFileSync(
 );
 
 const panel = readFileSync(
-  new URL(
-    "../../dashboard/components/tournament/TournamentScheduleAudit.tsx",
-    import.meta.url,
-  ),
+  new URL("../../dashboard/components/tournament/TournamentScheduleAudit.tsx", import.meta.url),
   "utf8",
 );
 
@@ -42,12 +34,8 @@ describe("Tournament scheduling 6.15 audit visibility", () => {
     expect(routes).toContain("permission: PERMISSIONS.GAME_READ");
     expect(routes).toContain("queryScheduleAuditEvents(");
     expect(routes).toContain("identity.role === ROLES.SYSTEM_ADMIN");
-    expect(routes).toContain(
-      "requestedOrganizationId !== identity.organizationId",
-    );
-    expect(routes).toContain(
-      ": identity.organizationId",
-    );
+    expect(routes).toContain("requestedOrganizationId !== identity.organizationId");
+    expect(routes).toContain(": identity.organizationId");
   });
 
   it("joins actor identity and extracts schedule governance details", () => {

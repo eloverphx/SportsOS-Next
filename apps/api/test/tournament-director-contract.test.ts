@@ -34,9 +34,9 @@ describe("Tournament Director dashboard contract", () => {
   });
 
   it("links directly into the game-day operating surfaces", () => {
-    expect(page).toContain('href={`/games/${game.id}/control`}');
-    expect(page).toContain('href={`/games/${game.id}/scoreboard`}');
-    expect(page).toContain('href={`/games/${game.id}/overlay`}');
+    expect(page).toContain("href={`/games/${game.id}/control`}");
+    expect(page).toContain("href={`/games/${game.id}/scoreboard`}");
+    expect(page).toContain("href={`/games/${game.id}/overlay`}");
     expect(page).toContain("Engine Health");
   });
 

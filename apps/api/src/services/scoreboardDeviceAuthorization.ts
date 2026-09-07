@@ -1,7 +1,4 @@
-import {
-  getEnrollment,
-  isVerifiedDevice,
-} from "./scoreboardDeviceEnrollment.js";
+import { getEnrollment, isVerifiedDevice } from "./scoreboardDeviceEnrollment.js";
 
 export type DeviceAuthorizationResult =
   | {
@@ -13,18 +10,14 @@ export type DeviceAuthorizationResult =
       error: string;
     };
 
-export function authorizeVerifiedScoreboardDevice(
-  deviceId: string,
-): DeviceAuthorizationResult {
-  const record =
-    getEnrollment(deviceId);
+export function authorizeVerifiedScoreboardDevice(deviceId: string): DeviceAuthorizationResult {
+  const record = getEnrollment(deviceId);
 
   if (!record) {
     return {
       ok: false,
       statusCode: 403,
-      error:
-        "Scoreboard device is not enrolled.",
+      error: "Scoreboard device is not enrolled.",
     };
   }
 
@@ -32,8 +25,7 @@ export function authorizeVerifiedScoreboardDevice(
     return {
       ok: false,
       statusCode: 403,
-      error:
-        `Scoreboard device is not verified. Current status: ${record.status}.`,
+      error: `Scoreboard device is not verified. Current status: ${record.status}.`,
     };
   }
 

@@ -1,5 +1,4 @@
-export const SPORTSOS_OFFICIALS_STORAGE_PREFIX =
-  "sportsos:tournament-game-operations:officials";
+export const SPORTSOS_OFFICIALS_STORAGE_PREFIX = "sportsos:tournament-game-operations:officials";
 
 export type OfficialsAssignmentState = {
   referee1: string;
@@ -8,13 +7,12 @@ export type OfficialsAssignmentState = {
   linesman2: string;
 };
 
-export const EMPTY_OFFICIALS_ASSIGNMENT: OfficialsAssignmentState =
-  Object.freeze({
-    referee1: "",
-    referee2: "",
-    linesman1: "",
-    linesman2: "",
-  });
+export const EMPTY_OFFICIALS_ASSIGNMENT: OfficialsAssignmentState = Object.freeze({
+  referee1: "",
+  referee2: "",
+  linesman1: "",
+  linesman2: "",
+});
 
 function storageKey(gameId: string): string {
   return `${SPORTSOS_OFFICIALS_STORAGE_PREFIX}:${gameId}`;
@@ -64,18 +62,14 @@ export function writeOfficialsAssignment(
   );
 }
 
-export function hasRequiredOfficials(
-  state: OfficialsAssignmentState,
-): boolean {
+export function hasRequiredOfficials(state: OfficialsAssignmentState): boolean {
   return (
     normalizeOfficialName(state.referee1).length > 0 &&
     normalizeOfficialName(state.referee2).length > 0
   );
 }
 
-export function hasCompleteOfficialsCrew(
-  state: OfficialsAssignmentState,
-): boolean {
+export function hasCompleteOfficialsCrew(state: OfficialsAssignmentState): boolean {
   return (
     hasRequiredOfficials(state) &&
     normalizeOfficialName(state.linesman1).length > 0 &&

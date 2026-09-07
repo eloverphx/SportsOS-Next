@@ -15,34 +15,22 @@ const nav = readFileSync(
 );
 
 const operations = readFileSync(
-  new URL(
-    "../../dashboard/components/tournament/TournamentDayOperations.tsx",
-    import.meta.url,
-  ),
+  new URL("../../dashboard/components/tournament/TournamentDayOperations.tsx", import.meta.url),
   "utf8",
 );
 
 const focus = readFileSync(
-  new URL(
-    "../../dashboard/components/tournament/TournamentFocusPanel.tsx",
-    import.meta.url,
-  ),
+  new URL("../../dashboard/components/tournament/TournamentFocusPanel.tsx", import.meta.url),
   "utf8",
 );
 
 const timeline = readFileSync(
-  new URL(
-    "../../dashboard/components/tournament/TournamentScheduleTimeline.tsx",
-    import.meta.url,
-  ),
+  new URL("../../dashboard/components/tournament/TournamentScheduleTimeline.tsx", import.meta.url),
   "utf8",
 );
 
 const editor = readFileSync(
-  new URL(
-    "../../dashboard/components/tournament/TournamentScheduleEditor.tsx",
-    import.meta.url,
-  ),
+  new URL("../../dashboard/components/tournament/TournamentScheduleEditor.tsx", import.meta.url),
   "utf8",
 );
 
@@ -54,8 +42,8 @@ describe("Tournament Operations 6.10 hardening contract", () => {
     expect(nav).toContain("#director-focus");
     expect(nav).toContain("#director-timeline");
     expect(nav).toContain("#director-scheduling");
-    expect(nav).toContain('data-testid={`workflow-link-${section.id}`}');
-    expect(nav).toContain('aria-label={`${section.label}: ${section.detail}`}');
+    expect(nav).toContain("data-testid={`workflow-link-${section.id}`}");
+    expect(nav).toContain("aria-label={`${section.label}: ${section.detail}`}");
   });
 
   it("provides stable workflow section targets", () => {

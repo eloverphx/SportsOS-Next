@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  deriveBracketResultsFromGames,
-} from "../lib/tournament-bracket-results";
-import type {
-  BracketMatchup,
-} from "../lib/tournament-bracket-seeding";
+import { deriveBracketResultsFromGames } from "../lib/tournament-bracket-results";
+import type { BracketMatchup } from "../lib/tournament-bracket-seeding";
 
 const matchup: BracketMatchup = {
   id: "round-1-slot-1",
@@ -144,8 +140,6 @@ describe("Milestone 8.9 bracket result integration / persistence", () => {
           },
         ],
       ),
-    ).toThrow(
-      "Multiple finalized games match bracket matchup",
-    );
+    ).toThrow("Multiple finalized games match bracket matchup");
   });
 });

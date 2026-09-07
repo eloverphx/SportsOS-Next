@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  seedBracket,
-} from "../lib/tournament-bracket-seeding";
+import { seedBracket } from "../lib/tournament-bracket-seeding";
 
-function row(
-  rank: number,
-  teamId: string,
-  teamName: string,
-) {
+function row(rank: number, teamId: string, teamName: string) {
   return {
     teamId,
     teamName,
@@ -40,17 +34,9 @@ describe("Milestone 8.4 bracket seeding engine", () => {
       row(3, "c", "Eagles"),
     ]);
 
-    expect(result.seeds.map((seed) => seed.teamId)).toEqual([
-      "a",
-      "b",
-      "c",
-    ]);
+    expect(result.seeds.map((seed) => seed.teamId)).toEqual(["a", "b", "c"]);
 
-    expect(result.seeds.map((seed) => seed.seed)).toEqual([
-      1,
-      2,
-      3,
-    ]);
+    expect(result.seeds.map((seed) => seed.seed)).toEqual([1, 2, 3]);
   });
 
   it("expands the field to the next power-of-two bracket", () => {
@@ -101,11 +87,7 @@ describe("Milestone 8.4 bracket seeding engine", () => {
   });
 
   it("marks unmatched high seeds as first-round byes", () => {
-    const result = seedBracket([
-      row(1, "a", "A"),
-      row(2, "b", "B"),
-      row(3, "c", "C"),
-    ]);
+    const result = seedBracket([row(1, "a", "A"), row(2, "b", "B"), row(3, "c", "C")]);
 
     expect(result.bracketSize).toBe(4);
 
@@ -132,11 +114,8 @@ describe("Milestone 8.4 bracket seeding engine", () => {
   });
 
   it("rejects duplicate teams", () => {
-    expect(() =>
-      seedBracket([
-        row(1, "a", "A"),
-        row(2, "a", "A duplicate"),
-      ]),
-    ).toThrow("Duplicate team in standings");
+    expect(() => seedBracket([row(1, "a", "A"), row(2, "a", "A duplicate")])).toThrow(
+      "Duplicate team in standings",
+    );
   });
 });

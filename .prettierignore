@@ -6,3 +6,5 @@ coverage
 package-lock.json
 public
 sprints/
+.game-engine-backups/
+firmware/esp32-scoreboard/.pio/

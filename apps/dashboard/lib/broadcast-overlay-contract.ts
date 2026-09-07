@@ -32,47 +32,26 @@ export type BroadcastOverlaySnapshot = {
 type UnknownRecord = Record<string, unknown>;
 
 function record(value: unknown): UnknownRecord | null {
-  return value && typeof value === "object"
-    ? (value as UnknownRecord)
-    : null;
+  return value && typeof value === "object" ? (value as UnknownRecord) : null;
 }
 
-function stringValue(
-  value: unknown,
-  fallback = "",
-): string {
+function stringValue(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
 }
 
-function nullableString(
-  value: unknown,
-): string | null {
-  return typeof value === "string" && value.trim()
-    ? value
-    : null;
+function nullableString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
 }
 
-function numberValue(
-  value: unknown,
-  fallback = 0,
-): number {
-  return typeof value === "number" && Number.isFinite(value)
-    ? value
-    : fallback;
+function numberValue(value: unknown, fallback = 0): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
-function nullableNumber(
-  value: unknown,
-): number | null {
-  return typeof value === "number" && Number.isFinite(value)
-    ? value
-    : null;
+function nullableNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function booleanValue(
-  value: unknown,
-  fallback = false,
-): boolean {
+function booleanValue(value: unknown, fallback = false): boolean {
   return typeof value === "boolean" ? value : fallback;
 }
 
@@ -85,19 +64,10 @@ function teamSnapshot(
   const team = record(teamValue);
 
   return {
-    id:
-      stringValue(team?.id) ||
-      stringValue(fallbackId),
-    name:
-      stringValue(team?.name) ||
-      stringValue(fallbackName) ||
-      "Unknown",
-    shortName:
-      nullableString(team?.shortName) ??
-      nullableString(team?.abbreviation),
-    logoUrl:
-      nullableString(team?.logoUrl) ??
-      nullableString(team?.logo),
+    id: stringValue(team?.id) || stringValue(fallbackId),
+    name: stringValue(team?.name) || stringValue(fallbackName) || "Unknown",
+    shortName: nullableString(team?.shortName) ?? nullableString(team?.abbreviation),
+    logoUrl: nullableString(team?.logoUrl) ?? nullableString(team?.logo),
     score: numberValue(fallbackScore),
   };
 }
@@ -109,17 +79,13 @@ export function normalizeBroadcastOverlaySnapshot(
   const game = record(gameValue);
 
   if (!game) {
-    throw new Error(
-      "Broadcast overlay game payload must be an object.",
-    );
+    throw new Error("Broadcast overlay game payload must be an object.");
   }
 
   const gameId = stringValue(game.id);
 
   if (!gameId) {
-    throw new Error(
-      "Broadcast overlay game payload is missing id.",
-    );
+    throw new Error("Broadcast overlay game payload is missing id.");
   }
 
   const remainingMs =
@@ -133,52 +99,30 @@ export function normalizeBroadcastOverlaySnapshot(
     booleanValue(game.clockRunning) ||
     booleanValue(record(game.clock)?.running);
 
-  const powerPlayRecord =
-    record(game.powerPlay) ??
-    record(game.activePowerPlay);
+  const powerPlayRecord = record(game.powerPlay) ?? record(game.activePowerPlay);
 
-  const powerPlayTeamId =
-    stringValue(powerPlayRecord?.teamId);
+  const powerPlayTeamId = stringValue(powerPlayRecord?.teamId);
 
-  const powerPlayRemainingMs =
-    nullableNumber(powerPlayRecord?.remainingMs);
+  const powerPlayRemainingMs = nullableNumber(powerPlayRecord?.remainingMs);
 
   return {
     version: 1,
     generatedAt: generatedAt.toISOString(),
     gameId,
     status: stringValue(game.status, "UNKNOWN"),
-    phase:
-      nullableString(game.gamePhase) ??
-      nullableString(game.phase),
-    period:
-      nullableNumber(game.period) ??
-      nullableNumber(game.currentPeriod),
-    home: teamSnapshot(
-      game.homeTeam,
-      game.homeTeamId,
-      game.homeTeamName,
-      game.homeScore,
-    ),
-    away: teamSnapshot(
-      game.awayTeam,
-      game.awayTeamId,
-      game.awayTeamName,
-      game.awayScore,
-    ),
+    phase: nullableString(game.gamePhase) ?? nullableString(game.phase),
+    period: nullableNumber(game.period) ?? nullableNumber(game.currentPeriod),
+    home: teamSnapshot(game.homeTeam, game.homeTeamId, game.homeTeamName, game.homeScore),
+    away: teamSnapshot(game.awayTeam, game.awayTeamId, game.awayTeamName, game.awayScore),
     clock: {
       remainingMs: Math.max(0, remainingMs),
       running,
     },
     powerPlay:
-      powerPlayTeamId &&
-      powerPlayRemainingMs !== null
+      powerPlayTeamId && powerPlayRemainingMs !== null
         ? {
             teamId: powerPlayTeamId,
-            remainingMs: Math.max(
-              0,
-              powerPlayRemainingMs,
-            ),
+            remainingMs: Math.max(0, powerPlayRemainingMs),
           }
         : null,
   };

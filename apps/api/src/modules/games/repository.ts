@@ -4,10 +4,7 @@ import { enqueueRealtimeEvent } from "../../infrastructure/realtime-outbox.js";
 import { logoUrl } from "../../lib/media.js";
 import type { GameInput, ScoreAction } from "./schemas.js";
 import type { Game, GamePhase, GameStatus, GameTeamOption } from "./types.js";
-import {
-  applyGameEngineAction,
-  type GameEngineState,
-} from "./engine.js";
+import { applyGameEngineAction, type GameEngineState } from "./engine.js";
 export { GamePhaseError } from "./engine.js";
 import {
   adjustActivePenaltyClocks,
@@ -542,7 +539,6 @@ export async function deleteGame(id: number): Promise<boolean> {
   return result.affectedRows > 0;
 }
 
-
 export class IdempotencyConflictError extends Error {
   constructor(message: string) {
     super(message);
@@ -687,17 +683,12 @@ export async function applyGameScoringAction(
       clockRemainingMs: clockRemainingMsAtAction,
       clockRunning: Boolean(row.clock_running) && clockRemainingMsAtAction > 0,
       clockStartedAt:
-        Boolean(row.clock_running) && clockRemainingMsAtAction > 0
-          ? new Date()
-          : null,
+        Boolean(row.clock_running) && clockRemainingMsAtAction > 0 ? new Date() : null,
       regulationPeriods: Number(row.regulation_periods ?? 3),
-      regulationPeriodLengthMs: Number(
-        row.regulation_period_length_ms ?? row.period_length_ms,
-      ),
+      regulationPeriodLengthMs: Number(row.regulation_period_length_ms ?? row.period_length_ms),
       intermissionLengthMs: Number(row.intermission_length_ms ?? 0),
       intermissionRemainingMs: intermissionRemainingMsAtAction,
-      intermissionRunning:
-        Boolean(row.intermission_running) && intermissionRemainingMsAtAction > 0,
+      intermissionRunning: Boolean(row.intermission_running) && intermissionRemainingMsAtAction > 0,
       intermissionStartedAt:
         Boolean(row.intermission_running) && intermissionRemainingMsAtAction > 0
           ? new Date()
@@ -725,11 +716,7 @@ export async function applyGameScoringAction(
       intermissionStartedAt,
     } = transition.state;
 
-    await adjustActivePenaltyClocks(
-      connection,
-      id,
-      transition.penaltyClockAdjustmentMs,
-    );
+    await adjustActivePenaltyClocks(connection, id, transition.penaltyClockAdjustmentMs);
 
     await connection.execute(
       `UPDATE games SET

@@ -8,11 +8,7 @@ export type ScoreboardControlAuditRecord = {
   inputId: string;
   inputType: string;
   sequence: number;
-  disposition:
-    | "ACCEPTED"
-    | "REJECTED"
-    | "IGNORED_DUPLICATE"
-    | "EXECUTION_FAILED";
+  disposition: "ACCEPTED" | "REJECTED" | "IGNORED_DUPLICATE" | "EXECUTION_FAILED";
   command: unknown;
   execution: unknown;
   reconciliation: unknown;
@@ -25,35 +21,18 @@ type AuditStore = {
   records: ScoreboardControlAuditRecord[];
 };
 
-const DATA_DIR =
-  process.env.SPORTSOS_DATA_DIR ??
-  path.resolve(process.cwd(), "data");
+const DATA_DIR = process.env.SPORTSOS_DATA_DIR ?? path.resolve(process.cwd(), "data");
 
-const STORE_FILE =
-  path.join(
-    DATA_DIR,
-    "scoreboard-control-audit.json",
-  );
+const STORE_FILE = path.join(DATA_DIR, "scoreboard-control-audit.json");
 
 let store = loadStore();
 
 function loadStore(): AuditStore {
   try {
-    const parsed =
-      JSON.parse(
-        fs.readFileSync(
-          STORE_FILE,
-          "utf8",
-        ),
-      ) as AuditStore;
+    const parsed = JSON.parse(fs.readFileSync(STORE_FILE, "utf8")) as AuditStore;
 
-    if (
-      parsed.version !== 1 ||
-      !Array.isArray(parsed.records)
-    ) {
-      throw new Error(
-        "Invalid scoreboard control audit store.",
-      );
+    if (parsed.version !== 1 || !Array.isArray(parsed.records)) {
+      throw new Error("Invalid scoreboard control audit store.");
     }
 
     return parsed;
@@ -66,28 +45,13 @@ function loadStore(): AuditStore {
 }
 
 function persistStore(): void {
-  fs.mkdirSync(
-    DATA_DIR,
-    { recursive: true },
-  );
+  fs.mkdirSync(DATA_DIR, { recursive: true });
 
-  const temp =
-    `${STORE_FILE}.tmp`;
+  const temp = `${STORE_FILE}.tmp`;
 
-  fs.writeFileSync(
-    temp,
-    JSON.stringify(
-      store,
-      null,
-      2,
-    ),
-    "utf8",
-  );
+  fs.writeFileSync(temp, JSON.stringify(store, null, 2), "utf8");
 
-  fs.renameSync(
-    temp,
-    STORE_FILE,
-  );
+  fs.renameSync(temp, STORE_FILE);
 }
 
 export function recordScoreboardControlAudit(
@@ -96,8 +60,7 @@ export function recordScoreboardControlAudit(
   store.records.push(record);
 
   if (store.records.length > 2000) {
-    store.records =
-      store.records.slice(-2000);
+    store.records = store.records.slice(-2000);
   }
 
   persistStore();
@@ -110,34 +73,18 @@ export function listScoreboardControlAudit(input?: {
   disposition?: string;
   limit?: number;
 }): ScoreboardControlAuditRecord[] {
-  const limit =
-    Math.max(
-      1,
-      Math.min(
-        input?.limit ?? 100,
-        500,
-      ),
-    );
+  const limit = Math.max(1, Math.min(input?.limit ?? 100, 500));
 
   return store.records
     .filter(
       (record) =>
-        (!input?.deviceId ||
-          record.deviceId === input.deviceId) &&
-        (!input?.gameId ||
-          record.gameId === input.gameId) &&
-        (!input?.disposition ||
-          record.disposition === input.disposition),
+        (!input?.deviceId || record.deviceId === input.deviceId) &&
+        (!input?.gameId || record.gameId === input.gameId) &&
+        (!input?.disposition || record.disposition === input.disposition),
     )
-    .sort(
-      (a, b) =>
-        b.createdAt.localeCompare(
-          a.createdAt,
-        ),
-    )
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, limit);
 }
-
 
 export type ScoreboardControlIncident = {
   auditId: string;
@@ -151,57 +98,30 @@ export type ScoreboardControlIncident = {
   createdAt: string;
 };
 
-export function listScoreboardControlIncidents(
-  limit = 100,
-): ScoreboardControlIncident[] {
+export function listScoreboardControlIncidents(limit = 100): ScoreboardControlIncident[] {
   return listScoreboardControlAudit({
-    limit:
-      Math.max(
-        100,
-        Math.min(
-          limit * 5,
-          1000,
-        ),
-      ),
+    limit: Math.max(100, Math.min(limit * 5, 1000)),
   })
-    .filter(
-      (record) =>
-        record.disposition === "REJECTED" ||
-        Boolean(record.error),
-    )
-    .map(
-      (record) => ({
-        auditId: record.auditId,
-        deviceId: record.deviceId,
-        gameId: record.gameId ?? null,
-        inputId: record.inputId,
-        inputType: record.inputType,
-        sequence: record.sequence,
-        disposition: record.disposition,
-        error: record.error ?? null,
-        createdAt: record.createdAt,
-      }),
-    )
-    .slice(
-      0,
-      Math.max(
-        1,
-        Math.min(
-          limit,
-          500,
-        ),
-      ),
-    );
+    .filter((record) => record.disposition === "REJECTED" || Boolean(record.error))
+    .map((record) => ({
+      auditId: record.auditId,
+      deviceId: record.deviceId,
+      gameId: record.gameId ?? null,
+      inputId: record.inputId,
+      inputType: record.inputType,
+      sequence: record.sequence,
+      disposition: record.disposition,
+      error: record.error ?? null,
+      createdAt: record.createdAt,
+    }))
+    .slice(0, Math.max(1, Math.min(limit, 500)));
 }
-
 
 export type ScoreboardControlReadinessEvent = {
   auditId: string;
   deviceId: string;
   gameId: string | null;
-  eventType:
-    | "DEVICE_READINESS_DEGRADED"
-    | "DEVICE_READINESS_RESTORED";
+  eventType: "DEVICE_READINESS_DEGRADED" | "DEVICE_READINESS_RESTORED";
   disposition: string;
   error: string | null;
   createdAt: string;
@@ -211,52 +131,21 @@ export function listScoreboardControlReadinessEvents(
   limit = 100,
 ): ScoreboardControlReadinessEvent[] {
   return listScoreboardControlAudit({
-    limit:
-      Math.max(
-        100,
-        Math.min(
-          limit * 5,
-          1000,
-        ),
-      ),
+    limit: Math.max(100, Math.min(limit * 5, 1000)),
   })
     .filter(
       (record) =>
-        record.inputType ===
-          "DEVICE_READINESS_DEGRADED" ||
-        record.inputType ===
-          "DEVICE_READINESS_RESTORED",
+        record.inputType === "DEVICE_READINESS_DEGRADED" ||
+        record.inputType === "DEVICE_READINESS_RESTORED",
     )
-    .map(
-      (record) => ({
-        auditId:
-          record.auditId,
-        deviceId:
-          record.deviceId,
-        gameId:
-          record.gameId ??
-          null,
-        eventType:
-          record.inputType as
-            | "DEVICE_READINESS_DEGRADED"
-            | "DEVICE_READINESS_RESTORED",
-        disposition:
-          record.disposition,
-        error:
-          record.error ??
-          null,
-        createdAt:
-          record.createdAt,
-      }),
-    )
-    .slice(
-      0,
-      Math.max(
-        1,
-        Math.min(
-          limit,
-          500,
-        ),
-      ),
-    );
+    .map((record) => ({
+      auditId: record.auditId,
+      deviceId: record.deviceId,
+      gameId: record.gameId ?? null,
+      eventType: record.inputType as "DEVICE_READINESS_DEGRADED" | "DEVICE_READINESS_RESTORED",
+      disposition: record.disposition,
+      error: record.error ?? null,
+      createdAt: record.createdAt,
+    }))
+    .slice(0, Math.max(1, Math.min(limit, 500)));
 }

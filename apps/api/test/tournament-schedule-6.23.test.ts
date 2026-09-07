@@ -6,24 +6,16 @@ const audit = readFileSync(
   "utf8",
 );
 
-const routes = readFileSync(
-  new URL("../src/modules/games/routes.ts", import.meta.url),
-  "utf8",
-);
+const routes = readFileSync(new URL("../src/modules/games/routes.ts", import.meta.url), "utf8");
 
 const panel = readFileSync(
-  new URL(
-    "../../dashboard/components/tournament/TournamentScheduleAudit.tsx",
-    import.meta.url,
-  ),
+  new URL("../../dashboard/components/tournament/TournamentScheduleAudit.tsx", import.meta.url),
   "utf8",
 );
 
 describe("Tournament scheduling 6.23 server-side audit filtering and pagination", () => {
   it("keeps the proven legacy audit reader intact", () => {
-    expect(audit).toContain(
-      "export async function listRecentScheduleAuditEvents(",
-    );
+    expect(audit).toContain("export async function listRecentScheduleAuditEvents(");
   });
 
   it("adds a bounded paginated audit query", () => {
@@ -54,9 +46,7 @@ describe("Tournament scheduling 6.23 server-side audit filtering and pagination"
 
   it("keeps organization authorization authoritative", () => {
     expect(routes).toContain("identity.role === ROLES.SYSTEM_ADMIN");
-    expect(routes).toContain(
-      "requestedOrganizationId !== identity.organizationId",
-    );
+    expect(routes).toContain("requestedOrganizationId !== identity.organizationId");
     expect(routes).toContain('code: "AUDIT_ORGANIZATION_FORBIDDEN"');
     expect(routes).toContain("queryScheduleAuditEvents({");
   });

@@ -6,9 +6,7 @@ import {
   type ServerScheduleGame,
 } from "../src/modules/games/schedule-conflicts.js";
 
-function scheduled(
-  overrides: Partial<ServerScheduleGame> = {},
-): ServerScheduleGame {
+function scheduled(overrides: Partial<ServerScheduleGame> = {}): ServerScheduleGame {
   return {
     id: 1,
     homeTeamId: 10,
@@ -27,9 +25,7 @@ function scheduled(
   };
 }
 
-function proposed(
-  overrides: Partial<ProposedScheduleGame> = {},
-): ProposedScheduleGame {
+function proposed(overrides: Partial<ProposedScheduleGame> = {}): ProposedScheduleGame {
   return {
     ...scheduled(),
     id: 99,
@@ -78,10 +74,7 @@ describe("server-side tournament schedule enforcement", () => {
   });
 
   it("keeps missing rink and short turnaround as warnings", () => {
-    const missing = detectServerScheduleConflicts(
-      proposed({ venue: null }),
-      [],
-    );
+    const missing = detectServerScheduleConflicts(proposed({ venue: null }), []);
 
     expect(missing).toEqual([
       expect.objectContaining({
@@ -101,9 +94,7 @@ describe("server-side tournament schedule enforcement", () => {
       [scheduled()],
     );
 
-    expect(turnaround.some((conflict) => conflict.code === "TEAM_TURNAROUND")).toBe(
-      true,
-    );
+    expect(turnaround.some((conflict) => conflict.code === "TEAM_TURNAROUND")).toBe(true);
     expect(hasHardScheduleConflicts(turnaround)).toBe(false);
   });
 });

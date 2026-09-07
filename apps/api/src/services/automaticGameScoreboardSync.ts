@@ -1,9 +1,5 @@
-import type {
-  AuthoritativeGameSnapshot,
-} from "./gameScoreboardSync.js";
-import {
-  GameScoreboardSyncService,
-} from "./gameScoreboardSync.js";
+import type { AuthoritativeGameSnapshot } from "./gameScoreboardSync.js";
+import { GameScoreboardSyncService } from "./gameScoreboardSync.js";
 
 export type GameScoreboardAssignment = {
   gameId: string;
@@ -24,131 +20,80 @@ export type AutomaticSyncResult =
       reason: "NO_DEVICE_ASSIGNED" | "UNCHANGED";
     };
 
-function snapshotFingerprint(
-  snapshot: AuthoritativeGameSnapshot,
-): string {
+function snapshotFingerprint(snapshot: AuthoritativeGameSnapshot): string {
   return JSON.stringify({
     gameId: snapshot.gameId,
     homeScore: snapshot.homeScore,
     awayScore: snapshot.awayScore,
     period: snapshot.period,
-    remainingMs:
-      snapshot.clock.remainingMs,
-    running:
-      snapshot.clock.running,
+    remainingMs: snapshot.clock.remainingMs,
+    running: snapshot.clock.running,
   });
 }
 
 export class AutomaticGameScoreboardSync {
-  private readonly assignments =
-    new Map<string, GameScoreboardAssignment>();
+  private readonly assignments = new Map<string, GameScoreboardAssignment>();
 
-  private readonly lastFingerprint =
-    new Map<string, string>();
+  private readonly lastFingerprint = new Map<string, string>();
 
-  public constructor(
-    private readonly syncService:
-      GameScoreboardSyncService,
-  ) {}
+  public constructor(private readonly syncService: GameScoreboardSyncService) {}
 
-  public assign(
-    gameId: string,
-    deviceId: string,
-  ): GameScoreboardAssignment {
-    const normalizedGameId =
-      gameId.trim();
-    const normalizedDeviceId =
-      deviceId.trim();
+  public assign(gameId: string, deviceId: string): GameScoreboardAssignment {
+    const normalizedGameId = gameId.trim();
+    const normalizedDeviceId = deviceId.trim();
 
     if (!normalizedGameId) {
-      throw new Error(
-        "gameId is required.",
-      );
+      throw new Error("gameId is required.");
     }
 
     if (!normalizedDeviceId) {
-      throw new Error(
-        "deviceId is required.",
-      );
+      throw new Error("deviceId is required.");
     }
 
     const assignment: GameScoreboardAssignment = {
       gameId: normalizedGameId,
       deviceId: normalizedDeviceId,
-      assignedAt:
-        new Date().toISOString(),
+      assignedAt: new Date().toISOString(),
     };
 
-    this.assignments.set(
-      normalizedGameId,
-      assignment,
-    );
+    this.assignments.set(normalizedGameId, assignment);
 
-    this.lastFingerprint.delete(
-      normalizedGameId,
-    );
+    this.lastFingerprint.delete(normalizedGameId);
 
     return assignment;
   }
 
-  public unassign(
-    gameId: string,
-  ): boolean {
-    this.lastFingerprint.delete(
-      gameId,
-    );
+  public unassign(gameId: string): boolean {
+    this.lastFingerprint.delete(gameId);
 
-    return this.assignments.delete(
-      gameId,
-    );
+    return this.assignments.delete(gameId);
   }
 
-  public invalidate(
-    gameId: string,
-  ): void {
-    this.lastFingerprint.delete(
-      gameId,
-    );
+  public invalidate(gameId: string): void {
+    this.lastFingerprint.delete(gameId);
   }
 
-  public getAssignment(
-    gameId: string,
-  ): GameScoreboardAssignment | null {
+  public getAssignment(gameId: string): GameScoreboardAssignment | null {
+    return this.assignments.get(gameId) ?? null;
+  }
+
+  public getAssignmentByDeviceId(deviceId: string): GameScoreboardAssignment | null {
+    const normalizedDeviceId = deviceId.trim();
+
     return (
-      this.assignments.get(gameId) ??
+      this.listAssignments().find((assignment) => assignment.deviceId === normalizedDeviceId) ??
       null
     );
   }
 
-  public getAssignmentByDeviceId(
-    deviceId: string,
-  ): GameScoreboardAssignment | null {
-    const normalizedDeviceId =
-      deviceId.trim();
-
-    return (
-      this.listAssignments().find(
-        (assignment) =>
-          assignment.deviceId ===
-          normalizedDeviceId,
-      ) ?? null
-    );
-  }
-
-  public listAssignments():
-    GameScoreboardAssignment[] {
-    return Array.from(
-      this.assignments.values(),
-    );
+  public listAssignments(): GameScoreboardAssignment[] {
+    return Array.from(this.assignments.values());
   }
 
   public async handleAuthoritativeSnapshot(
     snapshot: AuthoritativeGameSnapshot,
   ): Promise<AutomaticSyncResult> {
-    const assignment =
-      this.assignments.get(
-        snapshot.gameId,
-      );
+    const assignment = this.assignments.get(snapshot.gameId);
 
     if (!assignment) {
       return {
@@ -158,14 +103,9 @@ export class AutomaticGameScoreboardSync {
       };
     }
 
-    const fingerprint =
-      snapshotFingerprint(snapshot);
+    const fingerprint = snapshotFingerprint(snapshot);
 
-    if (
-      this.lastFingerprint.get(
-        snapshot.gameId,
-      ) === fingerprint
-    ) {
+    if (this.lastFingerprint.get(snapshot.gameId) === fingerprint) {
       return {
         synced: false,
         gameId: snapshot.gameId,
@@ -173,22 +113,14 @@ export class AutomaticGameScoreboardSync {
       };
     }
 
-    const commandId =
-      await this.syncService.sync(
-        snapshot,
-        assignment.deviceId,
-      );
+    const commandId = await this.syncService.sync(snapshot, assignment.deviceId);
 
-    this.lastFingerprint.set(
-      snapshot.gameId,
-      fingerprint,
-    );
+    this.lastFingerprint.set(snapshot.gameId, fingerprint);
 
     return {
       synced: true,
       gameId: snapshot.gameId,
-      deviceId:
-        assignment.deviceId,
+      deviceId: assignment.deviceId,
       commandId,
     };
   }

@@ -1,14 +1,9 @@
 import type { FastifyRequest } from "fastify";
 import { permissionsForRole } from "./permissions.js";
 import { normalizeRole } from "./roles.js";
-import type {
-  AuthenticatedIdentity,
-  IdentityTokenPayload,
-} from "./types.js";
+import type { AuthenticatedIdentity, IdentityTokenPayload } from "./types.js";
 
-export function identityFromToken(
-  payload: IdentityTokenPayload,
-): AuthenticatedIdentity {
+export function identityFromToken(payload: IdentityTokenPayload): AuthenticatedIdentity {
   const role = normalizeRole(payload.role);
   const userId = Number(payload.sub);
 
@@ -16,10 +11,7 @@ export function identityFromToken(
     throw new Error("Authenticated user identifier is invalid");
   }
 
-  if (
-    !Number.isSafeInteger(payload.organizationId) ||
-    payload.organizationId <= 0
-  ) {
+  if (!Number.isSafeInteger(payload.organizationId) || payload.organizationId <= 0) {
     throw new Error("Authenticated organization identifier is invalid");
   }
 
@@ -32,8 +24,6 @@ export function identityFromToken(
   };
 }
 
-export function authenticatedIdentity(
-  request: FastifyRequest,
-): AuthenticatedIdentity {
+export function authenticatedIdentity(request: FastifyRequest): AuthenticatedIdentity {
   return identityFromToken(request.user as IdentityTokenPayload);
 }

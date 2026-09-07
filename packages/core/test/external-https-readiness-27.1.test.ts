@@ -1,97 +1,53 @@
-import {
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {
-  evaluateExternalHttpsReadiness,
-} from "../../../apps/api/src/services/externalHttpsReadiness";
+import { evaluateExternalHttpsReadiness } from "../../../apps/api/src/services/externalHttpsReadiness";
 
 describe("Milestone 27.1 external HTTPS readiness", () => {
-  it("passes a production HTTPS configuration",()=> {
-    const result =
-      evaluateExternalHttpsReadiness({
-        NODE_ENV:
-          "production",
-        PUBLIC_API_URL:
-          "https://api.example.com",
-        DASHBOARD_ORIGIN:
-          "https://sports.example.com",
-        HOST:
-          "0.0.0.0",
-      });
+  it("passes a production HTTPS configuration", () => {
+    const result = evaluateExternalHttpsReadiness({
+      NODE_ENV: "production",
+      PUBLIC_API_URL: "https://api.example.com",
+      DASHBOARD_ORIGIN: "https://sports.example.com",
+      HOST: "0.0.0.0",
+    });
 
-    expect(
-      result.ready,
-    ).toBe(
-      true,
-    );
+    expect(result.ready).toBe(true);
 
-    expect(
-      result.expectations.tlsTermination,
-    ).toBe(
-      "external-reverse-proxy",
-    );
+    expect(result.expectations.tlsTermination).toBe("external-reverse-proxy");
   });
 
-  it("rejects http public API",()=> {
+  it("rejects http public API", () => {
     expect(
       evaluateExternalHttpsReadiness({
-        NODE_ENV:
-          "production",
-        PUBLIC_API_URL:
-          "http://api.example.com",
-        DASHBOARD_ORIGIN:
-          "https://sports.example.com",
-        HOST:
-          "0.0.0.0",
+        NODE_ENV: "production",
+        PUBLIC_API_URL: "http://api.example.com",
+        DASHBOARD_ORIGIN: "https://sports.example.com",
+        HOST: "0.0.0.0",
       }).ready,
-    ).toBe(
-      false,
-    );
+    ).toBe(false);
   });
 
-  it("rejects http dashboard origin",()=> {
+  it("rejects http dashboard origin", () => {
     expect(
       evaluateExternalHttpsReadiness({
-        NODE_ENV:
-          "production",
-        PUBLIC_API_URL:
-          "https://api.example.com",
-        DASHBOARD_ORIGIN:
-          "http://sports.example.com",
-        HOST:
-          "0.0.0.0",
+        NODE_ENV: "production",
+        PUBLIC_API_URL: "https://api.example.com",
+        DASHBOARD_ORIGIN: "http://sports.example.com",
+        HOST: "0.0.0.0",
       }).ready,
-    ).toBe(
-      false,
-    );
+    ).toBe(false);
   });
 
-  it("documents forwarded proxy expectations",()=> {
-    const result =
-      evaluateExternalHttpsReadiness({
-        NODE_ENV:
-          "production",
-        PUBLIC_API_URL:
-          "https://api.example.com",
-        DASHBOARD_ORIGIN:
-          "https://sports.example.com",
-        HOST:
-          "0.0.0.0",
-      });
+  it("documents forwarded proxy expectations", () => {
+    const result = evaluateExternalHttpsReadiness({
+      NODE_ENV: "production",
+      PUBLIC_API_URL: "https://api.example.com",
+      DASHBOARD_ORIGIN: "https://sports.example.com",
+      HOST: "0.0.0.0",
+    });
 
-    expect(
-      result.expectations.forwardedProtoRequired,
-    ).toBe(
-      true,
-    );
+    expect(result.expectations.forwardedProtoRequired).toBe(true);
 
-    expect(
-      result.expectations.directContainerTlsRequired,
-    ).toBe(
-      false,
-    );
+    expect(result.expectations.directContainerTlsRequired).toBe(false);
   });
 });

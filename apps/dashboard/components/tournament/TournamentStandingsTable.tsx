@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type {
-  TournamentStandingRow,
-} from "../../lib/tournament-standings";
+import type { TournamentStandingRow } from "../../lib/tournament-standings";
 
 type PoolStandingsResponse = {
   poolId: string;
@@ -19,8 +17,7 @@ type StandingsResponse = {
 
 export function TournamentStandingsTable() {
   const [rows, setRows] = useState<TournamentStandingRow[]>([]);
-  const [poolRows, setPoolRows] =
-    useState<PoolStandingsResponse[]>([]);
+  const [poolRows, setPoolRows] = useState<PoolStandingsResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,9 +33,7 @@ export function TournamentStandingsTable() {
         const payload = (await response.json()) as StandingsResponse;
 
         if (!response.ok) {
-          throw new Error(
-            payload.error ?? "Unable to load standings.",
-          );
+          throw new Error(payload.error ?? "Unable to load standings.");
         }
 
         if (active) {
@@ -47,11 +42,7 @@ export function TournamentStandingsTable() {
         }
       } catch (cause) {
         if (active) {
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "Unable to load standings.",
-          );
+          setError(cause instanceof Error ? cause.message : "Unable to load standings.");
         }
       } finally {
         if (active) {
@@ -89,12 +80,9 @@ export function TournamentStandingsTable() {
       className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/40"
     >
       <div className="border-b border-slate-800 px-5 py-4">
-        <h2 className="font-semibold text-slate-100">
-          Current standings
-        </h2>
+        <h2 className="font-semibold text-slate-100">Current standings</h2>
         <p className="mt-1 text-xs text-slate-500">
-          Finalized games only. Ranking: points, wins, goal differential,
-          goals for, then team name.
+          Finalized games only. Ranking: points, wins, goal differential, goals for, then team name.
         </p>
       </div>
 
@@ -149,36 +137,16 @@ export function TournamentStandingsTable() {
                   data-testid={`standings-row-${row.teamId}`}
                   className="border-t border-slate-900 text-slate-200"
                 >
-                  <td className="px-4 py-3 font-bold">
-                    {row.rank}
-                  </td>
-                  <td className="px-4 py-3 font-semibold">
-                    {row.teamName}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {row.gamesPlayed}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {row.wins}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {row.losses}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {row.ties}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {row.goalsFor}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {row.goalsAgainst}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {row.goalDifferential}
-                  </td>
-                  <td className="px-4 py-3 text-center font-bold">
-                    {row.points}
-                  </td>
+                  <td className="px-4 py-3 font-bold">{row.rank}</td>
+                  <td className="px-4 py-3 font-semibold">{row.teamName}</td>
+                  <td className="px-4 py-3 text-center">{row.gamesPlayed}</td>
+                  <td className="px-4 py-3 text-center">{row.wins}</td>
+                  <td className="px-4 py-3 text-center">{row.losses}</td>
+                  <td className="px-4 py-3 text-center">{row.ties}</td>
+                  <td className="px-4 py-3 text-center">{row.goalsFor}</td>
+                  <td className="px-4 py-3 text-center">{row.goalsAgainst}</td>
+                  <td className="px-4 py-3 text-center">{row.goalDifferential}</td>
+                  <td className="px-4 py-3 text-center font-bold">{row.points}</td>
                 </tr>
               ))}
             </tbody>

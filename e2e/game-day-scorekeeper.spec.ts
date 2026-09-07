@@ -53,7 +53,6 @@ async function installSession(page: Page) {
   }, scorekeeper);
 }
 
-
 async function installRealtimeFixture(page: Page) {
   let namespaceConnected = false;
 
@@ -84,8 +83,7 @@ async function installRealtimeFixture(page: Page) {
       return route.fulfill({
         status: 200,
         contentType: "text/plain; charset=UTF-8",
-        body:
-          '0{"sid":"sportsos-e2e-socket","upgrades":[],"pingInterval":25000,"pingTimeout":20000,"maxPayload":1000000}',
+        body: '0{"sid":"sportsos-e2e-socket","upgrades":[],"pingInterval":25000,"pingTimeout":20000,"maxPayload":1000000}',
       });
     }
 
@@ -185,13 +183,9 @@ test.describe("game-day scorekeeper workflow", () => {
       }),
     );
 
-    await page.route("**/games/42/event-players", (route) =>
-      json(route, { players }),
-    );
+    await page.route("**/games/42/event-players", (route) => json(route, { players }));
 
-    await page.route("**/games/42/penalties", (route) =>
-      json(route, { penalties }),
-    );
+    await page.route("**/games/42/penalties", (route) => json(route, { penalties }));
 
     await page.route("**/games/42/events", async (route) => {
       const request = route.request();
@@ -326,9 +320,7 @@ test.describe("game-day scorekeeper workflow", () => {
 
     await page.goto("/games/42/control");
 
-    await expect(
-      page.getByRole("heading", { name: "Game-day readiness" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Game-day readiness" })).toBeVisible();
 
     await expect(page.getByText("SportsOS is ready for game operation.")).toBeVisible({
       timeout: 10_000,
@@ -341,7 +333,9 @@ test.describe("game-day scorekeeper workflow", () => {
 
     await page
       .getByText("Prior Lake Lakers", { exact: true })
-      .locator("xpath=ancestor::*[self::section or self::article or self::div][.//button[normalize-space()='GOAL']][1]")
+      .locator(
+        "xpath=ancestor::*[self::section or self::article or self::div][.//button[normalize-space()='GOAL']][1]",
+      )
       .getByRole("button", { name: "GOAL", exact: true })
       .click();
 
@@ -366,7 +360,9 @@ test.describe("game-day scorekeeper workflow", () => {
 
     await page
       .getByText("Edina Hornets", { exact: true })
-      .locator("xpath=ancestor::*[self::section or self::article or self::div][.//button[normalize-space()='2:00 PENALTY']][1]")
+      .locator(
+        "xpath=ancestor::*[self::section or self::article or self::div][.//button[normalize-space()='2:00 PENALTY']][1]",
+      )
       .getByRole("button", { name: "2:00 PENALTY", exact: true })
       .click();
 

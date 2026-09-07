@@ -1,21 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
-export type StreamProtocol =
-  | "RTMP"
-  | "SRT";
+export type StreamProtocol = "RTMP" | "SRT";
 
-export type StreamLatencyMode =
-  | "NORMAL"
-  | "LOW"
-  | "ULTRA_LOW";
+export type StreamLatencyMode = "NORMAL" | "LOW" | "ULTRA_LOW";
 
-export type StreamDestinationStatus =
-  | "DISABLED"
-  | "CONFIGURED"
-  | "READY"
-  | "LIVE"
-  | "ERROR";
+export type StreamDestinationStatus = "DISABLED" | "CONFIGURED" | "READY" | "LIVE" | "ERROR";
 
 export type StreamDestinationProfile = {
   gameId: string;
@@ -34,45 +24,21 @@ export type StreamDestinationProfile = {
 
 type Store = {
   version: 1;
-  profiles:
-    StreamDestinationProfile[];
+  profiles: StreamDestinationProfile[];
 };
 
-const DATA_DIR =
-  process.env.SPORTSOS_DATA_DIR ??
-  path.resolve(
-    process.cwd(),
-    "data",
-  );
+const DATA_DIR = process.env.SPORTSOS_DATA_DIR ?? path.resolve(process.cwd(), "data");
 
-const STORE_FILE =
-  path.join(
-    DATA_DIR,
-    "stream-destination-profiles.json",
-  );
+const STORE_FILE = path.join(DATA_DIR, "stream-destination-profiles.json");
 
-let store =
-  loadStore();
+let store = loadStore();
 
 function loadStore(): Store {
   try {
-    const parsed =
-      JSON.parse(
-        fs.readFileSync(
-          STORE_FILE,
-          "utf8",
-        ),
-      ) as Store;
+    const parsed = JSON.parse(fs.readFileSync(STORE_FILE, "utf8")) as Store;
 
-    if (
-      parsed.version !== 1 ||
-      !Array.isArray(
-        parsed.profiles,
-      )
-    ) {
-      throw new Error(
-        "Invalid stream destination profile store.",
-      );
+    if (parsed.version !== 1 || !Array.isArray(parsed.profiles)) {
+      throw new Error("Invalid stream destination profile store.");
     }
 
     return parsed;
@@ -85,36 +51,18 @@ function loadStore(): Store {
 }
 
 function persistStore(): void {
-  fs.mkdirSync(
-    DATA_DIR,
-    {
-      recursive: true,
-    },
-  );
+  fs.mkdirSync(DATA_DIR, {
+    recursive: true,
+  });
 
-  const temporary =
-    `${STORE_FILE}.tmp`;
+  const temporary = `${STORE_FILE}.tmp`;
 
-  fs.writeFileSync(
-    temporary,
-    JSON.stringify(
-      store,
-      null,
-      2,
-    ),
-    "utf8",
-  );
+  fs.writeFileSync(temporary, JSON.stringify(store, null, 2), "utf8");
 
-  fs.renameSync(
-    temporary,
-    STORE_FILE,
-  );
+  fs.renameSync(temporary, STORE_FILE);
 }
 
-function optionalText(
-  value: string | null | undefined,
-  fallback: string | null,
-): string | null {
+function optionalText(value: string | null | undefined, fallback: string | null): string | null {
   if (value === undefined) {
     return fallback;
   }
@@ -126,19 +74,10 @@ function optionalText(
   return value.trim() || null;
 }
 
-export function getStreamDestinationProfile(
-  gameId: string,
-): StreamDestinationProfile | null {
-  const profile =
-    store.profiles.find(
-      (item) =>
-        item.gameId ===
-        gameId,
-    );
+export function getStreamDestinationProfile(gameId: string): StreamDestinationProfile | null {
+  const profile = store.profiles.find((item) => item.gameId === gameId);
 
-  return profile
-    ? { ...profile }
-    : null;
+  return profile ? { ...profile } : null;
 }
 
 export function upsertStreamDestinationProfile(input: {
@@ -150,91 +89,43 @@ export function upsertStreamDestinationProfile(input: {
   credentialRef?: string | null;
   latencyMode?: StreamLatencyMode;
 }): StreamDestinationProfile {
-  const existing =
-    getStreamDestinationProfile(
-      input.gameId,
-    );
+  const existing = getStreamDestinationProfile(input.gameId);
 
-  const enabled =
-    input.enabled ??
-    existing?.enabled ??
-    false;
+  const enabled = input.enabled ?? existing?.enabled ?? false;
 
-  const ingestUrl =
-    optionalText(
-      input.ingestUrl,
-      existing?.ingestUrl ??
-        null,
-    );
+  const ingestUrl = optionalText(input.ingestUrl, existing?.ingestUrl ?? null);
 
-  const credentialRef =
-    optionalText(
-      input.credentialRef,
-      existing?.credentialRef ??
-        null,
-    );
+  const credentialRef = optionalText(input.credentialRef, existing?.credentialRef ?? null);
 
-  const configured =
-    Boolean(
-      ingestUrl &&
-      credentialRef,
-    );
+  const configured = Boolean(ingestUrl && credentialRef);
 
-  const profile:
-    StreamDestinationProfile = {
-      gameId:
-        input.gameId,
-      enabled,
-      protocol:
-        input.protocol ??
-        existing?.protocol ??
-        "RTMP",
-      ingestUrl,
-      streamName:
-        optionalText(
-          input.streamName,
-          existing?.streamName ??
-            null,
-        ),
-      credentialRef,
-      latencyMode:
-        input.latencyMode ??
-        existing?.latencyMode ??
-        "NORMAL",
-      status:
-        enabled
-          ? configured
-            ? existing?.status ===
-                "LIVE"
-              ? "LIVE"
-              : "CONFIGURED"
-            : "ERROR"
-          : "DISABLED",
-      lastError:
-        enabled &&
-        !configured
-          ? "Enabled stream destination requires ingestUrl and credentialRef."
-          : null,
-      lastProbeAt:
-        existing?.lastProbeAt ??
-        null,
-      lastProbeLatencyMs:
-        existing?.lastProbeLatencyMs ??
-        null,
-      updatedAt:
-        new Date().toISOString(),
-    };
+  const profile: StreamDestinationProfile = {
+    gameId: input.gameId,
+    enabled,
+    protocol: input.protocol ?? existing?.protocol ?? "RTMP",
+    ingestUrl,
+    streamName: optionalText(input.streamName, existing?.streamName ?? null),
+    credentialRef,
+    latencyMode: input.latencyMode ?? existing?.latencyMode ?? "NORMAL",
+    status: enabled
+      ? configured
+        ? existing?.status === "LIVE"
+          ? "LIVE"
+          : "CONFIGURED"
+        : "ERROR"
+      : "DISABLED",
+    lastError:
+      enabled && !configured
+        ? "Enabled stream destination requires ingestUrl and credentialRef."
+        : null,
+    lastProbeAt: existing?.lastProbeAt ?? null,
+    lastProbeLatencyMs: existing?.lastProbeLatencyMs ?? null,
+    updatedAt: new Date().toISOString(),
+  };
 
-  store.profiles =
-    store.profiles.filter(
-      (item) =>
-        item.gameId !==
-        input.gameId,
-    );
+  store.profiles = store.profiles.filter((item) => item.gameId !== input.gameId);
 
-  store.profiles.push(
-    profile,
-  );
+  store.profiles.push(profile);
 
   persistStore();
 
@@ -250,42 +141,24 @@ export function updateStreamDestinationProbeResult(input: {
   latencyMs: number | null;
   error: string | null;
 }): StreamDestinationProfile | null {
-  const existing =
-    getStreamDestinationProfile(
-      input.gameId,
-    );
+  const existing = getStreamDestinationProfile(input.gameId);
 
   if (!existing) {
     return null;
   }
 
-  const profile:
-    StreamDestinationProfile = {
-      ...existing,
-      status:
-        input.reachable
-          ? "READY"
-          : "ERROR",
-      lastError:
-        input.error,
-      lastProbeAt:
-        input.checkedAt,
-      lastProbeLatencyMs:
-        input.latencyMs,
-      updatedAt:
-        new Date().toISOString(),
-    };
+  const profile: StreamDestinationProfile = {
+    ...existing,
+    status: input.reachable ? "READY" : "ERROR",
+    lastError: input.error,
+    lastProbeAt: input.checkedAt,
+    lastProbeLatencyMs: input.latencyMs,
+    updatedAt: new Date().toISOString(),
+  };
 
-  store.profiles =
-    store.profiles.filter(
-      (item) =>
-        item.gameId !==
-        input.gameId,
-    );
+  store.profiles = store.profiles.filter((item) => item.gameId !== input.gameId);
 
-  store.profiles.push(
-    profile,
-  );
+  store.profiles.push(profile);
 
   persistStore();
 
@@ -294,22 +167,12 @@ export function updateStreamDestinationProbeResult(input: {
   };
 }
 
-export function deleteStreamDestinationProfile(
-  gameId: string,
-): boolean {
-  const before =
-    store.profiles.length;
+export function deleteStreamDestinationProfile(gameId: string): boolean {
+  const before = store.profiles.length;
 
-  store.profiles =
-    store.profiles.filter(
-      (item) =>
-        item.gameId !==
-        gameId,
-    );
+  store.profiles = store.profiles.filter((item) => item.gameId !== gameId);
 
-  const changed =
-    store.profiles.length !==
-    before;
+  const changed = store.profiles.length !== before;
 
   if (changed) {
     persistStore();
@@ -318,17 +181,12 @@ export function deleteStreamDestinationProfile(
   return changed;
 }
 
-export function publicStreamDestinationSummary(
-  gameId: string,
-): {
+export function publicStreamDestinationSummary(gameId: string): {
   enabled: boolean;
   protocol: StreamProtocol | null;
   status: StreamDestinationStatus;
 } {
-  const profile =
-    getStreamDestinationProfile(
-      gameId,
-    );
+  const profile = getStreamDestinationProfile(gameId);
 
   if (!profile) {
     return {
@@ -339,11 +197,8 @@ export function publicStreamDestinationSummary(
   }
 
   return {
-    enabled:
-      profile.enabled,
-    protocol:
-      profile.protocol,
-    status:
-      profile.status,
+    enabled: profile.enabled,
+    protocol: profile.protocol,
+    status: profile.status,
   };
 }

@@ -1,48 +1,31 @@
-import type {
-  AuthoritativeGameSnapshot,
-} from "./gameScoreboardSync.js";
-import {
-  AutomaticGameScoreboardSync,
-} from "./automaticGameScoreboardSync.js";
-import type {
-  ScoreboardDeviceRecoveryService,
-} from "./scoreboardDeviceRecovery.js";
+import type { AuthoritativeGameSnapshot } from "./gameScoreboardSync.js";
+import { AutomaticGameScoreboardSync } from "./automaticGameScoreboardSync.js";
+import type { ScoreboardDeviceRecoveryService } from "./scoreboardDeviceRecovery.js";
 
-let automaticSync:
-  AutomaticGameScoreboardSync | null = null;
+let automaticSync: AutomaticGameScoreboardSync | null = null;
 
-let recoveryService:
-  ScoreboardDeviceRecoveryService | null = null;
+let recoveryService: ScoreboardDeviceRecoveryService | null = null;
 
-export function bindAutomaticGameScoreboardSync(
-  service: AutomaticGameScoreboardSync,
-): void {
+export function bindAutomaticGameScoreboardSync(service: AutomaticGameScoreboardSync): void {
   automaticSync = service;
 }
 
-export function bindScoreboardDeviceRecovery(
-  service: ScoreboardDeviceRecoveryService,
-): void {
+export function bindScoreboardDeviceRecovery(service: ScoreboardDeviceRecoveryService): void {
   recoveryService = service;
 }
 
 export function normalizeAuthoritativeGameUpdate(
   payload: unknown,
 ): AuthoritativeGameSnapshot | null {
-  if (
-    !payload ||
-    typeof payload !== "object"
-  ) {
+  if (!payload || typeof payload !== "object") {
     return null;
   }
 
-  const record =
-    payload as Record<string, unknown>;
+  const record = payload as Record<string, unknown>;
 
   const nested =
-    record.game &&
-    typeof record.game === "object"
-      ? record.game as Record<string, unknown>
+    record.game && typeof record.game === "object"
+      ? (record.game as Record<string, unknown>)
       : record;
 
   const gameId =
@@ -80,12 +63,10 @@ export function normalizeAuthoritativeGameUpdate(
             : null;
 
   const clockObject =
-    nested.clock &&
-    typeof nested.clock === "object"
-      ? nested.clock as Record<string, unknown>
-      : record.clock &&
-          typeof record.clock === "object"
-        ? record.clock as Record<string, unknown>
+    nested.clock && typeof nested.clock === "object"
+      ? (nested.clock as Record<string, unknown>)
+      : record.clock && typeof record.clock === "object"
+        ? (record.clock as Record<string, unknown>)
         : null;
 
   const remainingMs =
@@ -93,8 +74,7 @@ export function normalizeAuthoritativeGameUpdate(
       ? nested.remainingMs
       : typeof nested.clockRemainingMs === "number"
         ? nested.clockRemainingMs
-        : clockObject &&
-            typeof clockObject.remainingMs === "number"
+        : clockObject && typeof clockObject.remainingMs === "number"
           ? clockObject.remainingMs
           : typeof record.remainingMs === "number"
             ? record.remainingMs
@@ -105,8 +85,7 @@ export function normalizeAuthoritativeGameUpdate(
       ? nested.isClockRunning
       : typeof nested.clockRunning === "boolean"
         ? nested.clockRunning
-        : clockObject &&
-            typeof clockObject.running === "boolean"
+        : clockObject && typeof clockObject.running === "boolean"
           ? clockObject.running
           : typeof record.clockRunning === "boolean"
             ? record.clockRunning
@@ -134,29 +113,18 @@ export function normalizeAuthoritativeGameUpdate(
   };
 }
 
-export async function notifyAutomaticScoreboardGameUpdate(
-  payload: unknown,
-): Promise<void> {
+export async function notifyAutomaticScoreboardGameUpdate(payload: unknown): Promise<void> {
   if (!automaticSync) {
     return;
   }
 
-  const snapshot =
-    normalizeAuthoritativeGameUpdate(
-      payload,
-    );
+  const snapshot = normalizeAuthoritativeGameUpdate(payload);
 
   if (!snapshot) {
     return;
   }
 
-  recoveryService
-    ?.rememberAuthoritativeSnapshot(
-      snapshot,
-    );
+  recoveryService?.rememberAuthoritativeSnapshot(snapshot);
 
-  await automaticSync
-    .handleAuthoritativeSnapshot(
-      snapshot,
-    );
+  await automaticSync.handleAuthoritativeSnapshot(snapshot);
 }

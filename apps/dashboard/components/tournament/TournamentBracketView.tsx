@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type {
-  TournamentBracketTree,
-} from "../../lib/tournament-bracket-rounds";
+import type { TournamentBracketTree } from "../../lib/tournament-bracket-rounds";
 
 type BracketResponse = {
   tree?: TournamentBracketTree;
@@ -21,9 +19,7 @@ function TeamSlot({
 }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
-      <div className="w-8 text-center text-xs font-bold text-slate-500">
-        {seed ?? "—"}
-      </div>
+      <div className="w-8 text-center text-xs font-bold text-slate-500">{seed ?? "—"}</div>
 
       <div className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-200">
         {name ?? emptyLabel}
@@ -33,8 +29,7 @@ function TeamSlot({
 }
 
 export function TournamentBracketView() {
-  const [tree, setTree] =
-    useState<TournamentBracketTree | null>(null);
+  const [tree, setTree] = useState<TournamentBracketTree | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,9 +45,7 @@ export function TournamentBracketView() {
         const payload = (await response.json()) as BracketResponse;
 
         if (!response.ok) {
-          throw new Error(
-            payload.error ?? "Unable to load tournament bracket.",
-          );
+          throw new Error(payload.error ?? "Unable to load tournament bracket.");
         }
 
         if (active) {
@@ -60,11 +53,7 @@ export function TournamentBracketView() {
         }
       } catch (cause) {
         if (active) {
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "Unable to load tournament bracket.",
-          );
+          setError(cause instanceof Error ? cause.message : "Unable to load tournament bracket.");
         }
       } finally {
         if (active) {
@@ -105,10 +94,7 @@ export function TournamentBracketView() {
   }
 
   return (
-    <section
-      data-testid="tournament-bracket-view"
-      className="space-y-5"
-    >
+    <section data-testid="tournament-bracket-view" className="space-y-5">
       {tree.champion ? (
         <div
           data-testid="tournament-bracket-champion"
@@ -136,9 +122,7 @@ export function TournamentBracketView() {
                 <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Round {round.round}
                 </div>
-                <h2 className="mt-1 text-lg font-bold text-slate-100">
-                  {round.name}
-                </h2>
+                <h2 className="mt-1 text-lg font-bold text-slate-100">{round.name}</h2>
               </div>
 
               <div className="space-y-4">
@@ -170,9 +154,7 @@ export function TournamentBracketView() {
                       <TeamSlot
                         seed={matchup.awaySeed?.seed ?? null}
                         name={matchup.awaySeed?.teamName ?? null}
-                        emptyLabel={
-                          matchup.bye ? "BYE" : "TBD"
-                        }
+                        emptyLabel={matchup.bye ? "BYE" : "TBD"}
                       />
                     </div>
                   </div>

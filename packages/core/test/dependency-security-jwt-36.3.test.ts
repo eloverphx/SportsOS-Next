@@ -15,9 +15,7 @@ describe("Milestone 36.3 critical JWT security remediation", () => {
     const [major, minor, patch] = version.split(".").map(Number);
 
     const safe =
-      major > 6 ||
-      (major === 6 && minor > 2) ||
-      (major === 6 && minor === 2 && patch >= 4);
+      major > 6 || (major === 6 && minor > 2) || (major === 6 && minor === 2 && patch >= 4);
 
     expect(safe).toBe(true);
   });

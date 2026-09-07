@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  deriveSmoothedRemainingMs,
-  formatOverlayClock,
-} from "../lib/broadcast-overlay-clock";
+import { deriveSmoothedRemainingMs, formatOverlayClock } from "../lib/broadcast-overlay-clock";
 
 describe("Milestone 9.6 overlay clock smoothing", () => {
   it("holds a paused authoritative clock steady", () => {

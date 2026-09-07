@@ -6,10 +6,7 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   "http://api:4001";
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ gameId: string }> },
-) {
+export async function POST(request: NextRequest, context: { params: Promise<{ gameId: string }> }) {
   const { gameId } = await context.params;
 
   const headers = new Headers({
@@ -30,20 +27,16 @@ export async function POST(
    * - Never send browser testing-override/localStorage state as authority.
    * - The API decides permission and whether startGame is valid.
    */
-  const response = await fetch(
-    `${API_BASE_URL}/games/${encodeURIComponent(gameId)}/lifecycle`,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        command: "startGame",
-      }),
-      cache: "no-store",
-    },
-  );
+  const response = await fetch(`${API_BASE_URL}/games/${encodeURIComponent(gameId)}/lifecycle`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      command: "startGame",
+    }),
+    cache: "no-store",
+  });
 
-  const contentType =
-    response.headers.get("content-type") ?? "application/json";
+  const contentType = response.headers.get("content-type") ?? "application/json";
 
   const body = await response.text();
 

@@ -11,19 +11,11 @@ describe("Milestone 7.3 team check-in", () => {
   it("defaults both teams to not checked in", () => {
     const storage = { getItem: () => null };
 
-    expect(readTeamCheckIn(storage, "game-73")).toEqual(
-      EMPTY_TEAM_CHECK_IN,
-    );
+    expect(readTeamCheckIn(storage, "game-73")).toEqual(EMPTY_TEAM_CHECK_IN);
   });
 
   it("updates one side without mutating the other", () => {
-    expect(
-      setTeamCheckedIn(
-        { home: false, away: true },
-        "home",
-        true,
-      ),
-    ).toEqual({
+    expect(setTeamCheckedIn({ home: false, away: true }, "home", true)).toEqual({
       home: true,
       away: true,
     });
@@ -67,12 +59,7 @@ describe("Milestone 7.3 team check-in", () => {
   });
 
   it("fails closed for malformed persisted data", () => {
-    expect(
-      readTeamCheckIn(
-        { getItem: () => "{broken-json" },
-        "game-73",
-      ),
-    ).toEqual({
+    expect(readTeamCheckIn({ getItem: () => "{broken-json" }, "game-73")).toEqual({
       home: false,
       away: false,
     });

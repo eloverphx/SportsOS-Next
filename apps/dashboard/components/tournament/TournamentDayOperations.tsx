@@ -14,11 +14,7 @@ type Device = {
 
 type EngineGame = {
   readonly gameId: number;
-  readonly state:
-    | "HEALTHY"
-    | "TRANSITION_PENDING"
-    | "OPERATOR_REQUIRED"
-    | "WARNING";
+  readonly state: "HEALTHY" | "TRANSITION_PENDING" | "OPERATOR_REQUIRED" | "WARNING";
   readonly actionRequired: string | null;
   readonly detail?: string | null;
 };
@@ -67,11 +63,7 @@ function expectedDurationMs(game: ScheduleGame): number {
   return 90 * 60_000;
 }
 
-export function TournamentDayOperations({
-  games,
-  devices,
-  engineGames,
-}: Props) {
+export function TournamentDayOperations({ games, devices, engineGames }: Props) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -93,9 +85,9 @@ export function TournamentDayOperations({
             priority: 100,
             tone: "critical",
             title: `Game #${game.id} is late`,
-            detail: `${game.homeTeamName} vs ${game.awayTeamName} was scheduled ${
-              Math.abs(delta)
-            } minutes ago.`,
+            detail: `${game.homeTeamName} vs ${game.awayTeamName} was scheduled ${Math.abs(
+              delta,
+            )} minutes ago.`,
             gameId: game.id,
             rink,
           });
@@ -116,9 +108,7 @@ export function TournamentDayOperations({
       }
 
       const assignedDevices = devices.filter((device) => device.gameId === game.id);
-      const offlineDevices = assignedDevices.filter(
-        (device) => device.status === "OFFLINE",
-      );
+      const offlineDevices = assignedDevices.filter((device) => device.status === "OFFLINE");
 
       if (offlineDevices.length > 0) {
         next.push({
@@ -145,10 +135,7 @@ export function TournamentDayOperations({
           priority: engine.state === "OPERATOR_REQUIRED" ? 98 : 85,
           tone: engine.state === "OPERATOR_REQUIRED" ? "critical" : "warning",
           title: `Game #${game.id} engine: ${engine.state.replaceAll("_", " ")}`,
-          detail:
-            engine.detail ||
-            engine.actionRequired ||
-            "Game engine needs attention.",
+          detail: engine.detail || engine.actionRequired || "Game engine needs attention.",
           gameId: game.id,
           rink,
         });
@@ -158,11 +145,7 @@ export function TournamentDayOperations({
     const byRink = new Map<string, ScheduleGame[]>();
 
     for (const game of games) {
-      if (
-        game.status === "CANCELED" ||
-        game.status === "FINAL" ||
-        !game.venue?.trim()
-      ) {
+      if (game.status === "CANCELED" || game.status === "FINAL" || !game.venue?.trim()) {
         continue;
       }
 
@@ -177,8 +160,7 @@ export function TournamentDayOperations({
         .slice()
         .sort(
           (left, right) =>
-            new Date(left.scheduledStart).getTime() -
-            new Date(right.scheduledStart).getTime(),
+            new Date(left.scheduledStart).getTime() - new Date(right.scheduledStart).getTime(),
         );
 
       for (let index = 0; index < ordered.length - 1; index += 1) {
@@ -187,8 +169,7 @@ export function TournamentDayOperations({
 
         if (!current || !upcoming) continue;
 
-        const currentEnd =
-          new Date(current.scheduledStart).getTime() + expectedDurationMs(current);
+        const currentEnd = new Date(current.scheduledStart).getTime() + expectedDurationMs(current);
         const nextStart = new Date(upcoming.scheduledStart).getTime();
         const gapMinutes = Math.round((nextStart - currentEnd) / 60_000);
 
@@ -228,8 +209,8 @@ export function TournamentDayOperations({
           <span className="tournamentOpsEyebrow">Tournament day operations</span>
           <h2 id="tournament-ops-heading">Director attention queue</h2>
           <p>
-            Prioritized operational issues from schedule timing, rink turnover,
-            scoreboard health, and game-engine state.
+            Prioritized operational issues from schedule timing, rink turnover, scoreboard health,
+            and game-engine state.
           </p>
         </div>
 
@@ -241,16 +222,11 @@ export function TournamentDayOperations({
       </div>
 
       {issues.length === 0 ? (
-        <div className="tournamentOpsClear">
-          No immediate tournament-day issues detected.
-        </div>
+        <div className="tournamentOpsClear">No immediate tournament-day issues detected.</div>
       ) : (
         <div className="tournamentOpsList">
           {issues.map((issue) => (
-            <article
-              key={issue.key}
-              className={`tournamentOpsIssue ${issue.tone}`}
-            >
+            <article key={issue.key} className={`tournamentOpsIssue ${issue.tone}`}>
               <div>
                 <span className="tournamentOpsIssueTone">
                   {issue.tone === "critical"
@@ -266,12 +242,8 @@ export function TournamentDayOperations({
 
               {issue.gameId ? (
                 <div className="tournamentOpsActions">
-                  <Link href={`/games/${issue.gameId}/control`}>
-                    Scorekeeper
-                  </Link>
-                  <Link href={`/games/${issue.gameId}/scoreboard`}>
-                    Scoreboard
-                  </Link>
+                  <Link href={`/games/${issue.gameId}/control`}>Scorekeeper</Link>
+                  <Link href={`/games/${issue.gameId}/scoreboard`}>Scoreboard</Link>
                 </div>
               ) : null}
             </article>

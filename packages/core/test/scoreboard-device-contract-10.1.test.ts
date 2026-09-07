@@ -19,14 +19,11 @@ describe("Milestone 10.1 physical scoreboard device contract", () => {
         running: true,
       },
       hornActive: false,
-      updatedAt: new Date(
-        "2026-08-17T12:00:00.000Z",
-      ),
+      updatedAt: new Date("2026-08-17T12:00:00.000Z"),
     });
 
     expect(snapshot).toMatchObject({
-      protocolVersion:
-        SCOREBOARD_DEVICE_PROTOCOL_VERSION,
+      protocolVersion: SCOREBOARD_DEVICE_PROTOCOL_VERSION,
       deviceId: "scoreboard-1",
       gameId: "game-1",
       homeScore: 3,
@@ -37,8 +34,7 @@ describe("Milestone 10.1 physical scoreboard device contract", () => {
 
   it("accepts a valid score command", () => {
     const command = validateScoreboardDeviceCommand({
-      protocolVersion:
-        SCOREBOARD_DEVICE_PROTOCOL_VERSION,
+      protocolVersion: SCOREBOARD_DEVICE_PROTOCOL_VERSION,
       commandId: "cmd-1",
       type: "SET_SCORE",
       homeScore: 4,
@@ -51,8 +47,7 @@ describe("Milestone 10.1 physical scoreboard device contract", () => {
   it("accepts a valid clock command", () => {
     expect(
       validateScoreboardDeviceCommand({
-        protocolVersion:
-          SCOREBOARD_DEVICE_PROTOCOL_VERSION,
+        protocolVersion: SCOREBOARD_DEVICE_PROTOCOL_VERSION,
         commandId: "cmd-clock",
         type: "SET_CLOCK",
         remainingMs: 60000,
@@ -68,41 +63,33 @@ describe("Milestone 10.1 physical scoreboard device contract", () => {
   it("rejects negative scores", () => {
     expect(() =>
       validateScoreboardDeviceCommand({
-        protocolVersion:
-          SCOREBOARD_DEVICE_PROTOCOL_VERSION,
+        protocolVersion: SCOREBOARD_DEVICE_PROTOCOL_VERSION,
         commandId: "cmd-bad-score",
         type: "SET_SCORE",
         homeScore: -1,
         awayScore: 0,
       }),
-    ).toThrow(
-      "homeScore must be a non-negative integer.",
-    );
+    ).toThrow("homeScore must be a non-negative integer.");
   });
 
   it("rejects invalid periods", () => {
     expect(() =>
       validateScoreboardDeviceCommand({
-        protocolVersion:
-          SCOREBOARD_DEVICE_PROTOCOL_VERSION,
+        protocolVersion: SCOREBOARD_DEVICE_PROTOCOL_VERSION,
         commandId: "cmd-period",
         type: "SET_PERIOD",
         period: 0,
       }),
-    ).toThrow(
-      "period must be null or a positive integer.",
-    );
+    ).toThrow("period must be null or a positive integer.");
   });
 
   it("supports full state synchronization", () => {
     const command = validateScoreboardDeviceCommand({
-      protocolVersion:
-        SCOREBOARD_DEVICE_PROTOCOL_VERSION,
+      protocolVersion: SCOREBOARD_DEVICE_PROTOCOL_VERSION,
       commandId: "cmd-sync",
       type: "SYNC_STATE",
       snapshot: {
-        protocolVersion:
-          SCOREBOARD_DEVICE_PROTOCOL_VERSION,
+        protocolVersion: SCOREBOARD_DEVICE_PROTOCOL_VERSION,
         deviceId: "scoreboard-1",
         gameId: "game-1",
         homeScore: 5,

@@ -2,9 +2,7 @@
   {
     "file": "apps/api/src/services/scoreboardDeviceRecovery.ts",
     "score": 15,
-    "exports": [
-      "ScoreboardDeviceRecoveryService"
-    ],
+    "exports": ["ScoreboardDeviceRecoveryService"],
     "symbols": [
       "AuthoritativeGameSnapshot",
       "gameScoreboardSync",
@@ -38,9 +36,7 @@
   {
     "file": "apps/api/src/services/automaticGameScoreboardSync.ts",
     "score": 10,
-    "exports": [
-      "AutomaticGameScoreboardSync"
-    ],
+    "exports": ["AutomaticGameScoreboardSync"],
     "symbols": [
       "AuthoritativeGameSnapshot",
       "gameScoreboardSync",
@@ -53,9 +49,7 @@
   {
     "file": "apps/api/src/routes/scoreboardDevices.ts",
     "score": 9,
-    "exports": [
-      "scoreboardDevicesRoutes"
-    ],
+    "exports": ["scoreboardDevicesRoutes"],
     "symbols": [
       "AuthoritativeGameSnapshot",
       "gameScoreboardSync",

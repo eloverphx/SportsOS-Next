@@ -1,15 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const inventory = readFileSync(
-  "scripts/dependency-security-inventory.sh",
-  "utf8",
-);
+const inventory = readFileSync("scripts/dependency-security-inventory.sh", "utf8");
 
-const documentation = readFileSync(
-  "docs/MILESTONE-36-DEPENDENCY-SECURITY-INVENTORY.md",
-  "utf8",
-);
+const documentation = readFileSync("docs/MILESTONE-36-DEPENDENCY-SECURITY-INVENTORY.md", "utf8");
 
 describe("Milestone 36.2 dependency security inventory", () => {
   it("uses read-only npm audit and outdated inventory commands", () => {

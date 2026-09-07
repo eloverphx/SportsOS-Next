@@ -5,22 +5,13 @@ import {
   type OperationsSeverityReason,
 } from "./operationsStatus";
 
-
 type RecoveryGuardrailService = {
   service: string;
   policy: "auto" | "monitor";
   restartCount?: number;
-  guardrailState:
-    | "ready"
-    | "cooldown"
-    | "budget-exhausted"
-    | "monitor-only";
+  guardrailState: "ready" | "cooldown" | "budget-exhausted" | "monitor-only";
   eligible: boolean;
-  blockedReason:
-    | "cooldown"
-    | "budget-exhausted"
-    | "monitor-only"
-    | null;
+  blockedReason: "cooldown" | "budget-exhausted" | "monitor-only" | null;
   successfulActionsInWindow: number;
   remainingBudget: number;
   cooldownRemainingSeconds: number;
@@ -39,43 +30,23 @@ function finishedText(result: OperationResult | null): string {
   return new Date(result.finishedAt).toLocaleString();
 }
 
-function OperationCard({
-  title,
-  result,
-}: {
-  title: string;
-  result: OperationResult | null;
-}) {
+function OperationCard({ title, result }: { title: string; result: OperationResult | null }) {
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-4">
-      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
-        {title}
-      </div>
-      <div className="mt-2 text-lg font-semibold text-slate-100">
-        {statusText(result)}
-      </div>
-      <div className="mt-1 text-sm text-slate-400">
-        {finishedText(result)}
-      </div>
+      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{title}</div>
+      <div className="mt-2 text-lg font-semibold text-slate-100">{statusText(result)}</div>
+      <div className="mt-1 text-sm text-slate-400">{finishedText(result)}</div>
       {result ? (
-        <div className="mt-2 text-xs text-slate-500">
-          Exit code: {result.exitCode}
-        </div>
+        <div className="mt-2 text-xs text-slate-500">Exit code: {result.exitCode}</div>
       ) : null}
     </div>
   );
 }
 
-function SeverityReason({
-  item,
-}: {
-  item: OperationsSeverityReason;
-}) {
+function SeverityReason({ item }: { item: OperationsSeverityReason }) {
   return (
     <li className="rounded-lg border border-slate-800 p-3">
-      <span className="font-semibold uppercase text-slate-300">
-        {item.severity}
-      </span>
+      <span className="font-semibold uppercase text-slate-300">{item.severity}</span>
       <span className="text-slate-400"> — {item.reason}</span>
     </li>
   );
@@ -92,18 +63,14 @@ export default async function OperationsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">
-            Production Operations
-          </h1>
+          <h1 className="text-2xl font-bold text-slate-100">Production Operations</h1>
           <p className="mt-1 text-slate-400">
             Protected production reliability and recovery status.
           </p>
         </div>
 
         <div className="rounded-xl border border-amber-900/50 bg-amber-950/20 p-5">
-          <h2 className="font-semibold text-amber-200">
-            Operations status unavailable
-          </h2>
+          <h2 className="font-semibold text-amber-200">Operations status unavailable</h2>
           <p className="mt-2 text-sm text-amber-100/80">
             {response.error ?? "Unable to load operations status."}
           </p>
@@ -117,12 +84,8 @@ export default async function OperationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-100">
-          Production Operations
-        </h1>
-        <p className="mt-1 text-slate-400">
-          Protected production reliability and recovery status.
-        </p>
+        <h1 className="text-2xl font-bold text-slate-100">Production Operations</h1>
+        <p className="mt-1 text-slate-400">Protected production reliability and recovery status.</p>
         <p className="mt-1 text-xs text-slate-500">
           Snapshot generated {new Date(data.generatedAt).toLocaleString()}
         </p>
@@ -131,12 +94,9 @@ export default async function OperationsPage() {
       <section className="rounded-xl border border-slate-800 bg-slate-950/50 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-slate-100">
-              Operations severity
-            </h2>
+            <h2 className="text-lg font-semibold text-slate-100">Operations severity</h2>
             <p className="mt-1 text-sm text-slate-400">
-              Normalized production reliability state for the last{" "}
-              {data.windowHours} hours.
+              Normalized production reliability state for the last {data.windowHours} hours.
             </p>
           </div>
           <div className="rounded-full border border-slate-700 px-3 py-1 text-sm font-semibold uppercase tracking-wide text-slate-200">
@@ -146,36 +106,28 @@ export default async function OperationsPage() {
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-lg border border-slate-800 p-3">
-            <div className="text-xs uppercase tracking-wide text-slate-500">
-              Failure rate
-            </div>
+            <div className="text-xs uppercase tracking-wide text-slate-500">Failure rate</div>
             <div className="mt-1 text-xl font-semibold text-slate-100">
               {data.severity.summary.failureRatePercent}%
             </div>
           </div>
 
           <div className="rounded-lg border border-slate-800 p-3">
-            <div className="text-xs uppercase tracking-wide text-slate-500">
-              Failed runs
-            </div>
+            <div className="text-xs uppercase tracking-wide text-slate-500">Failed runs</div>
             <div className="mt-1 text-xl font-semibold text-slate-100">
               {data.severity.summary.failedRuns}
             </div>
           </div>
 
           <div className="rounded-lg border border-slate-800 p-3">
-            <div className="text-xs uppercase tracking-wide text-slate-500">
-              Passed runs
-            </div>
+            <div className="text-xs uppercase tracking-wide text-slate-500">Passed runs</div>
             <div className="mt-1 text-xl font-semibold text-slate-100">
               {data.severity.summary.passedRuns}
             </div>
           </div>
 
           <div className="rounded-lg border border-slate-800 p-3">
-            <div className="text-xs uppercase tracking-wide text-slate-500">
-              Failure streak
-            </div>
+            <div className="text-xs uppercase tracking-wide text-slate-500">Failure streak</div>
             <div className="mt-1 text-xl font-semibold text-slate-100">
               {data.severity.summary.maxFailureStreak}
             </div>
@@ -184,15 +136,10 @@ export default async function OperationsPage() {
 
         {data.severity.reasons.length > 0 ? (
           <div className="mt-5">
-            <h3 className="text-sm font-medium text-slate-300">
-              Severity reasons
-            </h3>
+            <h3 className="text-sm font-medium text-slate-300">Severity reasons</h3>
             <ul className="mt-2 space-y-2 text-sm">
               {data.severity.reasons.map((item, index) => (
-                <SeverityReason
-                  key={`${item.severity}-${index}`}
-                  item={item}
-                />
+                <SeverityReason key={`${item.severity}-${index}`} item={item} />
               ))}
             </ul>
           </div>
@@ -200,53 +147,32 @@ export default async function OperationsPage() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-slate-100">
-          Latest production operations
-        </h2>
+        <h2 className="mb-3 text-lg font-semibold text-slate-100">Latest production operations</h2>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <OperationCard title="Health" result={data.latest.health} />
           <OperationCard title="MySQL backup" result={data.latest.backup} />
-          <OperationCard
-            title="Persistent backup"
-            result={data.latest.persistentBackup}
-          />
+          <OperationCard title="Persistent backup" result={data.latest.persistentBackup} />
           <OperationCard title="Recovery" result={data.latest.recovery} />
-          <OperationCard
-            title="Restore rehearsal"
-            result={data.latest.restoreRehearsal}
-          />
-          <OperationCard
-            title="Reliability alert"
-            result={data.latest.reliabilityAlert}
-          />
+          <OperationCard title="Restore rehearsal" result={data.latest.restoreRehearsal} />
+          <OperationCard title="Reliability alert" result={data.latest.reliabilityAlert} />
         </div>
       </section>
 
       <section className="rounded-xl border border-slate-800 bg-slate-950/50 p-5">
-        <h2 className="text-lg font-semibold text-slate-100">
-          Recent operations
-        </h2>
+        <h2 className="text-lg font-semibold text-slate-100">Recent operations</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <div>
-            <div className="text-xs uppercase tracking-wide text-slate-500">
-              Total
-            </div>
-            <div className="mt-1 text-xl font-semibold text-slate-100">
-              {data.recent.totalRuns}
-            </div>
+            <div className="text-xs uppercase tracking-wide text-slate-500">Total</div>
+            <div className="mt-1 text-xl font-semibold text-slate-100">{data.recent.totalRuns}</div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wide text-slate-500">
-              Passed
-            </div>
+            <div className="text-xs uppercase tracking-wide text-slate-500">Passed</div>
             <div className="mt-1 text-xl font-semibold text-slate-100">
               {data.recent.passedRuns}
             </div>
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wide text-slate-500">
-              Failed
-            </div>
+            <div className="text-xs uppercase tracking-wide text-slate-500">Failed</div>
             <div className="mt-1 text-xl font-semibold text-slate-100">
               {data.recent.failedRuns}
             </div>
@@ -256,9 +182,7 @@ export default async function OperationsPage() {
 
       {data.reliability?.issues.length ? (
         <section className="rounded-xl border border-slate-800 bg-slate-950/50 p-5">
-          <h2 className="text-lg font-semibold text-slate-100">
-            Reliability issues
-          </h2>
+          <h2 className="text-lg font-semibold text-slate-100">Reliability issues</h2>
           <ul className="mt-3 space-y-2 text-sm text-slate-400">
             {data.reliability.issues.map((issue, index) => (
               <li
@@ -320,9 +244,7 @@ export default async function OperationsPage() {
                 Budget: {response.data?.recovery.defaults.maxActionsPerWindow} /{" "}
                 {response.data?.recovery.defaults.budgetWindowSeconds}s
               </div>
-              <div>
-                Restart delta: {response.data?.recovery.defaults.restartDeltaThreshold}
-              </div>
+              <div>Restart delta: {response.data?.recovery.defaults.restartDeltaThreshold}</div>
               <div>
                 Health timeout: {response.data?.recovery.defaults.postRecoveryTimeoutSeconds}s
               </div>
@@ -366,9 +288,7 @@ export default async function OperationsPage() {
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="font-medium">{entry.service}</span>
-                      <span className="text-slate-400">
-                        {entry.time ?? "Unknown time"}
-                      </span>
+                      <span className="text-slate-400">{entry.time ?? "Unknown time"}</span>
                     </div>
                     <div className="mt-1 text-slate-300">
                       {entry.action}: {entry.result}
@@ -377,20 +297,19 @@ export default async function OperationsPage() {
                 ))}
               </div>
             ) : (
-              <p className="mt-3 text-sm text-slate-400">
-                No recovery actions recorded.
-              </p>
+              <p className="mt-3 text-sm text-slate-400">No recovery actions recorded.</p>
             )}
           </div>
-        
-        <section className="mt-6">
-          <h3 className="text-lg font-semibold">Recovery Guardrails</h3>
-          <p className="mt-1 text-sm text-slate-400">
-            Live bounded-recovery eligibility. Observability only.
-          </p>
-          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {(((response.data?.recovery?.services ?? []) as unknown) as RecoveryGuardrailService[]).map(
-              (service) => (
+
+          <section className="mt-6">
+            <h3 className="text-lg font-semibold">Recovery Guardrails</h3>
+            <p className="mt-1 text-sm text-slate-400">
+              Live bounded-recovery eligibility. Observability only.
+            </p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {(
+                (response.data?.recovery?.services ?? []) as unknown as RecoveryGuardrailService[]
+              ).map((service) => (
                 <div
                   key={`guardrail-${service.service}`}
                   className="rounded-lg border border-slate-800 p-4"
@@ -408,27 +327,24 @@ export default async function OperationsPage() {
                     </span>
                   </div>
                   <div className="mt-2 text-xs text-slate-400">
-                    Policy: {service.policy} · Eligible:{" "}
-                    {service.eligible ? "yes" : "no"}
+                    Policy: {service.policy} · Eligible: {service.eligible ? "yes" : "no"}
                   </div>
                   <div className="mt-1 text-xs text-slate-400">
-                    Successful in window: {service.successfulActionsInWindow} ·
-                    Remaining budget: {service.remainingBudget}
+                    Successful in window: {service.successfulActionsInWindow} · Remaining budget:{" "}
+                    {service.remainingBudget}
                   </div>
                   <div className="mt-1 text-xs text-slate-400">
                     Cooldown remaining: {service.cooldownRemainingSeconds}s
                   </div>
                 </div>
-              ),
-            )}
-          </div>
+              ))}
+            </div>
+          </section>
         </section>
-</section>
       ) : null}
 
-    
       {/* SPORTSOS_M34_5_INCIDENT_PANEL */}
-      
+
       {/* SPORTSOS_M35_5_ESCALATION_DASHBOARD */}
       {/* SPORTSOS_M35_5_4_RESPONSE_DATA_BINDING */}
       <section className="mt-6 rounded-xl border border-slate-800 bg-slate-950/50 p-5">
@@ -446,43 +362,36 @@ export default async function OperationsPage() {
                 : "No delivery telemetry yet"}
             </div>
             <div>
-              {response.data?.incidentEscalation?.recentDeliveryFailureCount ?? 0} recent delivery failures
+              {response.data?.incidentEscalation?.recentDeliveryFailureCount ?? 0} recent delivery
+              failures
             </div>
           </div>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-lg border border-slate-800 p-3">
-            <div className="text-xs uppercase tracking-wide text-slate-500">
-              Tracked incidents
-            </div>
+            <div className="text-xs uppercase tracking-wide text-slate-500">Tracked incidents</div>
             <div className="mt-1 text-2xl font-semibold">
               {response.data?.incidentEscalation?.trackedIncidents ?? 0}
             </div>
           </div>
 
           <div className="rounded-lg border border-slate-800 p-3">
-            <div className="text-xs uppercase tracking-wide text-slate-500">
-              Audit events
-            </div>
+            <div className="text-xs uppercase tracking-wide text-slate-500">Audit events</div>
             <div className="mt-1 text-2xl font-semibold">
               {response.data?.incidentEscalation?.auditEventCount ?? 0}
             </div>
           </div>
 
           <div className="rounded-lg border border-slate-800 p-3">
-            <div className="text-xs uppercase tracking-wide text-slate-500">
-              Recent events
-            </div>
+            <div className="text-xs uppercase tracking-wide text-slate-500">Recent events</div>
             <div className="mt-1 text-2xl font-semibold">
               {response.data?.incidentEscalation?.recentEventCount ?? 0}
             </div>
           </div>
 
           <div className="rounded-lg border border-slate-800 p-3">
-            <div className="text-xs uppercase tracking-wide text-slate-500">
-              Delivery failures
-            </div>
+            <div className="text-xs uppercase tracking-wide text-slate-500">Delivery failures</div>
             <div className="mt-1 text-2xl font-semibold">
               {response.data?.incidentEscalation?.recentDeliveryFailureCount ?? 0}
             </div>
@@ -490,9 +399,7 @@ export default async function OperationsPage() {
         </div>
 
         <div className="mt-4">
-          <h3 className="text-sm font-medium text-slate-300">
-            Recent escalation activity
-          </h3>
+          <h3 className="text-sm font-medium text-slate-300">Recent escalation activity</h3>
 
           {(response.data?.incidentEscalation?.recentEvents.length ?? 0) === 0 ? (
             <p className="mt-2 text-sm text-slate-500">
@@ -500,57 +407,49 @@ export default async function OperationsPage() {
             </p>
           ) : (
             <div className="mt-2 space-y-2">
-              {response.data?.incidentEscalation?.recentEvents
-                .slice(0, 8)
-                .map((event, index) => (
-                  <div
-                    key={`${event.observedAt ?? "unknown"}-${event.incidentId ?? "none"}-${index}`}
-                    className="rounded-lg border border-slate-800 px-3 py-2 text-sm"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="font-medium text-slate-200">
-                        {event.severity ?? "unknown"} · {event.action ?? "event"} ·{" "}
-                        {event.result ?? "unknown"}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        {event.observedAt ?? "unknown time"}
-                      </div>
+              {response.data?.incidentEscalation?.recentEvents.slice(0, 8).map((event, index) => (
+                <div
+                  key={`${event.observedAt ?? "unknown"}-${event.incidentId ?? "none"}-${index}`}
+                  className="rounded-lg border border-slate-800 px-3 py-2 text-sm"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="font-medium text-slate-200">
+                      {event.severity ?? "unknown"} · {event.action ?? "event"} ·{" "}
+                      {event.result ?? "unknown"}
                     </div>
-
-                    {event.incidentId ? (
-                      <div className="mt-1 font-mono text-xs text-slate-500">
-                        Incident {event.incidentId}
-                      </div>
-                    ) : null}
-
-                    {event.detail ? (
-                      <div className="mt-1 text-xs text-slate-400">
-                        {event.detail}
-                      </div>
-                    ) : null}
+                    <div className="text-xs text-slate-500">
+                      {event.observedAt ?? "unknown time"}
+                    </div>
                   </div>
-                ))}
+
+                  {event.incidentId ? (
+                    <div className="mt-1 font-mono text-xs text-slate-500">
+                      Incident {event.incidentId}
+                    </div>
+                  ) : null}
+
+                  {event.detail ? (
+                    <div className="mt-1 text-xs text-slate-400">{event.detail}</div>
+                  ) : null}
+                </div>
+              ))}
             </div>
           )}
         </div>
       </section>
 
-<section className="mt-6 rounded-xl border border-slate-800 bg-slate-950/60 p-5">
+      <section className="mt-6 rounded-xl border border-slate-800 bg-slate-950/60 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-slate-100">
-              Production Incidents
-            </h2>
+            <h2 className="text-xl font-semibold text-slate-100">Production Incidents</h2>
             <p className="mt-1 text-sm text-slate-400">
-              Read-only incident visibility synthesized from production operations,
-              reliability, and bounded recovery telemetry.
+              Read-only incident visibility synthesized from production operations, reliability, and
+              bounded recovery telemetry.
             </p>
           </div>
           {incidentData ? (
             <div className="text-right text-sm text-slate-300">
-              <div>
-                Active: {incidentData.summary.open + incidentData.summary.acknowledged}
-              </div>
+              <div>Active: {incidentData.summary.open + incidentData.summary.acknowledged}</div>
               <div className="text-slate-500">
                 Critical {incidentData.summary.critical} · Warning {incidentData.summary.warning}
               </div>
@@ -579,9 +478,7 @@ export default async function OperationsPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-semibold text-slate-100">
-                        {incident.title}
-                      </span>
+                      <span className="font-semibold text-slate-100">{incident.title}</span>
                       <span className="rounded border border-slate-700 px-2 py-0.5 text-xs uppercase text-slate-300">
                         {incident.severity}
                       </span>
@@ -589,9 +486,7 @@ export default async function OperationsPage() {
                         {incident.status}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm text-slate-300">
-                      {incident.summary}
-                    </p>
+                    <p className="mt-2 text-sm text-slate-300">{incident.summary}</p>
                   </div>
                   <div className="text-right text-xs text-slate-500">
                     <div>{incident.source}</div>
@@ -612,10 +507,10 @@ export default async function OperationsPage() {
         )}
 
         <p className="mt-4 text-xs text-slate-500">
-          Operator actions are authenticated server-side and recorded in the durable incident journal.
+          Operator actions are authenticated server-side and recorded in the durable incident
+          journal.
         </p>
       </section>
-
-      </div>
+    </div>
   );
 }

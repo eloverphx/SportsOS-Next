@@ -80,9 +80,9 @@ describe("authoritative game engine", () => {
       clockRemainingMs: 0,
     });
 
-    expect(() =>
-      applyGameEngineAction(endedRegulation, { action: "nextPeriod" }),
-    ).toThrow("Choose overtime or final after regulation has ended");
+    expect(() => applyGameEngineAction(endedRegulation, { action: "nextPeriod" })).toThrow(
+      "Choose overtime or final after regulation has ended",
+    );
   });
 
   it("enters configured overtime after regulation", () => {

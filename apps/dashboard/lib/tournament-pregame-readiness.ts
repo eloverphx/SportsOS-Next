@@ -1,10 +1,6 @@
 import type { TournamentGameOperationsGame } from "./tournament-game-operations";
 
-export type PregameReadinessState =
-  | "PASS"
-  | "WARNING"
-  | "BLOCKED"
-  | "UNKNOWN";
+export type PregameReadinessState = "PASS" | "WARNING" | "BLOCKED" | "UNKNOWN";
 
 export type PregameReadinessSeverity = "required" | "recommended";
 
@@ -75,8 +71,9 @@ export function buildPregameReadinessChecks(
   operationalState: {
     teamCheckInReady?: boolean;
     rosterLockReady?: boolean;
-  
-    officialsReady?: boolean;} = {},
+
+    officialsReady?: boolean;
+  } = {},
 ): PregameReadinessCheck[] {
   return [
     derivedCheck(
@@ -156,13 +153,9 @@ export function summarizePregameReadiness(
     (check) => check.severity === "required" && check.state === "BLOCKED",
   ).length;
 
-  const warningCount = checks.filter(
-    (check) => check.state === "WARNING",
-  ).length;
+  const warningCount = checks.filter((check) => check.state === "WARNING").length;
 
-  const unknownCount = checks.filter(
-    (check) => check.state === "UNKNOWN",
-  ).length;
+  const unknownCount = checks.filter((check) => check.state === "UNKNOWN").length;
 
   /*
    * UNKNOWN checks are visible but do not block until their backing
@@ -187,9 +180,10 @@ export function buildPregameReadinessSummary(
   testingOverrideEnabled: boolean,
   operationalState: {
     teamCheckInReady?: boolean;
-  
+
     rosterLockReady?: boolean;
-    officialsReady?: boolean;} = {},
+    officialsReady?: boolean;
+  } = {},
 ): PregameReadinessSummary {
   return summarizePregameReadiness(
     buildPregameReadinessChecks(game, operationalState),

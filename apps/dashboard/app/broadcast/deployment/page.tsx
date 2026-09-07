@@ -1,14 +1,8 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import { useCallback, useEffect, useState } from "react";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://192.168.5.3:4001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://192.168.5.3:4001";
 
 type Check = {
   id: string;
@@ -47,110 +41,67 @@ type Payload = {
 };
 
 async function loadJson(path: string) {
-  const response =
-    await fetch(
-      `${API_BASE}${path}`,
-      {
-        cache: "no-store",
-      },
-    );
+  const response = await fetch(`${API_BASE}${path}`, {
+    cache: "no-store",
+  });
 
-  const json =
-    await response.json();
+  const json = await response.json();
 
   if (!response.ok) {
-    throw new Error(
-      json?.error ??
-      `Request failed: ${path}`,
-    );
+    throw new Error(json?.error ?? `Request failed: ${path}`);
   }
 
   return json?.data ?? null;
 }
 
 export default function DeploymentPreflightPage() {
-  const [data, setData] =
-    useState<Payload>({
-      release: null,
-      migration: null,
-      secrets: null,
-      rollback: null,
-      manifest: null,
-    });
+  const [data, setData] = useState<Payload>({
+    release: null,
+    migration: null,
+    secrets: null,
+    rollback: null,
+    manifest: null,
+  });
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [error, setError] =
-    useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const load =
-    useCallback(
-      async () => {
-        setLoading(true);
+  const load = useCallback(async () => {
+    setLoading(true);
 
-        try {
-          const [
-            release,
-            migration,
-            secrets,
-            rollback,
-            manifest,
-          ] =
-            await Promise.all([
-              loadJson(
-                "/broadcast-coordinator/release-readiness",
-              ),
-              loadJson(
-                "/broadcast-coordinator/data-migration-readiness",
-              ),
-              loadJson(
-                "/broadcast-coordinator/secret-environment-validation",
-              ),
-              loadJson(
-                "/broadcast-coordinator/rollback-restore-readiness",
-              ),
-              loadJson(
-                "/broadcast-coordinator/deployment-manifest",
-              ),
-            ]);
+    try {
+      const [release, migration, secrets, rollback, manifest] = await Promise.all([
+        loadJson("/broadcast-coordinator/release-readiness"),
+        loadJson("/broadcast-coordinator/data-migration-readiness"),
+        loadJson("/broadcast-coordinator/secret-environment-validation"),
+        loadJson("/broadcast-coordinator/rollback-restore-readiness"),
+        loadJson("/broadcast-coordinator/deployment-manifest"),
+      ]);
 
-          setData({
-            release,
-            migration,
-            secrets,
-            rollback,
-            manifest,
-          });
+      setData({
+        release,
+        migration,
+        secrets,
+        rollback,
+        manifest,
+      });
 
-          setError(null);
-        } catch (err) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Unable to load deployment preflight.",
-          );
-        } finally {
-          setLoading(false);
-        }
-      },
-      [],
-    );
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to load deployment preflight.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const allReady =
-    [
-      data.release,
-      data.migration,
-      data.secrets,
-      data.rollback,
-    ].every(
-      (section) =>
-        section?.ready === true,
-    );
+  const allReady = [data.release, data.migration, data.secrets, data.rollback].every(
+    (section) => section?.ready === true,
+  );
 
   const sections = [
     ["Release Readiness", data.release],
@@ -163,19 +114,15 @@ export default function DeploymentPreflightPage() {
     <main className="mx-auto max-w-7xl p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <a
-            href="/broadcast/operations"
-            className="text-xs text-slate-500"
-          >
+          <a href="/broadcast/operations" className="text-xs text-slate-500">
             ← Broadcast Operations
           </a>
 
-          <h1 className="mt-2 text-2xl font-bold">
-            Deployment Preflight
-          </h1>
+          <h1 className="mt-2 text-2xl font-bold">Deployment Preflight</h1>
 
           <p className="mt-1 text-sm text-slate-500">
-            Release readiness, migration safety, secrets, rollback, and version identity in one view.
+            Release readiness, migration safety, secrets, rollback, and version identity in one
+            view.
           </p>
         </div>
 
@@ -190,13 +137,9 @@ export default function DeploymentPreflightPage() {
       </div>
 
       <section className="mt-6 rounded-xl border border-slate-800 p-5">
-        <div className="text-xs text-slate-500">
-          Deployment Gate
-        </div>
+        <div className="text-xs text-slate-500">Deployment Gate</div>
 
-        <div className="mt-1 text-2xl font-bold">
-          {allReady ? "READY" : "BLOCKED"}
-        </div>
+        <div className="mt-1 text-2xl font-bold">{allReady ? "READY" : "BLOCKED"}</div>
 
         <p className="mt-2 text-xs text-slate-500">
           A production release should proceed only when all required sections report READY.
@@ -210,99 +153,63 @@ export default function DeploymentPreflightPage() {
       )}
 
       <section className="mt-6 grid gap-4 lg:grid-cols-2">
-        {sections.map(
-          ([title, section]) => (
-            <div
-              key={title}
-              className="rounded-xl border border-slate-800 p-5"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-semibold">
-                  {title}
-                </h2>
+        {sections.map(([title, section]) => (
+          <div key={title} className="rounded-xl border border-slate-800 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">{title}</h2>
 
-                <span className="rounded border border-slate-700 px-3 py-1 text-xs font-semibold">
-                  {section?.ready ? "READY" : "BLOCKED"}
-                </span>
-              </div>
-
-              <div className="mt-4 space-y-2">
-                {section?.checks?.map(
-                  (check) => (
-                    <div
-                      key={check.id}
-                      className="rounded border border-slate-800 p-3"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-xs font-semibold">
-                          {check.id}
-                        </div>
-
-                        <div className="text-xs">
-                          {check.ok ? "PASS" : "FAIL"}
-                        </div>
-                      </div>
-
-                      <div className="mt-1 text-xs text-slate-500">
-                        {check.message}
-                      </div>
-                    </div>
-                  ),
-                ) ??
-                (
-                  <div className="text-xs text-slate-500">
-                    No checks loaded.
-                  </div>
-                )}
-              </div>
+              <span className="rounded border border-slate-700 px-3 py-1 text-xs font-semibold">
+                {section?.ready ? "READY" : "BLOCKED"}
+              </span>
             </div>
-          ),
-        )}
+
+            <div className="mt-4 space-y-2">
+              {section?.checks?.map((check) => (
+                <div key={check.id} className="rounded border border-slate-800 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-semibold">{check.id}</div>
+
+                    <div className="text-xs">{check.ok ? "PASS" : "FAIL"}</div>
+                  </div>
+
+                  <div className="mt-1 text-xs text-slate-500">{check.message}</div>
+                </div>
+              )) ?? <div className="text-xs text-slate-500">No checks loaded.</div>}
+            </div>
+          </div>
+        ))}
       </section>
 
       <section className="mt-6 rounded-xl border border-slate-800 p-5">
-        <h2 className="text-lg font-semibold">
-          Deployment Manifest
-        </h2>
+        <h2 className="text-lg font-semibold">Deployment Manifest</h2>
 
         {!data.manifest ? (
-          <div className="mt-3 text-xs text-slate-500">
-            Manifest unavailable.
-          </div>
+          <div className="mt-3 text-xs text-slate-500">Manifest unavailable.</div>
         ) : (
           <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <div className="rounded border border-slate-800 p-3">
-              <div className="text-xs text-slate-500">
-                Root Version
-              </div>
+              <div className="text-xs text-slate-500">Root Version</div>
               <div className="mt-1 text-sm font-semibold">
                 {data.manifest.versions.root ?? "unknown"}
               </div>
             </div>
 
             <div className="rounded border border-slate-800 p-3">
-              <div className="text-xs text-slate-500">
-                Commit
-              </div>
+              <div className="text-xs text-slate-500">Commit</div>
               <div className="mt-1 break-all text-xs font-semibold">
-                {data.manifest.repository.commit ??
-                  "not available in runtime image"}
+                {data.manifest.repository.commit ?? "not available in runtime image"}
               </div>
             </div>
 
             <div className="rounded border border-slate-800 p-3">
-              <div className="text-xs text-slate-500">
-                Tag
-              </div>
+              <div className="text-xs text-slate-500">Tag</div>
               <div className="mt-1 text-sm font-semibold">
                 {data.manifest.repository.tag ?? "none"}
               </div>
             </div>
 
             <div className="rounded border border-slate-800 p-3">
-              <div className="text-xs text-slate-500">
-                Working Tree
-              </div>
+              <div className="text-xs text-slate-500">Working Tree</div>
               <div className="mt-1 text-sm font-semibold">
                 {data.manifest.repository.dirty === null
                   ? "UNKNOWN"
@@ -316,12 +223,10 @@ export default function DeploymentPreflightPage() {
       </section>
 
       <section className="mt-6 rounded-xl border border-slate-800 p-5">
-        <h2 className="text-lg font-semibold">
-          Release Verification
-        </h2>
+        <h2 className="text-lg font-semibold">Release Verification</h2>
 
         <pre className="mt-3 overflow-x-auto rounded border border-slate-800 p-4 text-xs text-slate-400">
-{`npm run typecheck && npm test
+          {`npm run typecheck && npm test
 docker compose up -d --build api dashboard
 bash scripts/release-smoke-test.sh
 npm run test:e2e:docker`}

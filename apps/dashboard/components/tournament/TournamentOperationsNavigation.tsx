@@ -39,10 +39,7 @@ export function TournamentOperationsNavigation() {
         <strong>See it → focus it → schedule it</strong>
       </div>
 
-      <div
-        className="tournamentWorkflowLinks"
-        data-testid="tournament-workflow-links"
-      >
+      <div className="tournamentWorkflowLinks" data-testid="tournament-workflow-links">
         {sections.map((section, index) => (
           <a
             key={section.id}
@@ -60,7 +57,9 @@ export function TournamentOperationsNavigation() {
           </a>
         ))}
       </div>
-      <a href="#director-audit" data-testid="workflow-link-audit">History</a>
-</nav>
+      <a href="#director-audit" data-testid="workflow-link-audit">
+        History
+      </a>
+    </nav>
   );
 }

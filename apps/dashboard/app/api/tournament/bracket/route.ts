@@ -1,21 +1,11 @@
 import { NextResponse } from "next/server";
-import {
-  seedBracket,
-} from "../../../../lib/tournament-bracket-seeding";
-import {
-  buildTournamentBracketTree,
-} from "../../../../lib/tournament-bracket-rounds";
-import type {
-  BracketMatchupResult,
-} from "../../../../lib/tournament-bracket-advancement";
-import type {
-  TournamentStandingRow,
-} from "../../../../lib/tournament-standings";
+import { seedBracket } from "../../../../lib/tournament-bracket-seeding";
+import { buildTournamentBracketTree } from "../../../../lib/tournament-bracket-rounds";
+import type { BracketMatchupResult } from "../../../../lib/tournament-bracket-advancement";
+import type { TournamentStandingRow } from "../../../../lib/tournament-standings";
 
 const SITE_BASE_URL =
-  process.env.SPORTSOS_DASHBOARD_URL ??
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  "http://localhost:4000";
+  process.env.SPORTSOS_DASHBOARD_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:4000";
 
 type StandingsPayload = {
   standings?: TournamentStandingRow[];
@@ -25,9 +15,7 @@ type StandingsPayload = {
 type UnknownRecord = Record<string, unknown>;
 
 function record(value: unknown): UnknownRecord | null {
-  return value && typeof value === "object"
-    ? (value as UnknownRecord)
-    : null;
+  return value && typeof value === "object" ? (value as UnknownRecord) : null;
 }
 
 function stringValue(value: unknown): string {
@@ -35,14 +23,10 @@ function stringValue(value: unknown): string {
 }
 
 function numberValue(value: unknown): number {
-  return typeof value === "number" && Number.isFinite(value)
-    ? value
-    : 0;
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function normalizeBracketResults(
-  payload: unknown,
-): BracketMatchupResult[] {
+function normalizeBracketResults(payload: unknown): BracketMatchupResult[] {
   const root = record(payload);
 
   if (!root) {
@@ -63,9 +47,7 @@ function normalizeBracketResults(
         return null;
       }
 
-      const matchupId =
-        stringValue(item.matchupId) ||
-        stringValue(item.id);
+      const matchupId = stringValue(item.matchupId) || stringValue(item.id);
 
       if (!matchupId) {
         return null;
@@ -78,21 +60,13 @@ function normalizeBracketResults(
         status: stringValue(item.status),
       };
     })
-    .filter(
-      (
-        value,
-      ): value is BracketMatchupResult =>
-        value !== null,
-    );
+    .filter((value): value is BracketMatchupResult => value !== null);
 }
 
 export async function GET() {
-  const standingsResponse = await fetch(
-    `${SITE_BASE_URL}/api/tournament/standings`,
-    {
-      cache: "no-store",
-    },
-  ).catch(() => null);
+  const standingsResponse = await fetch(`${SITE_BASE_URL}/api/tournament/standings`, {
+    cache: "no-store",
+  }).catch(() => null);
 
   if (!standingsResponse || !standingsResponse.ok) {
     return NextResponse.json(
@@ -105,31 +79,22 @@ export async function GET() {
     );
   }
 
-  const standingsPayload =
-    (await standingsResponse.json()) as StandingsPayload;
+  const standingsPayload = (await standingsResponse.json()) as StandingsPayload;
 
   const standings = standingsPayload.standings ?? [];
   const seeded = seedBracket(standings);
 
-  const resultsResponse = await fetch(
-    `${SITE_BASE_URL}/api/tournament/bracket/results`,
-    {
-      cache: "no-store",
-    },
-  ).catch(() => null);
+  const resultsResponse = await fetch(`${SITE_BASE_URL}/api/tournament/bracket/results`, {
+    cache: "no-store",
+  }).catch(() => null);
 
   let results: BracketMatchupResult[] = [];
 
   if (resultsResponse?.ok) {
-    results = normalizeBracketResults(
-      await resultsResponse.json(),
-    );
+    results = normalizeBracketResults(await resultsResponse.json());
   }
 
-  const tree = buildTournamentBracketTree(
-    seeded,
-    results,
-  );
+  const tree = buildTournamentBracketTree(seeded, results);
 
   return NextResponse.json({
     standings,

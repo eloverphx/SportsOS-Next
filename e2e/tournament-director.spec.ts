@@ -9,13 +9,7 @@ const director = {
   email: "director@example.test",
   username: "director",
   role: "system_admin",
-  permissions: [
-    "game.read",
-    "game.score",
-    "scoreboard.read",
-    "stream.read",
-    "system.read",
-  ],
+  permissions: ["game.read", "game.score", "scoreboard.read", "stream.read", "system.read"],
 };
 
 function json(route: Route, body: unknown) {
@@ -60,8 +54,7 @@ async function installRealtimeFixture(page: Page) {
       return route.fulfill({
         status: 200,
         contentType: "text/plain; charset=UTF-8",
-        body:
-          '0{"sid":"sportsos-director-e2e","upgrades":[],"pingInterval":25000,"pingTimeout":20000,"maxPayload":1000000}',
+        body: '0{"sid":"sportsos-director-e2e","upgrades":[],"pingInterval":25000,"pingTimeout":20000,"maxPayload":1000000}',
       });
     }
 
@@ -251,13 +244,13 @@ test.describe("Tournament Director", () => {
     await expect(rink1.getByText("0/1 online")).toBeVisible();
     await expect(rink1.getByText("Hooking", { exact: false })).toBeVisible();
 
-    await expect(
-      rink1.getByRole("link", { name: "Open Scorekeeper" }).first(),
-    ).toHaveAttribute("href", "/games/1/control");
+    await expect(rink1.getByRole("link", { name: "Open Scorekeeper" }).first()).toHaveAttribute(
+      "href",
+      "/games/1/control",
+    );
 
     await page.getByPlaceholder("Team, rink, season…").fill("Burnsville");
     await expect(rink2).toBeVisible();
     await expect(rink1).toBeHidden();
   });
 });
-

@@ -5,18 +5,12 @@ import {
   type BroadcastTransportState,
 } from "../../../../../lib/tournament-broadcast-session";
 
-function boolParam(
-  request: NextRequest,
-  key: string,
-): boolean {
+function boolParam(request: NextRequest, key: string): boolean {
   return request.nextUrl.searchParams.get(key) === "true";
 }
 
-function transportParam(
-  request: NextRequest,
-): BroadcastTransportState {
-  const value =
-    request.nextUrl.searchParams.get("transport")?.toUpperCase();
+function transportParam(request: NextRequest): BroadcastTransportState {
+  const value = request.nextUrl.searchParams.get("transport")?.toUpperCase();
 
   if (
     value === "OFFLINE" ||
@@ -31,17 +25,10 @@ function transportParam(
   return "OFFLINE";
 }
 
-function overlayParam(
-  request: NextRequest,
-): BroadcastOverlayState {
-  const value =
-    request.nextUrl.searchParams.get("overlay")?.toUpperCase();
+function overlayParam(request: NextRequest): BroadcastOverlayState {
+  const value = request.nextUrl.searchParams.get("overlay")?.toUpperCase();
 
-  if (
-    value === "DISABLED" ||
-    value === "READY" ||
-    value === "ACTIVE"
-  ) {
+  if (value === "DISABLED" || value === "READY" || value === "ACTIVE") {
     return value;
   }
 
@@ -49,8 +36,7 @@ function overlayParam(
 }
 
 export async function GET(request: NextRequest) {
-  const gameId =
-    request.nextUrl.searchParams.get("gameId")?.trim() ?? "";
+  const gameId = request.nextUrl.searchParams.get("gameId")?.trim() ?? "";
 
   if (!gameId) {
     return NextResponse.json(
@@ -65,21 +51,12 @@ export async function GET(request: NextRequest) {
 
   const summary = buildBroadcastSessionSummary({
     gameId,
-    operatorAssigned: boolParam(
-      request,
-      "operatorAssigned",
-    ),
-    gameAuthorized: boolParam(
-      request,
-      "gameAuthorized",
-    ),
+    operatorAssigned: boolParam(request, "operatorAssigned"),
+    gameAuthorized: boolParam(request, "gameAuthorized"),
     gameLive: boolParam(request, "gameLive"),
     transportState: transportParam(request),
     overlayState: overlayParam(request),
-    streamKeyConfigured: boolParam(
-      request,
-      "streamKeyConfigured",
-    ),
+    streamKeyConfigured: boolParam(request, "streamKeyConfigured"),
   });
 
   return NextResponse.json({

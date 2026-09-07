@@ -18,10 +18,7 @@ export type ScheduleAuditConflict = {
   readonly message: string;
 };
 
-export type ScheduleAuditDecisionFilter =
-  | "ALL"
-  | "BLOCKED"
-  | "OVERRIDDEN";
+export type ScheduleAuditDecisionFilter = "ALL" | "BLOCKED" | "OVERRIDDEN";
 
 export type ScheduleAuditQuery = {
   readonly organizationId: number | null;
@@ -86,9 +83,7 @@ function optionalString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function normalizeConflicts(
-  details: AuditDetails,
-): ScheduleAuditConflict[] {
+function normalizeConflicts(details: AuditDetails): ScheduleAuditConflict[] {
   const source = Array.isArray(details.conflicts)
     ? details.conflicts
     : Array.isArray(details.scheduleConflicts)
@@ -105,9 +100,7 @@ function normalizeConflicts(
       severity: optionalString(conflict.severity) ?? "UNKNOWN",
       gameId: optionalNumber(conflict.gameId),
       relatedGameId: optionalNumber(conflict.relatedGameId),
-      message:
-        optionalString(conflict.message) ??
-        "No conflict description was recorded.",
+      message: optionalString(conflict.message) ?? "No conflict description was recorded.",
     }));
 }
 
@@ -123,15 +116,11 @@ function scheduleAuditDecisionActions(
   decision: ScheduleAuditDecisionFilter,
 ): readonly ScheduleAuditAction[] {
   if (decision === "BLOCKED") {
-    return SCHEDULE_AUDIT_ACTIONS.filter((action) =>
-      action.endsWith("_blocked"),
-    );
+    return SCHEDULE_AUDIT_ACTIONS.filter((action) => action.endsWith("_blocked"));
   }
 
   if (decision === "OVERRIDDEN") {
-    return SCHEDULE_AUDIT_ACTIONS.filter((action) =>
-      action.endsWith("_overridden"),
-    );
+    return SCHEDULE_AUDIT_ACTIONS.filter((action) => action.endsWith("_overridden"));
   }
 
   return SCHEDULE_AUDIT_ACTIONS;
@@ -151,9 +140,7 @@ function scheduleAuditEventFromRow(row: RowDataPacket): ScheduleAuditEvent {
   const details = detailsObject(row.details);
   const firstName = optionalString(row.first_name);
   const lastName = optionalString(row.last_name);
-  const actorName =
-    [firstName, lastName].filter(Boolean).join(" ") ||
-    "System / unknown user";
+  const actorName = [firstName, lastName].filter(Boolean).join(" ") || "System / unknown user";
 
   return {
     id: Number(row.id),
@@ -164,14 +151,10 @@ function scheduleAuditEventFromRow(row: RowDataPacket): ScheduleAuditEvent {
     organizationId: optionalNumber(details.organizationId),
     gameId: optionalNumber(details.gameId),
     scheduledStart:
-      optionalString(details.scheduledStart) ??
-      optionalString(details.requestedScheduledStart),
-    venue:
-      optionalString(details.venue) ??
-      optionalString(details.requestedVenue),
+      optionalString(details.scheduledStart) ?? optionalString(details.requestedScheduledStart),
+    venue: optionalString(details.venue) ?? optionalString(details.requestedVenue),
     reason:
-      optionalString(details.reason) ??
-      optionalString(details.scheduleConflictOverrideReason),
+      optionalString(details.reason) ?? optionalString(details.scheduleConflictOverrideReason),
     conflictCount: conflictsCount(details),
     conflicts: normalizeConflicts(details),
     createdAt: new Date(row.created_at as string | Date).toISOString(),
@@ -208,17 +191,13 @@ export async function listRecentScheduleAuditEvents(
     const details = detailsObject(row.details);
     const eventOrganizationId = optionalNumber(details.organizationId);
 
-    if (
-      organizationId !== null &&
-      eventOrganizationId !== organizationId
-    ) {
+    if (organizationId !== null && eventOrganizationId !== organizationId) {
       continue;
     }
 
     const firstName = optionalString(row.first_name);
     const lastName = optionalString(row.last_name);
-    const actorName =
-      [firstName, lastName].filter(Boolean).join(" ") || "System / unknown user";
+    const actorName = [firstName, lastName].filter(Boolean).join(" ") || "System / unknown user";
 
     events.push({
       id: Number(row.id),
@@ -229,14 +208,10 @@ export async function listRecentScheduleAuditEvents(
       organizationId: eventOrganizationId,
       gameId: optionalNumber(details.gameId),
       scheduledStart:
-        optionalString(details.scheduledStart) ??
-        optionalString(details.requestedScheduledStart),
-      venue:
-        optionalString(details.venue) ??
-        optionalString(details.requestedVenue),
+        optionalString(details.scheduledStart) ?? optionalString(details.requestedScheduledStart),
+      venue: optionalString(details.venue) ?? optionalString(details.requestedVenue),
       reason:
-        optionalString(details.reason) ??
-        optionalString(details.scheduleConflictOverrideReason),
+        optionalString(details.reason) ?? optionalString(details.scheduleConflictOverrideReason),
       conflictCount: conflictsCount(details),
       conflicts: normalizeConflicts(details),
       createdAt: new Date(row.created_at as string | Date).toISOString(),
@@ -248,7 +223,6 @@ export async function listRecentScheduleAuditEvents(
   return events;
 }
 
-
 export async function queryScheduleAuditEvents(
   query: ScheduleAuditQuery,
 ): Promise<ScheduleAuditPage> {
@@ -256,22 +230,16 @@ export async function queryScheduleAuditEvents(
   const offset = boundedScheduleAuditInteger(query.offset, 0, 0, 10_000);
   const actions = scheduleAuditDecisionActions(query.decision ?? "ALL");
 
-  const clauses: string[] = [
-    `a.action IN (${actions.map(() => "?").join(", ")})`,
-  ];
+  const clauses: string[] = [`a.action IN (${actions.map(() => "?").join(", ")})`];
   const params: unknown[] = [...actions];
 
   if (query.organizationId !== null) {
-    clauses.push(
-      "CAST(JSON_UNQUOTE(JSON_EXTRACT(a.details, '$.organizationId')) AS UNSIGNED) = ?",
-    );
+    clauses.push("CAST(JSON_UNQUOTE(JSON_EXTRACT(a.details, '$.organizationId')) AS UNSIGNED) = ?");
     params.push(query.organizationId);
   }
 
   if (query.gameId !== null && query.gameId !== undefined) {
-    clauses.push(
-      "CAST(JSON_UNQUOTE(JSON_EXTRACT(a.details, '$.gameId')) AS UNSIGNED) = ?",
-    );
+    clauses.push("CAST(JSON_UNQUOTE(JSON_EXTRACT(a.details, '$.gameId')) AS UNSIGNED) = ?");
     params.push(query.gameId);
   }
 

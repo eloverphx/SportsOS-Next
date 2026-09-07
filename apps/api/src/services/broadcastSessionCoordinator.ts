@@ -1,17 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import {
-  recordBroadcastCoordinatorAudit,
-} from "./broadcastCoordinatorAudit.js";
+import { recordBroadcastCoordinatorAudit } from "./broadcastCoordinatorAudit.js";
 
-import {
-  evaluateGameDayGoLivePreflight,
-} from "./gameDayGoLivePreflight.js";
+import { evaluateGameDayGoLivePreflight } from "./gameDayGoLivePreflight.js";
 
-import {
-  getStreamDestinationProfile,
-} from "./streamDestinationProfile.js";
+import { getStreamDestinationProfile } from "./streamDestinationProfile.js";
 
 import {
   armGoLiveSession,
@@ -27,11 +21,7 @@ import {
   stopEncoderRuntime,
 } from "./encoderRuntime.js";
 
-export type BroadcastCoordinatorIntent =
-  | "IDLE"
-  | "PREPARE"
-  | "GO_LIVE"
-  | "STOP";
+export type BroadcastCoordinatorIntent = "IDLE" | "PREPARE" | "GO_LIVE" | "STOP";
 
 export type BroadcastCoordinatorRecord = {
   gameId: string;
@@ -43,61 +33,28 @@ export type BroadcastCoordinatorRecord = {
 
 export type BroadcastCoordinatorSnapshot = {
   coordinator: BroadcastCoordinatorRecord;
-  preflight:
-    ReturnType<
-      typeof evaluateGameDayGoLivePreflight
-    >;
-  goLive:
-    ReturnType<
-      typeof getGoLiveSession
-    >;
-  runtime:
-    ReturnType<
-      typeof encoderRuntimeSnapshot
-    >;
+  preflight: ReturnType<typeof evaluateGameDayGoLivePreflight>;
+  goLive: ReturnType<typeof getGoLiveSession>;
+  runtime: ReturnType<typeof encoderRuntimeSnapshot>;
 };
 
 type Store = {
   version: 1;
-  records:
-    BroadcastCoordinatorRecord[];
+  records: BroadcastCoordinatorRecord[];
 };
 
-const DATA_DIR =
-  process.env.SPORTSOS_DATA_DIR ??
-  path.resolve(
-    process.cwd(),
-    "data",
-  );
+const DATA_DIR = process.env.SPORTSOS_DATA_DIR ?? path.resolve(process.cwd(), "data");
 
-const STORE_FILE =
-  path.join(
-    DATA_DIR,
-    "broadcast-session-coordinator.json",
-  );
+const STORE_FILE = path.join(DATA_DIR, "broadcast-session-coordinator.json");
 
-let store =
-  loadStore();
+let store = loadStore();
 
 function loadStore(): Store {
   try {
-    const parsed =
-      JSON.parse(
-        fs.readFileSync(
-          STORE_FILE,
-          "utf8",
-        ),
-      ) as Store;
+    const parsed = JSON.parse(fs.readFileSync(STORE_FILE, "utf8")) as Store;
 
-    if (
-      parsed.version !== 1 ||
-      !Array.isArray(
-        parsed.records,
-      )
-    ) {
-      throw new Error(
-        "Invalid broadcast coordinator store.",
-      );
+    if (parsed.version !== 1 || !Array.isArray(parsed.records)) {
+      throw new Error("Invalid broadcast coordinator store.");
     }
 
     return parsed;
@@ -110,108 +67,47 @@ function loadStore(): Store {
 }
 
 function persistStore(): void {
-  fs.mkdirSync(
-    DATA_DIR,
-    {
-      recursive: true,
-    },
-  );
+  fs.mkdirSync(DATA_DIR, {
+    recursive: true,
+  });
 
-  const temp =
-    `${STORE_FILE}.tmp`;
+  const temp = `${STORE_FILE}.tmp`;
 
-  fs.writeFileSync(
-    temp,
-    JSON.stringify(
-      store,
-      null,
-      2,
-    ),
-    "utf8",
-  );
+  fs.writeFileSync(temp, JSON.stringify(store, null, 2), "utf8");
 
-  fs.renameSync(
-    temp,
-    STORE_FILE,
-  );
+  fs.renameSync(temp, STORE_FILE);
 }
 
-function createCorrelationId(
-  gameId: string,
-): string {
-  return `broadcast-${gameId}-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
+function createCorrelationId(gameId: string): string {
+  return `broadcast-${gameId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export function listKnownBroadcastCoordinatorGameIds(): string[] {
-  return Array.from(
-    new Set(
-      store.records
-        .map((record) => record.gameId)
-        .filter(Boolean),
-    ),
-  );
+  return Array.from(new Set(store.records.map((record) => record.gameId).filter(Boolean)));
 }
 
 export function listActiveBroadcastGameIds(): string[] {
-  return listKnownBroadcastCoordinatorGameIds()
-    .filter((gameId) => {
-      const coordinator =
-        getBroadcastCoordinatorRecord(
-          gameId,
-        );
+  return listKnownBroadcastCoordinatorGameIds().filter((gameId) => {
+    const coordinator = getBroadcastCoordinatorRecord(gameId);
 
-      const goLive =
-        getGoLiveSession(
-          gameId,
-        );
+    const goLive = getGoLiveSession(gameId);
 
-      const runtime =
-        encoderRuntimeSnapshot(
-          gameId,
-        );
+    const runtime = encoderRuntimeSnapshot(gameId);
 
-      const coordinatorActive =
-        coordinator.intent !==
-        "IDLE";
+    const coordinatorActive = coordinator.intent !== "IDLE";
 
-      const goLiveActive =
-        [
-          "ARMED",
-          "STARTING",
-          "LIVE",
-          "DEGRADED",
-          "STOPPING",
-        ].includes(
-          goLive.status,
-        );
+    const goLiveActive = ["ARMED", "STARTING", "LIVE", "DEGRADED", "STOPPING"].includes(
+      goLive.status,
+    );
 
-      const runtimeActive =
-        ![
-          "STOPPED",
-          "ERROR",
-        ].includes(
-          runtime.session.status,
-        );
+    const runtimeActive = !["STOPPED", "ERROR"].includes(runtime.session.status);
 
-      return (
-        coordinatorActive ||
-        goLiveActive ||
-        runtimeActive
-      );
-    });
+    return coordinatorActive || goLiveActive || runtimeActive;
+  });
 }
 
-export function getBroadcastCoordinatorRecord(
-  gameId: string,
-): BroadcastCoordinatorRecord {
-  const existing =
-    store.records.find(
-      (record) =>
-        record.gameId ===
-        gameId,
-    );
+export function getBroadcastCoordinatorRecord(gameId: string): BroadcastCoordinatorRecord {
+  const existing = store.records.find((record) => record.gameId === gameId);
 
   if (existing) {
     return {
@@ -221,16 +117,10 @@ export function getBroadcastCoordinatorRecord(
 
   return {
     gameId,
-    intent:
-      "IDLE",
-    correlationId:
-      createCorrelationId(
-        gameId,
-      ),
-    updatedAt:
-      new Date().toISOString(),
-    lastError:
-      null,
+    intent: "IDLE",
+    correlationId: createCorrelationId(gameId),
+    updatedAt: new Date().toISOString(),
+    lastError: null,
   };
 }
 
@@ -240,43 +130,24 @@ export function setBroadcastCoordinatorIntent(input: {
   lastError?: string | null;
 }): BroadcastCoordinatorRecord {
   const record: BroadcastCoordinatorRecord = {
-    gameId:
-      input.gameId,
-    intent:
-      input.intent,
-    correlationId:
-      createCorrelationId(
-        input.gameId,
-      ),
-    updatedAt:
-      new Date().toISOString(),
-    lastError:
-      input.lastError ??
-      null,
+    gameId: input.gameId,
+    intent: input.intent,
+    correlationId: createCorrelationId(input.gameId),
+    updatedAt: new Date().toISOString(),
+    lastError: input.lastError ?? null,
   };
 
-  store.records =
-    store.records.filter(
-      (item) =>
-        item.gameId !==
-        input.gameId,
-    );
+  store.records = store.records.filter((item) => item.gameId !== input.gameId);
 
-  store.records.push(
-    record,
-  );
+  store.records.push(record);
 
   persistStore();
 
   recordBroadcastCoordinatorAudit({
-    gameId:
-      input.gameId,
-    type:
-      "INTENT_CHANGED",
-    correlationId:
-      record.correlationId,
-    detail:
-      `Intent changed to ${record.intent}.`,
+    gameId: input.gameId,
+    type: "INTENT_CHANGED",
+    correlationId: record.correlationId,
+    detail: `Intent changed to ${record.intent}.`,
   });
 
   return {
@@ -284,174 +155,97 @@ export function setBroadcastCoordinatorIntent(input: {
   };
 }
 
-export function getBroadcastCoordinatorSnapshot(
-  gameId: string,
-): BroadcastCoordinatorSnapshot {
+export function getBroadcastCoordinatorSnapshot(gameId: string): BroadcastCoordinatorSnapshot {
   return {
-    coordinator:
-      getBroadcastCoordinatorRecord(
-        gameId,
-      ),
-    preflight:
-      evaluateGameDayGoLivePreflight(
-        gameId,
-      ),
-    goLive:
-      getGoLiveSession(
-        gameId,
-      ),
-    runtime:
-      encoderRuntimeSnapshot(
-        gameId,
-      ),
+    coordinator: getBroadcastCoordinatorRecord(gameId),
+    preflight: evaluateGameDayGoLivePreflight(gameId),
+    goLive: getGoLiveSession(gameId),
+    runtime: encoderRuntimeSnapshot(gameId),
   };
 }
 
-export function prepareBroadcastSession(
-  gameId: string,
-): BroadcastCoordinatorSnapshot {
-  const coordinator =
-    getBroadcastCoordinatorRecord(
-      gameId,
-    );
+export function prepareBroadcastSession(gameId: string): BroadcastCoordinatorSnapshot {
+  const coordinator = getBroadcastCoordinatorRecord(gameId);
 
   recordBroadcastCoordinatorAudit({
     gameId,
-    type:
-      "PREPARE_REQUESTED",
-    correlationId:
-      coordinator.correlationId,
+    type: "PREPARE_REQUESTED",
+    correlationId: coordinator.correlationId,
   });
 
-  const preflight =
-    evaluateGameDayGoLivePreflight(
-      gameId,
-    );
+  const preflight = evaluateGameDayGoLivePreflight(gameId);
 
   setBroadcastCoordinatorIntent({
     gameId,
-    intent:
-      "PREPARE",
-    lastError:
-      preflight.ready
-        ? null
-        : "Game-day go-live preflight is blocked.",
+    intent: "PREPARE",
+    lastError: preflight.ready ? null : "Game-day go-live preflight is blocked.",
   });
 
   if (!preflight.ready) {
     recordBroadcastCoordinatorAudit({
       gameId,
-      type:
-        "PREPARE_BLOCKED",
-      correlationId:
-        getBroadcastCoordinatorRecord(
-          gameId,
-        ).correlationId,
-      detail:
-        "Game-day go-live preflight is blocked.",
+      type: "PREPARE_BLOCKED",
+      correlationId: getBroadcastCoordinatorRecord(gameId).correlationId,
+      detail: "Game-day go-live preflight is blocked.",
     });
   }
 
-  return getBroadcastCoordinatorSnapshot(
-    gameId,
-  );
+  return getBroadcastCoordinatorSnapshot(gameId);
 }
-
 
 export async function startCoordinatedBroadcast(
   gameId: string,
 ): Promise<BroadcastCoordinatorSnapshot> {
   recordBroadcastCoordinatorAudit({
     gameId,
-    type:
-      "START_REQUESTED",
-    correlationId:
-      getBroadcastCoordinatorRecord(
-        gameId,
-      ).correlationId,
+    type: "START_REQUESTED",
+    correlationId: getBroadcastCoordinatorRecord(gameId).correlationId,
   });
 
-  const preflight =
-    evaluateGameDayGoLivePreflight(
-      gameId,
-    );
+  const preflight = evaluateGameDayGoLivePreflight(gameId);
 
   if (!preflight.ready) {
     setBroadcastCoordinatorIntent({
       gameId,
-      intent:
-        "GO_LIVE",
-      lastError:
-        "Final game-day go-live preflight is blocked.",
+      intent: "GO_LIVE",
+      lastError: "Final game-day go-live preflight is blocked.",
     });
 
     recordBroadcastCoordinatorAudit({
       gameId,
-      type:
-        "START_BLOCKED",
-      correlationId:
-        getBroadcastCoordinatorRecord(
-          gameId,
-        ).correlationId,
-      detail:
-        "Final game-day go-live preflight is blocked.",
+      type: "START_BLOCKED",
+      correlationId: getBroadcastCoordinatorRecord(gameId).correlationId,
+      detail: "Final game-day go-live preflight is blocked.",
     });
 
-    throw new Error(
-      "Final game-day go-live preflight is blocked.",
-    );
+    throw new Error("Final game-day go-live preflight is blocked.");
   }
 
-  const current =
-    getGoLiveSession(
-      gameId,
-    );
+  const current = getGoLiveSession(gameId);
 
-  if (
-    current.status !==
-      "ARMED"
-  ) {
-    armGoLiveSession(
-      gameId,
-    );
+  if (current.status !== "ARMED") {
+    armGoLiveSession(gameId);
   }
 
-  const armed =
-    getGoLiveSession(
-      gameId,
-    );
+  const armed = getGoLiveSession(gameId);
 
-  if (
-    armed.status !==
-      "ARMED"
-  ) {
-    throw new Error(
-      "Go-live session could not be armed.",
-    );
+  if (armed.status !== "ARMED") {
+    throw new Error("Go-live session could not be armed.");
   }
 
-  const destination =
-    getStreamDestinationProfile(
-      gameId,
-    );
+  const destination = getStreamDestinationProfile(gameId);
 
   if (!destination) {
-    throw new Error(
-      "Stream destination is missing.",
-    );
+    throw new Error("Stream destination is missing.");
   }
 
   setBroadcastCoordinatorIntent({
     gameId,
-    intent:
-      "GO_LIVE",
-    lastError:
-      null,
+    intent: "GO_LIVE",
+    lastError: null,
   });
 
-  markGoLiveStarting(
-    gameId,
-  );
+  markGoLiveStarting(gameId);
 
   await startEncoderRuntime({
     gameId,
@@ -460,17 +254,11 @@ export async function startCoordinatedBroadcast(
 
   recordBroadcastCoordinatorAudit({
     gameId,
-    type:
-      "START_COMPLETED",
-    correlationId:
-      getBroadcastCoordinatorRecord(
-        gameId,
-      ).correlationId,
+    type: "START_COMPLETED",
+    correlationId: getBroadcastCoordinatorRecord(gameId).correlationId,
   });
 
-  return getBroadcastCoordinatorSnapshot(
-    gameId,
-  );
+  return getBroadcastCoordinatorSnapshot(gameId);
 }
 
 export async function stopCoordinatedBroadcast(
@@ -478,47 +266,30 @@ export async function stopCoordinatedBroadcast(
 ): Promise<BroadcastCoordinatorSnapshot> {
   recordBroadcastCoordinatorAudit({
     gameId,
-    type:
-      "STOP_REQUESTED",
-    correlationId:
-      getBroadcastCoordinatorRecord(
-        gameId,
-      ).correlationId,
+    type: "STOP_REQUESTED",
+    correlationId: getBroadcastCoordinatorRecord(gameId).correlationId,
   });
 
   setBroadcastCoordinatorIntent({
     gameId,
-    intent:
-      "STOP",
-    lastError:
-      null,
+    intent: "STOP",
+    lastError: null,
   });
 
-  markGoLiveStopping(
-    gameId,
-  );
+  markGoLiveStopping(gameId);
 
-  await stopEncoderRuntime(
-    gameId,
-  );
+  await stopEncoderRuntime(gameId);
 
-  completeGoLiveSession(
-    gameId,
-  );
+  completeGoLiveSession(gameId);
 
   setBroadcastCoordinatorIntent({
     gameId,
-    intent:
-      "IDLE",
-    lastError:
-      null,
+    intent: "IDLE",
+    lastError: null,
   });
 
-  return getBroadcastCoordinatorSnapshot(
-    gameId,
-  );
+  return getBroadcastCoordinatorSnapshot(gameId);
 }
-
 
 export type BroadcastCoordinatorHealth = {
   gameId: string;
@@ -535,133 +306,74 @@ export type BroadcastCoordinatorHealth = {
   }>;
 };
 
-export function evaluateBroadcastCoordinatorHealth(
-  gameId: string,
-): BroadcastCoordinatorHealth {
-  const snapshot =
-    getBroadcastCoordinatorSnapshot(
-      gameId,
-    );
+export function evaluateBroadcastCoordinatorHealth(gameId: string): BroadcastCoordinatorHealth {
+  const snapshot = getBroadcastCoordinatorSnapshot(gameId);
 
-  const issues:
-    BroadcastCoordinatorHealth["issues"] = [];
+  const issues: BroadcastCoordinatorHealth["issues"] = [];
 
   if (
-    snapshot.coordinator.intent ===
-      "GO_LIVE" &&
-    (
-      snapshot.runtime.session.status ===
-        "STOPPED" ||
-      snapshot.runtime.session.status ===
-        "ERROR"
-    )
+    snapshot.coordinator.intent === "GO_LIVE" &&
+    (snapshot.runtime.session.status === "STOPPED" || snapshot.runtime.session.status === "ERROR")
   ) {
     issues.push({
-      id:
-        "INTENT_GO_LIVE_RUNTIME_STOPPED",
-      message:
-        `Coordinator intent is GO_LIVE but encoder runtime is ${snapshot.runtime.session.status}.`,
+      id: "INTENT_GO_LIVE_RUNTIME_STOPPED",
+      message: `Coordinator intent is GO_LIVE but encoder runtime is ${snapshot.runtime.session.status}.`,
     });
   }
 
   if (
-    snapshot.coordinator.intent ===
-      "GO_LIVE" &&
-    ![
-      "ARMED",
-      "STARTING",
-      "LIVE",
-      "DEGRADED",
-    ].includes(
-      snapshot.goLive.status,
-    )
+    snapshot.coordinator.intent === "GO_LIVE" &&
+    !["ARMED", "STARTING", "LIVE", "DEGRADED"].includes(snapshot.goLive.status)
   ) {
     issues.push({
-      id:
-        "INTENT_GO_LIVE_SESSION_NOT_ACTIVE",
-      message:
-        `Coordinator intent is GO_LIVE but go-live session is ${snapshot.goLive.status}.`,
+      id: "INTENT_GO_LIVE_SESSION_NOT_ACTIVE",
+      message: `Coordinator intent is GO_LIVE but go-live session is ${snapshot.goLive.status}.`,
     });
   }
 
   if (
-    snapshot.coordinator.intent ===
-      "STOP" &&
-    ![
-      "STOPPED",
-      "ERROR",
-    ].includes(
-      snapshot.runtime.session.status,
-    )
+    snapshot.coordinator.intent === "STOP" &&
+    !["STOPPED", "ERROR"].includes(snapshot.runtime.session.status)
   ) {
     issues.push({
-      id:
-        "INTENT_STOP_RUNTIME_ACTIVE",
-      message:
-        `Coordinator intent is STOP but encoder runtime is ${snapshot.runtime.session.status}.`,
+      id: "INTENT_STOP_RUNTIME_ACTIVE",
+      message: `Coordinator intent is STOP but encoder runtime is ${snapshot.runtime.session.status}.`,
+    });
+  }
+
+  if (snapshot.goLive.status === "LIVE" && snapshot.runtime.session.status !== "LIVE") {
+    issues.push({
+      id: "GO_LIVE_LIVE_RUNTIME_NOT_LIVE",
+      message: `Go-live session is LIVE but encoder runtime is ${snapshot.runtime.session.status}.`,
     });
   }
 
   if (
-    snapshot.goLive.status ===
-      "LIVE" &&
-    snapshot.runtime.session.status !==
-      "LIVE"
+    snapshot.goLive.status === "EMERGENCY_STOPPED" &&
+    !["STOPPED", "ERROR"].includes(snapshot.runtime.session.status)
   ) {
     issues.push({
-      id:
-        "GO_LIVE_LIVE_RUNTIME_NOT_LIVE",
-      message:
-        `Go-live session is LIVE but encoder runtime is ${snapshot.runtime.session.status}.`,
-    });
-  }
-
-  if (
-    snapshot.goLive.status ===
-      "EMERGENCY_STOPPED" &&
-    ![
-      "STOPPED",
-      "ERROR",
-    ].includes(
-      snapshot.runtime.session.status,
-    )
-  ) {
-    issues.push({
-      id:
-        "EMERGENCY_STOP_RUNTIME_ACTIVE",
-      message:
-        `Go-live session is EMERGENCY_STOPPED but encoder runtime is ${snapshot.runtime.session.status}.`,
+      id: "EMERGENCY_STOP_RUNTIME_ACTIVE",
+      message: `Go-live session is EMERGENCY_STOPPED but encoder runtime is ${snapshot.runtime.session.status}.`,
     });
   }
 
   if (issues.length > 0) {
     recordBroadcastCoordinatorAudit({
       gameId,
-      type:
-        "DRIFT_DETECTED",
-      correlationId:
-        snapshot.coordinator.correlationId,
-      detail:
-        issues
-          .map(
-            (issue) =>
-              `${issue.id}: ${issue.message}`,
-          )
-          .join(" | "),
+      type: "DRIFT_DETECTED",
+      correlationId: snapshot.coordinator.correlationId,
+      detail: issues.map((issue) => `${issue.id}: ${issue.message}`).join(" | "),
     });
   }
 
   return {
     gameId,
-    healthy:
-      issues.length ===
-      0,
-    checkedAt:
-      new Date().toISOString(),
+    healthy: issues.length === 0,
+    checkedAt: new Date().toISOString(),
     issues,
   };
 }
-
 
 export type BroadcastCoordinatorReconciliationAction =
   | "NONE"
@@ -671,14 +383,11 @@ export type BroadcastCoordinatorReconciliationAction =
 
 export type BroadcastCoordinatorReconciliation = {
   gameId: string;
-  action:
-    BroadcastCoordinatorReconciliationAction;
+  action: BroadcastCoordinatorReconciliationAction;
   repaired: boolean;
   message: string;
-  health:
-    BroadcastCoordinatorHealth;
-  snapshot:
-    BroadcastCoordinatorSnapshot;
+  health: BroadcastCoordinatorHealth;
+  snapshot: BroadcastCoordinatorSnapshot;
 };
 
 export async function reconcileBroadcastCoordinator(
@@ -686,186 +395,101 @@ export async function reconcileBroadcastCoordinator(
 ): Promise<BroadcastCoordinatorReconciliation> {
   recordBroadcastCoordinatorAudit({
     gameId,
-    type:
-      "RECONCILE_REQUESTED",
-    correlationId:
-      getBroadcastCoordinatorRecord(
-        gameId,
-      ).correlationId,
+    type: "RECONCILE_REQUESTED",
+    correlationId: getBroadcastCoordinatorRecord(gameId).correlationId,
   });
 
-  const before =
-    evaluateBroadcastCoordinatorHealth(
-      gameId,
-    );
+  const before = evaluateBroadcastCoordinatorHealth(gameId);
 
   if (before.healthy) {
     return {
       gameId,
-      action:
-        "NONE",
-      repaired:
-        false,
-      message:
-        "Coordinator state is already healthy.",
-      health:
-        before,
-      snapshot:
-        getBroadcastCoordinatorSnapshot(
-          gameId,
-        ),
+      action: "NONE",
+      repaired: false,
+      message: "Coordinator state is already healthy.",
+      health: before,
+      snapshot: getBroadcastCoordinatorSnapshot(gameId),
     };
   }
 
-  const ids =
-    new Set(
-      before.issues.map(
-        (issue) =>
-          issue.id,
-      ),
-    );
+  const ids = new Set(before.issues.map((issue) => issue.id));
 
-  if (
-    ids.has(
-      "EMERGENCY_STOP_RUNTIME_ACTIVE",
-    ) ||
-    ids.has(
-      "INTENT_STOP_RUNTIME_ACTIVE",
-    )
-  ) {
-    await stopEncoderRuntime(
-      gameId,
-    );
+  if (ids.has("EMERGENCY_STOP_RUNTIME_ACTIVE") || ids.has("INTENT_STOP_RUNTIME_ACTIVE")) {
+    await stopEncoderRuntime(gameId);
 
     setBroadcastCoordinatorIntent({
       gameId,
-      intent:
-        "IDLE",
-      lastError:
-        null,
+      intent: "IDLE",
+      lastError: null,
     });
 
-    const health =
-      evaluateBroadcastCoordinatorHealth(
-        gameId,
-      );
+    const health = evaluateBroadcastCoordinatorHealth(gameId);
 
     recordBroadcastCoordinatorAudit({
       gameId,
-      type:
-        "RECONCILE_COMPLETED",
-      correlationId:
-        getBroadcastCoordinatorRecord(
-          gameId,
-        ).correlationId,
-      detail:
-        "STOP_RUNTIME",
+      type: "RECONCILE_COMPLETED",
+      correlationId: getBroadcastCoordinatorRecord(gameId).correlationId,
+      detail: "STOP_RUNTIME",
     });
 
     return {
       gameId,
-      action:
-        "STOP_RUNTIME",
-      repaired:
-        health.healthy,
-      message:
-        health.healthy
-          ? "Unexpected active runtime was stopped and coordinator intent reset."
-          : "Runtime stop was attempted, but coordinator health still reports drift.",
+      action: "STOP_RUNTIME",
+      repaired: health.healthy,
+      message: health.healthy
+        ? "Unexpected active runtime was stopped and coordinator intent reset."
+        : "Runtime stop was attempted, but coordinator health still reports drift.",
       health,
-      snapshot:
-        getBroadcastCoordinatorSnapshot(
-          gameId,
-        ),
+      snapshot: getBroadcastCoordinatorSnapshot(gameId),
     };
   }
 
-  if (
-    ids.has(
-      "INTENT_GO_LIVE_RUNTIME_STOPPED",
-    ) &&
-    ids.has(
-      "INTENT_GO_LIVE_SESSION_NOT_ACTIVE",
-    )
-  ) {
+  if (ids.has("INTENT_GO_LIVE_RUNTIME_STOPPED") && ids.has("INTENT_GO_LIVE_SESSION_NOT_ACTIVE")) {
     setBroadcastCoordinatorIntent({
       gameId,
-      intent:
-        "IDLE",
-      lastError:
-        null,
+      intent: "IDLE",
+      lastError: null,
     });
 
-    const health =
-      evaluateBroadcastCoordinatorHealth(
-        gameId,
-      );
+    const health = evaluateBroadcastCoordinatorHealth(gameId);
 
     recordBroadcastCoordinatorAudit({
       gameId,
-      type:
-        "RECONCILE_COMPLETED",
-      correlationId:
-        getBroadcastCoordinatorRecord(
-          gameId,
-        ).correlationId,
-      detail:
-        "RESET_INTENT",
+      type: "RECONCILE_COMPLETED",
+      correlationId: getBroadcastCoordinatorRecord(gameId).correlationId,
+      detail: "RESET_INTENT",
     });
 
     return {
       gameId,
-      action:
-        "RESET_INTENT",
-      repaired:
-        health.healthy,
-      message:
-        health.healthy
-          ? "Stale GO_LIVE intent was reset to IDLE."
-          : "Coordinator intent was reset, but health still reports drift.",
+      action: "RESET_INTENT",
+      repaired: health.healthy,
+      message: health.healthy
+        ? "Stale GO_LIVE intent was reset to IDLE."
+        : "Coordinator intent was reset, but health still reports drift.",
       health,
-      snapshot:
-        getBroadcastCoordinatorSnapshot(
-          gameId,
-        ),
+      snapshot: getBroadcastCoordinatorSnapshot(gameId),
     };
   }
 
   recordBroadcastCoordinatorAudit({
     gameId,
-    type:
-      "RECONCILE_REFUSED",
-    correlationId:
-      getBroadcastCoordinatorRecord(
-        gameId,
-      ).correlationId,
-    detail:
-      "Coordinator drift is ambiguous and requires operator review.",
+    type: "RECONCILE_REFUSED",
+    correlationId: getBroadcastCoordinatorRecord(gameId).correlationId,
+    detail: "Coordinator drift is ambiguous and requires operator review.",
   });
 
   return {
     gameId,
-    action:
-      "REFUSE_AMBIGUOUS",
-    repaired:
-      false,
-    message:
-      "Coordinator drift is ambiguous and requires operator review.",
-    health:
-      before,
-    snapshot:
-      getBroadcastCoordinatorSnapshot(
-        gameId,
-      ),
+    action: "REFUSE_AMBIGUOUS",
+    repaired: false,
+    message: "Coordinator drift is ambiguous and requires operator review.",
+    health: before,
+    snapshot: getBroadcastCoordinatorSnapshot(gameId),
   };
 }
 
-
-export type BroadcastCoordinatorRetryState =
-  | "IDLE"
-  | "SCHEDULED"
-  | "RETRYING"
-  | "EXHAUSTED";
+export type BroadcastCoordinatorRetryState = "IDLE" | "SCHEDULED" | "RETRYING" | "EXHAUSTED";
 
 export type BroadcastCoordinatorRetry = {
   gameId: string;
@@ -877,32 +501,18 @@ export type BroadcastCoordinatorRetry = {
   lastError: string | null;
 };
 
-const coordinatorRetry =
-  new Map<
-    string,
-    BroadcastCoordinatorRetry
-  >();
+const coordinatorRetry = new Map<string, BroadcastCoordinatorRetry>();
 
-export function getBroadcastCoordinatorRetry(
-  gameId: string,
-): BroadcastCoordinatorRetry {
+export function getBroadcastCoordinatorRetry(gameId: string): BroadcastCoordinatorRetry {
   return (
-    coordinatorRetry.get(
+    coordinatorRetry.get(gameId) ?? {
       gameId,
-    ) ?? {
-      gameId,
-      state:
-        "IDLE",
-      attempts:
-        0,
-      maxAttempts:
-        3,
-      backoffSeconds:
-        10,
-      nextRetryAt:
-        null,
-      lastError:
-        null,
+      state: "IDLE",
+      attempts: 0,
+      maxAttempts: 3,
+      backoffSeconds: 10,
+      nextRetryAt: null,
+      lastError: null,
     }
   );
 }
@@ -912,51 +522,19 @@ export function configureBroadcastCoordinatorRetry(input: {
   maxAttempts?: number;
   backoffSeconds?: number;
 }): BroadcastCoordinatorRetry {
-  const current =
-    getBroadcastCoordinatorRetry(
-      input.gameId,
-    );
+  const current = getBroadcastCoordinatorRetry(input.gameId);
 
   const next: BroadcastCoordinatorRetry = {
     ...current,
-    maxAttempts:
-      Number.isFinite(
-        input.maxAttempts,
-      )
-        ? Math.max(
-            0,
-            Math.min(
-              10,
-              Math.floor(
-                Number(
-                  input.maxAttempts,
-                ),
-              ),
-            ),
-          )
-        : current.maxAttempts,
-    backoffSeconds:
-      Number.isFinite(
-        input.backoffSeconds,
-      )
-        ? Math.max(
-            1,
-            Math.min(
-              300,
-              Math.floor(
-                Number(
-                  input.backoffSeconds,
-                ),
-              ),
-            ),
-          )
-        : current.backoffSeconds,
+    maxAttempts: Number.isFinite(input.maxAttempts)
+      ? Math.max(0, Math.min(10, Math.floor(Number(input.maxAttempts))))
+      : current.maxAttempts,
+    backoffSeconds: Number.isFinite(input.backoffSeconds)
+      ? Math.max(1, Math.min(300, Math.floor(Number(input.backoffSeconds))))
+      : current.backoffSeconds,
   };
 
-  coordinatorRetry.set(
-    input.gameId,
-    next,
-  );
+  coordinatorRetry.set(input.gameId, next);
 
   return next;
 }
@@ -965,190 +543,109 @@ export function scheduleBroadcastCoordinatorRetry(
   gameId: string,
   error: string,
 ): BroadcastCoordinatorRetry {
-  const current =
-    getBroadcastCoordinatorRetry(
-      gameId,
-    );
+  const current = getBroadcastCoordinatorRetry(gameId);
 
-  if (
-    current.attempts >=
-    current.maxAttempts
-  ) {
+  if (current.attempts >= current.maxAttempts) {
     const exhausted: BroadcastCoordinatorRetry = {
       ...current,
-      state:
-        "EXHAUSTED",
-      nextRetryAt:
-        null,
-      lastError:
-        error,
+      state: "EXHAUSTED",
+      nextRetryAt: null,
+      lastError: error,
     };
 
-    coordinatorRetry.set(
-      gameId,
-      exhausted,
-    );
+    coordinatorRetry.set(gameId, exhausted);
 
     recordBroadcastCoordinatorAudit({
       gameId,
-      type:
-        "RETRY_EXHAUSTED",
-      correlationId:
-        getBroadcastCoordinatorRecord(
-          gameId,
-        ).correlationId,
-      detail:
-        error,
+      type: "RETRY_EXHAUSTED",
+      correlationId: getBroadcastCoordinatorRecord(gameId).correlationId,
+      detail: error,
     });
 
     return exhausted;
   }
 
-  const nextAttempt =
-    current.attempts +
-    1;
+  const nextAttempt = current.attempts + 1;
 
-  const nextRetryAt =
-    new Date(
-      Date.now() +
-        current.backoffSeconds *
-          1000 *
-          nextAttempt,
-    ).toISOString();
+  const nextRetryAt = new Date(
+    Date.now() + current.backoffSeconds * 1000 * nextAttempt,
+  ).toISOString();
 
   const scheduled: BroadcastCoordinatorRetry = {
     ...current,
-    state:
-      "SCHEDULED",
-    attempts:
-      nextAttempt,
+    state: "SCHEDULED",
+    attempts: nextAttempt,
     nextRetryAt,
-    lastError:
-      error,
+    lastError: error,
   };
 
-  coordinatorRetry.set(
-    gameId,
-    scheduled,
-  );
+  coordinatorRetry.set(gameId, scheduled);
 
   recordBroadcastCoordinatorAudit({
     gameId,
-    type:
-      "RETRY_SCHEDULED",
-    correlationId:
-      getBroadcastCoordinatorRecord(
-        gameId,
-      ).correlationId,
-    detail:
-      `Attempt ${nextAttempt}/${scheduled.maxAttempts} at ${nextRetryAt}: ${error}`,
+    type: "RETRY_SCHEDULED",
+    correlationId: getBroadcastCoordinatorRecord(gameId).correlationId,
+    detail: `Attempt ${nextAttempt}/${scheduled.maxAttempts} at ${nextRetryAt}: ${error}`,
   });
 
   return scheduled;
 }
 
-export async function executeBroadcastCoordinatorRetry(
-  gameId: string,
-): Promise<{
-  retry:
-    BroadcastCoordinatorRetry;
-  snapshot:
-    BroadcastCoordinatorSnapshot;
+export async function executeBroadcastCoordinatorRetry(gameId: string): Promise<{
+  retry: BroadcastCoordinatorRetry;
+  snapshot: BroadcastCoordinatorSnapshot;
 }> {
-  const current =
-    getBroadcastCoordinatorRetry(
-      gameId,
-    );
+  const current = getBroadcastCoordinatorRetry(gameId);
 
-  if (
-    current.state !==
-    "SCHEDULED"
-  ) {
-    throw new Error(
-      "Coordinator retry is not scheduled.",
-    );
+  if (current.state !== "SCHEDULED") {
+    throw new Error("Coordinator retry is not scheduled.");
   }
 
-  if (
-    current.nextRetryAt &&
-    Date.now() <
-      Date.parse(
-        current.nextRetryAt,
-      )
-  ) {
-    throw new Error(
-      "Coordinator retry backoff has not elapsed.",
-    );
+  if (current.nextRetryAt && Date.now() < Date.parse(current.nextRetryAt)) {
+    throw new Error("Coordinator retry backoff has not elapsed.");
   }
 
   const retrying: BroadcastCoordinatorRetry = {
     ...current,
-    state:
-      "RETRYING",
+    state: "RETRYING",
   };
 
-  coordinatorRetry.set(
-    gameId,
-    retrying,
-  );
+  coordinatorRetry.set(gameId, retrying);
 
   recordBroadcastCoordinatorAudit({
     gameId,
-    type:
-      "RETRY_ATTEMPTED",
-    correlationId:
-      getBroadcastCoordinatorRecord(
-        gameId,
-      ).correlationId,
-    detail:
-      `Attempt ${retrying.attempts}/${retrying.maxAttempts}`,
+    type: "RETRY_ATTEMPTED",
+    correlationId: getBroadcastCoordinatorRecord(gameId).correlationId,
+    detail: `Attempt ${retrying.attempts}/${retrying.maxAttempts}`,
   });
 
-  const preflight =
-    evaluateGameDayGoLivePreflight(
-      gameId,
-    );
+  const preflight = evaluateGameDayGoLivePreflight(gameId);
 
   if (!preflight.ready) {
-    const retry =
-      scheduleBroadcastCoordinatorRetry(
-        gameId,
-        "Final game-day go-live preflight is still blocked.",
-      );
+    const retry = scheduleBroadcastCoordinatorRetry(
+      gameId,
+      "Final game-day go-live preflight is still blocked.",
+    );
 
     return {
       retry,
-      snapshot:
-        getBroadcastCoordinatorSnapshot(
-          gameId,
-        ),
+      snapshot: getBroadcastCoordinatorSnapshot(gameId),
     };
   }
 
   const idle: BroadcastCoordinatorRetry = {
     ...retrying,
-    state:
-      "IDLE",
-    attempts:
-      0,
-    nextRetryAt:
-      null,
-    lastError:
-      null,
+    state: "IDLE",
+    attempts: 0,
+    nextRetryAt: null,
+    lastError: null,
   };
 
-  coordinatorRetry.set(
-    gameId,
-    idle,
-  );
+  coordinatorRetry.set(gameId, idle);
 
   return {
-    retry:
-      idle,
-    snapshot:
-      prepareBroadcastSession(
-        gameId,
-      ),
+    retry: idle,
+    snapshot: prepareBroadcastSession(gameId),
   };
 }
 
@@ -1208,10 +705,7 @@ export async function runBroadcastCoordinatorSupervisorTick(
     const repairable =
       ids.has("EMERGENCY_STOP_RUNTIME_ACTIVE") ||
       ids.has("INTENT_STOP_RUNTIME_ACTIVE") ||
-      (
-        ids.has("INTENT_GO_LIVE_RUNTIME_STOPPED") &&
-        ids.has("INTENT_GO_LIVE_SESSION_NOT_ACTIVE")
-      );
+      (ids.has("INTENT_GO_LIVE_RUNTIME_STOPPED") && ids.has("INTENT_GO_LIVE_SESSION_NOT_ACTIVE"));
 
     if (repairable) {
       const result = await reconcileBroadcastCoordinator(gameId);

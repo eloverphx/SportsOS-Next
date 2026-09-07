@@ -31,11 +31,7 @@ export type ProposedScheduleGame = {
 };
 
 export type ServerScheduleConflict = {
-  readonly code:
-    | "RINK_OVERLAP"
-    | "TEAM_OVERLAP"
-    | "TEAM_TURNAROUND"
-    | "MISSING_RINK";
+  readonly code: "RINK_OVERLAP" | "TEAM_OVERLAP" | "TEAM_TURNAROUND" | "MISSING_RINK";
   readonly severity: "ERROR" | "WARNING";
   readonly gameId: number;
   readonly relatedGameId: number | null;
@@ -82,9 +78,7 @@ function sharedTeamName(
   left: ServerScheduleGame | ProposedScheduleGame,
   right: ServerScheduleGame | ProposedScheduleGame,
 ): string | null {
-  const pairs: Array<
-    readonly [number | null, string, number | null, string]
-  > = [
+  const pairs: Array<readonly [number | null, string, number | null, string]> = [
     [left.homeTeamId, left.homeTeamName, right.homeTeamId, right.homeTeamName],
     [left.homeTeamId, left.homeTeamName, right.awayTeamId, right.awayTeamName],
     [left.awayTeamId, left.awayTeamName, right.homeTeamId, right.homeTeamName],
@@ -189,8 +183,6 @@ export function detectServerScheduleConflicts(
   });
 }
 
-export function hasHardScheduleConflicts(
-  conflicts: readonly ServerScheduleConflict[],
-): boolean {
+export function hasHardScheduleConflicts(conflicts: readonly ServerScheduleConflict[]): boolean {
   return conflicts.some((conflict) => conflict.severity === "ERROR");
 }

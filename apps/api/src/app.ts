@@ -45,27 +45,13 @@ import { registerGoLiveSessionRoutes } from "./routes/goLiveSessions.js";
 import { startBroadcastCoordinatorSupervisor } from "./services/broadcastSessionCoordinatorSupervisor.js";
 import { listActiveBroadcastGameIds } from "./services/broadcastSessionCoordinator.js";
 import { registerBroadcastSessionCoordinatorRoutes } from "./routes/broadcastSessionCoordinator.js";
-import {
-  securityHeadersPlugin,
-} from "./plugins/securityHeaders.js";
-import {
-  resolveTrustedProxyConfig,
-} from "./services/trustedProxyConfig.js";
-import {
-  getReverseProxyRouteContract,
-} from "./services/reverseProxyRouteContract.js";
-import {
-  evaluateTlsCertificateReadiness,
-} from "./services/tlsCertificateReadiness.js";
-import {
-  evaluateExternalHealthReadiness,
-} from "./services/externalHealthReadiness.js";
-import {
-  evaluateExternalRealtimeReadiness,
-} from "./services/externalRealtimeReadiness.js";
-import {
-  evaluatePublicExposureReadiness,
-} from "./services/publicExposureReadiness.js";
+import { securityHeadersPlugin } from "./plugins/securityHeaders.js";
+import { resolveTrustedProxyConfig } from "./services/trustedProxyConfig.js";
+import { getReverseProxyRouteContract } from "./services/reverseProxyRouteContract.js";
+import { evaluateTlsCertificateReadiness } from "./services/tlsCertificateReadiness.js";
+import { evaluateExternalHealthReadiness } from "./services/externalHealthReadiness.js";
+import { evaluateExternalRealtimeReadiness } from "./services/externalRealtimeReadiness.js";
+import { evaluatePublicExposureReadiness } from "./services/publicExposureReadiness.js";
 
 import { scoreboardDevicesRoutes } from "./routes/scoreboardDevices.js";
 import { registerOperationsIncidentRoutes } from "./routes/operationsIncidents.js";
@@ -83,84 +69,51 @@ export interface BuildAppOptions {
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const app = Fastify({
     trustProxy: resolveTrustedProxyConfig(process.env),
-  logger: options.logger ?? true,
+    logger: options.logger ?? true,
     bodyLimit: 6 * 1024 * 1024,
     requestIdHeader: "x-request-id",
   });
 
-  
-await securityHeadersPlugin(
-  app,
-);
+  await securityHeadersPlugin(app);
 
-await registerPlatformPlugins(app);
+  await registerPlatformPlugins(app);
 
-  
-  
-  app.get(
-    "/deployment/public-exposure-readiness",
-    async () => {
-      return {
-        success: true,
-        data:
-          evaluatePublicExposureReadiness(
-            process.env,
-          ),
-      };
-    },
-  );
+  app.get("/deployment/public-exposure-readiness", async () => {
+    return {
+      success: true,
+      data: evaluatePublicExposureReadiness(process.env),
+    };
+  });
 
-app.get(
-    "/deployment/external-realtime-readiness",
-    async () => {
-      return {
-        success: true,
-        data:
-          evaluateExternalRealtimeReadiness(
-            process.env,
-          ),
-      };
-    },
-  );
+  app.get("/deployment/external-realtime-readiness", async () => {
+    return {
+      success: true,
+      data: evaluateExternalRealtimeReadiness(process.env),
+    };
+  });
 
-app.get(
-    "/deployment/external-health-readiness",
-    async () => {
-      return {
-        success: true,
-        data:
-          evaluateExternalHealthReadiness(
-            process.env,
-          ),
-      };
-    },
-  );
+  app.get("/deployment/external-health-readiness", async () => {
+    return {
+      success: true,
+      data: evaluateExternalHealthReadiness(process.env),
+    };
+  });
 
-app.get(
-    "/deployment/tls-certificate-readiness",
-    async () => {
-      return {
-        success: true,
-        data:
-          evaluateTlsCertificateReadiness(
-            process.env,
-          ),
-      };
-    },
-  );
+  app.get("/deployment/tls-certificate-readiness", async () => {
+    return {
+      success: true,
+      data: evaluateTlsCertificateReadiness(process.env),
+    };
+  });
 
-app.get(
-    "/deployment/reverse-proxy-route-contract",
-    async () => {
-      return {
-        success: true,
-        data:
-          getReverseProxyRouteContract(),
-      };
-    },
-  );
+  app.get("/deployment/reverse-proxy-route-contract", async () => {
+    return {
+      success: true,
+      data: getReverseProxyRouteContract(),
+    };
+  });
 
-await app.register(scoreboardDevicesRoutes);
+  await app.register(scoreboardDevicesRoutes);
   await app.register(jwt, {
     secret: config.auth.jwtSecret,
   });
@@ -190,27 +143,21 @@ await app.register(scoreboardDevicesRoutes);
       });
 
       stopGameRuntimeSupervisor = startGameRuntimeSupervisor({
-        onError: (error) =>
-          app.log.error({ error }, "Game runtime supervisor failed"),
+        onError: (error) => app.log.error({ error }, "Game runtime supervisor failed"),
       });
 
-      stopBroadcastCoordinatorSupervisor =
-        startBroadcastCoordinatorSupervisor({
-          gameIds: () => listActiveBroadcastGameIds(),
-          intervalMs:
-            5000,
-          onError: (
-            error,
-            gameId,
-          ) =>
-            app.log.error(
-              {
-                error,
-                gameId,
-              },
-              "Broadcast coordinator supervisor tick failed",
-            ),
-        });
+      stopBroadcastCoordinatorSupervisor = startBroadcastCoordinatorSupervisor({
+        gameIds: () => listActiveBroadcastGameIds(),
+        intervalMs: 5000,
+        onError: (error, gameId) =>
+          app.log.error(
+            {
+              error,
+              gameId,
+            },
+            "Broadcast coordinator supervisor tick failed",
+          ),
+      });
     });
 
     app.addHook("onClose", async () => {
@@ -240,14 +187,14 @@ await app.register(scoreboardDevicesRoutes);
     await app.register(systemRoutes);
     await app.register(gameEngineTelemetryRoutes);
     await app.register(simulationRoutes);
-  await app.register(registerScoreboardDeviceCommissioningRoutes);
-  await app.register(registerGameDayHardwarePreflightRoutes);
-  await app.register(registerBroadcastSessionProfileRoutes);
-  await app.register(registerStreamDestinationProfileRoutes);
-  await app.register(registerEncoderSessionRoutes);
-  await app.register(registerGoLiveSessionRoutes);
-  await app.register(registerBroadcastSessionCoordinatorRoutes);
-  await app.register(registerOperationsStatusRoutes);
+    await app.register(registerScoreboardDeviceCommissioningRoutes);
+    await app.register(registerGameDayHardwarePreflightRoutes);
+    await app.register(registerBroadcastSessionProfileRoutes);
+    await app.register(registerStreamDestinationProfileRoutes);
+    await app.register(registerEncoderSessionRoutes);
+    await app.register(registerGoLiveSessionRoutes);
+    await app.register(registerBroadcastSessionCoordinatorRoutes);
+    await app.register(registerOperationsStatusRoutes);
   }
 
   await registerScoreboardDeviceEnrollmentRoutes(app);
@@ -257,21 +204,15 @@ await app.register(scoreboardDevicesRoutes);
   await registerScoreboardFirmwareDeploymentStatusRoutes(app);
   await registerScoreboardFirmwareRolloutRoutes(app);
 
-    await registerScoreboardControlAuditRoutes(app);
+  await registerScoreboardControlAuditRoutes(app);
 
   await registerScoreboardControlPolicyRoutes(app);
 
-  const stopScoreboardReadinessIncidentMonitor =
-    startScoreboardReadinessIncidentMonitor(
-      app,
-    );
+  const stopScoreboardReadinessIncidentMonitor = startScoreboardReadinessIncidentMonitor(app);
 
-  app.addHook(
-    "onClose",
-    async () => {
-      stopScoreboardReadinessIncidentMonitor();
-    },
-  );
+  app.addHook("onClose", async () => {
+    stopScoreboardReadinessIncidentMonitor();
+  });
 
-return app;
+  return app;
 }

@@ -3,27 +3,15 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 export type OperationsIncidentSeverity = "warning" | "critical";
-export type OperationsIncidentStatus =
-  | "open"
-  | "acknowledged"
-  | "resolved";
+export type OperationsIncidentStatus = "open" | "acknowledged" | "resolved";
 
-export type OperationsIncidentSource =
-  | "operations"
-  | "recovery"
-  | "reliability"
-  | "health";
+export type OperationsIncidentSource = "operations" | "recovery" | "reliability" | "health";
 
 export interface OperationsIncidentEvent {
   readonly eventId: string;
   readonly incidentId: string;
   readonly timestamp: string;
-  readonly type:
-    | "opened"
-    | "acknowledged"
-    | "resolved"
-    | "reopened"
-    | "updated";
+  readonly type: "opened" | "acknowledged" | "resolved" | "reopened" | "updated";
   readonly actor: string;
   readonly note: string | null;
   readonly payload: Record<string, unknown>;
@@ -67,10 +55,7 @@ export interface OpenOperationsIncidentInput {
 }
 
 const DEFAULT_DATA_ROOT = path.resolve(process.cwd(), "data");
-const DEFAULT_INCIDENT_ROOT = path.join(
-  DEFAULT_DATA_ROOT,
-  "operations-incidents",
-);
+const DEFAULT_INCIDENT_ROOT = path.join(DEFAULT_DATA_ROOT, "operations-incidents");
 
 function getIncidentRoot(): string {
   return process.env.SPORTSOS_OPERATIONS_INCIDENT_DIR
@@ -114,10 +99,7 @@ function parseJournal(raw: string): OperationsIncidentJournal {
 
   return {
     schemaVersion: 1,
-    generatedAt:
-      typeof parsed.generatedAt === "string"
-        ? parsed.generatedAt
-        : nowIso(),
+    generatedAt: typeof parsed.generatedAt === "string" ? parsed.generatedAt : nowIso(),
     incidents: parsed.incidents as OperationsIncident[],
   };
 }
@@ -127,9 +109,7 @@ export async function readOperationsIncidentJournal(): Promise<OperationsInciden
     return parseJournal(await readFile(getJournalPath(), "utf8"));
   } catch (error) {
     const code =
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error
+      typeof error === "object" && error !== null && "code" in error
         ? String((error as { code?: unknown }).code ?? "")
         : "";
 
@@ -141,28 +121,20 @@ export async function readOperationsIncidentJournal(): Promise<OperationsInciden
   }
 }
 
-async function persistJournal(
-  journal: OperationsIncidentJournal,
-): Promise<void> {
+async function persistJournal(journal: OperationsIncidentJournal): Promise<void> {
   const root = getIncidentRoot();
   const target = getJournalPath();
   const temp = `${target}.tmp-${process.pid}-${Date.now()}`;
 
   await mkdir(root, { recursive: true });
-  await writeFile(
-    temp,
-    `${JSON.stringify(journal, null, 2)}\n`,
-    {
-      encoding: "utf8",
-      mode: 0o640,
-    },
-  );
+  await writeFile(temp, `${JSON.stringify(journal, null, 2)}\n`, {
+    encoding: "utf8",
+    mode: 0o640,
+  });
   await rename(temp, target);
 }
 
-export async function listOperationsIncidents(): Promise<
-  readonly OperationsIncident[]
-> {
+export async function listOperationsIncidents(): Promise<readonly OperationsIncident[]> {
   const journal = await readOperationsIncidentJournal();
 
   return [...journal.incidents].sort((left, right) =>
@@ -174,10 +146,7 @@ export async function findOperationsIncidentById(
   incidentId: string,
 ): Promise<OperationsIncident | null> {
   const journal = await readOperationsIncidentJournal();
-  return (
-    journal.incidents.find((incident) => incident.id === incidentId) ??
-    null
-  );
+  return journal.incidents.find((incident) => incident.id === incidentId) ?? null;
 }
 
 export async function openOrUpdateOperationsIncident(
@@ -194,9 +163,7 @@ export async function openOrUpdateOperationsIncident(
   if (existingIndex >= 0) {
     const existing = journal.incidents[existingIndex];
     if (!existing) {
-      throw new Error(
-        "Operations incident index resolved without an incident.",
-      );
+      throw new Error("Operations incident index resolved without an incident.");
     }
 
     const reopened = existing.status === "resolved";
@@ -224,12 +191,8 @@ export async function openOrUpdateOperationsIncident(
       summary: input.summary,
       service: input.service ?? existing.service,
       lastSeenAt: observedAt,
-      acknowledgedAt: reopened
-        ? null
-        : existing.acknowledgedAt,
-      acknowledgedBy: reopened
-        ? null
-        : existing.acknowledgedBy,
+      acknowledgedAt: reopened ? null : existing.acknowledgedAt,
+      acknowledgedBy: reopened ? null : existing.acknowledgedBy,
       resolvedAt: reopened ? null : existing.resolvedAt,
       resolvedBy: reopened ? null : existing.resolvedBy,
       occurrences: existing.occurrences + 1,
@@ -296,7 +259,6 @@ export async function openOrUpdateOperationsIncident(
   return created;
 }
 
-
 // SPORTSOS_M34_6_INCIDENT_LIFECYCLE
 export interface OperationsIncidentLifecycleInput {
   actor: string;
@@ -315,9 +277,7 @@ async function mutateOperationsIncidentLifecycle(
   }
 
   const journal = await readOperationsIncidentJournal();
-  const index = journal.incidents.findIndex(
-    (incident) => incident.id === incidentId,
-  );
+  const index = journal.incidents.findIndex((incident) => incident.id === incidentId);
   if (index < 0) return null;
 
   const existing = journal.incidents[index];

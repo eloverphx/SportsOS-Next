@@ -1,7 +1,5 @@
 import { EnrollmentTrustPanel } from "./EnrollmentTrustPanel";
-import {
-  ScoreboardHardwareOperationsDashboard,
-} from "../../../components/scoreboards/ScoreboardHardwareOperationsDashboard";
+import { ScoreboardHardwareOperationsDashboard } from "../../../components/scoreboards/ScoreboardHardwareOperationsDashboard";
 import { PhysicalControlDiagnosticsPanel } from "./PhysicalControlDiagnosticsPanel";
 import { PhysicalControlPolicyPanel } from "./PhysicalControlPolicyPanel";
 import { ScoreboardCommissioningWizard } from "./ScoreboardCommissioningWizard";
@@ -18,19 +16,17 @@ export default function ScoreboardOperationsPage() {
           SportsOS Hardware Operations
         </div>
 
-        <h1 className="mt-2 text-3xl font-bold text-slate-100">
-          Scoreboard Hardware Operations
-        </h1>
+        <h1 className="mt-2 text-3xl font-bold text-slate-100">Scoreboard Hardware Operations</h1>
 
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-          Monitor physical and simulated scoreboards, manage game assignments,
-          review device readiness, and manually reconcile hardware to the latest
-          authoritative SportsOS game state.
+          Monitor physical and simulated scoreboards, manage game assignments, review device
+          readiness, and manually reconcile hardware to the latest authoritative SportsOS game
+          state.
         </p>
       </div>
 
       <ScoreboardHardwareOperationsDashboard />
-    
+
       <a
         href="/scoreboards/firmware"
         className="rounded-lg border border-slate-700 px-3 py-2 text-sm"
@@ -43,6 +39,6 @@ export default function ScoreboardOperationsPage() {
       <PhysicalControlDiagnosticsPanel />
       <BroadcastSessionPanel />
       <StreamDestinationPanel />
-</main>
+    </main>
   );
 }

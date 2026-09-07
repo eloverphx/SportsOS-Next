@@ -1,5 +1,4 @@
-export const SCOREBOARD_CONTROL_INPUT_PROTOCOL_VERSION =
-  1 as const;
+export const SCOREBOARD_CONTROL_INPUT_PROTOCOL_VERSION = 1 as const;
 
 export type ScoreboardControlInputType =
   | "SCORE_HOME_INCREMENT"
@@ -14,8 +13,7 @@ export type ScoreboardControlInputType =
   | "HORN_TRIGGER";
 
 export type ScoreboardControlInputEvent = {
-  protocolVersion:
-    typeof SCOREBOARD_CONTROL_INPUT_PROTOCOL_VERSION;
+  protocolVersion: typeof SCOREBOARD_CONTROL_INPUT_PROTOCOL_VERSION;
   inputId: string;
   deviceId: string;
   type: ScoreboardControlInputType;
@@ -23,10 +21,7 @@ export type ScoreboardControlInputEvent = {
   sequence: number;
 };
 
-export type ScoreboardControlInputDisposition =
-  | "ACCEPTED"
-  | "REJECTED"
-  | "IGNORED_DUPLICATE";
+export type ScoreboardControlInputDisposition = "ACCEPTED" | "REJECTED" | "IGNORED_DUPLICATE";
 
 export type ScoreboardControlInputAck = {
   inputId: string;
@@ -37,9 +32,7 @@ export type ScoreboardControlInputAck = {
   processedAt: string;
 };
 
-export function isScoreboardControlInputType(
-  value: string,
-): value is ScoreboardControlInputType {
+export function isScoreboardControlInputType(value: string): value is ScoreboardControlInputType {
   return (
     value === "SCORE_HOME_INCREMENT" ||
     value === "SCORE_HOME_DECREMENT" ||

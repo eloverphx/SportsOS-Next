@@ -1,18 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import {
-  scheduleMutationOrganizationIds,
-} from "../src/modules/games/schedule-mutations.js";
+import { scheduleMutationOrganizationIds } from "../src/modules/games/schedule-mutations.js";
 
 const mutations = readFileSync(
   new URL("../src/modules/games/schedule-mutations.ts", import.meta.url),
   "utf8",
 );
 
-const routes = readFileSync(
-  new URL("../src/modules/games/routes.ts", import.meta.url),
-  "utf8",
-);
+const routes = readFileSync(new URL("../src/modules/games/routes.ts", import.meta.url), "utf8");
 
 const enforcement = readFileSync(
   new URL("../src/modules/games/schedule-enforcement.ts", import.meta.url),
@@ -73,8 +68,6 @@ describe("Tournament scheduling 6.12 transaction/concurrency hardening", () => {
   });
 
   it("treats organization moves as schedule-relevant", () => {
-    expect(enforcement).toContain(
-      "existing.organizationId !== input.organizationId",
-    );
+    expect(enforcement).toContain("existing.organizationId !== input.organizationId");
   });
 });

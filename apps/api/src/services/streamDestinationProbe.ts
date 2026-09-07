@@ -9,10 +9,7 @@ export type StreamDestinationProbeResult = {
   error: string | null;
 };
 
-function defaultPort(
-  protocol: "RTMP" | "SRT",
-  url: URL,
-): number {
+function defaultPort(protocol: "RTMP" | "SRT", url: URL): number {
   if (url.port) {
     return Number(url.port);
   }
@@ -29,16 +26,12 @@ export async function probeStreamDestination(input: {
   ingestUrl: string;
   timeoutMs?: number;
 }): Promise<StreamDestinationProbeResult> {
-  const checkedAt =
-    new Date().toISOString();
+  const checkedAt = new Date().toISOString();
 
   let parsed: URL;
 
   try {
-    parsed =
-      new URL(
-        input.ingestUrl,
-      );
+    parsed = new URL(input.ingestUrl);
   } catch {
     return {
       reachable: false,
@@ -46,117 +39,71 @@ export async function probeStreamDestination(input: {
       port: null,
       checkedAt,
       latencyMs: null,
-      error:
-        "Invalid ingest URL.",
+      error: "Invalid ingest URL.",
     };
   }
 
-  const host =
-    parsed.hostname;
+  const host = parsed.hostname;
 
-  const port =
-    defaultPort(
-      input.protocol,
-      parsed,
-    );
+  const port = defaultPort(input.protocol, parsed);
 
-  const timeoutMs =
-    Math.max(
-      500,
-      Math.min(
-        input.timeoutMs ??
-          3000,
-        10000,
-      ),
-    );
+  const timeoutMs = Math.max(500, Math.min(input.timeoutMs ?? 3000, 10000));
 
-  const startedAt =
-    Date.now();
+  const startedAt = Date.now();
 
-  return await new Promise(
-    (resolve) => {
-      const socket =
-        net.createConnection({
-          host,
-          port,
-        });
+  return await new Promise((resolve) => {
+    const socket = net.createConnection({
+      host,
+      port,
+    });
 
-      let settled =
-        false;
+    let settled = false;
 
-      function finish(
-        result:
-          StreamDestinationProbeResult,
-      ) {
-        if (settled) {
-          return;
-        }
-
-        settled =
-          true;
-
-        socket.destroy();
-
-        resolve(
-          result,
-        );
+    function finish(result: StreamDestinationProbeResult) {
+      if (settled) {
+        return;
       }
 
-      socket.setTimeout(
-        timeoutMs,
-      );
+      settled = true;
 
-      socket.once(
-        "connect",
-        () => {
-          finish({
-            reachable:
-              true,
-            host,
-            port,
-            checkedAt,
-            latencyMs:
-              Date.now() -
-              startedAt,
-            error:
-              null,
-          });
-        },
-      );
+      socket.destroy();
 
-      socket.once(
-        "timeout",
-        () => {
-          finish({
-            reachable:
-              false,
-            host,
-            port,
-            checkedAt,
-            latencyMs:
-              null,
-            error:
-              "Connection probe timed out.",
-          });
-        },
-      );
+      resolve(result);
+    }
 
-      socket.once(
-        "error",
-        (error) => {
-          finish({
-            reachable:
-              false,
-            host,
-            port,
-            checkedAt,
-            latencyMs:
-              null,
-            error:
-              error.message,
-          });
-        },
-      );
-    },
-  );
+    socket.setTimeout(timeoutMs);
+
+    socket.once("connect", () => {
+      finish({
+        reachable: true,
+        host,
+        port,
+        checkedAt,
+        latencyMs: Date.now() - startedAt,
+        error: null,
+      });
+    });
+
+    socket.once("timeout", () => {
+      finish({
+        reachable: false,
+        host,
+        port,
+        checkedAt,
+        latencyMs: null,
+        error: "Connection probe timed out.",
+      });
+    });
+
+    socket.once("error", (error) => {
+      finish({
+        reachable: false,
+        host,
+        port,
+        checkedAt,
+        latencyMs: null,
+        error: error.message,
+      });
+    });
+  });
 }

@@ -39,21 +39,12 @@ export type ScoreboardDevicesResponse = {
   };
 };
 
-export function formatScoreboardClock(
-  remainingMs: number,
-): string {
-  const totalSeconds = Math.max(
-    0,
-    Math.floor(remainingMs / 1000),
-  );
-  const minutes = Math.floor(
-    totalSeconds / 60,
-  );
+export function formatScoreboardClock(remainingMs: number): string {
+  const totalSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
 
-  return `${minutes}:${seconds
-    .toString()
-    .padStart(2, "0")}`;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 export function scoreboardDeviceHealth(
@@ -63,7 +54,5 @@ export function scoreboardDeviceHealth(
     return "UNKNOWN";
   }
 
-  return device.presence.online
-    ? "ONLINE"
-    : "OFFLINE";
+  return device.presence.online ? "ONLINE" : "OFFLINE";
 }

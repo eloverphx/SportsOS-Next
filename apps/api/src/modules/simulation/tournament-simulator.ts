@@ -57,11 +57,7 @@ export interface SimulatedGameEvent {
   detail?: string;
 }
 
-function clampInt(
-  value: number,
-  minimum: number,
-  maximum: number,
-): number {
+function clampInt(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, Math.floor(value)));
 }
 
@@ -86,15 +82,8 @@ export function createSimulationRandom(seed: number): () => number {
   };
 }
 
-function randomInt(
-  random: () => number,
-  minimum: number,
-  maximumInclusive: number,
-): number {
-  return (
-    minimum +
-    Math.floor(random() * (maximumInclusive - minimum + 1))
-  );
+function randomInt(random: () => number, minimum: number, maximumInclusive: number): number {
+  return minimum + Math.floor(random() * (maximumInclusive - minimum + 1));
 }
 
 function makeTeamName(index: number): string {
@@ -145,11 +134,7 @@ export function normalizeTournamentSimulationConfig(
     playersPerTeam: clampInt(input.playersPerTeam ?? 15, 5, 30),
     regulationPeriods: clampInt(input.regulationPeriods ?? 3, 1, 6),
     periodLengthMs: clampInt(input.periodLengthMs ?? 900_000, 60_000, 3_600_000),
-    intermissionLengthMs: clampInt(
-      input.intermissionLengthMs ?? 600_000,
-      0,
-      3_600_000,
-    ),
+    intermissionLengthMs: clampInt(input.intermissionLengthMs ?? 600_000, 0, 3_600_000),
   };
 }
 
@@ -159,22 +144,18 @@ export function generateTournamentPlan(
   const config = normalizeTournamentSimulationConfig(input);
   const random = createSimulationRandom(config.seed);
 
-  const teams: SimulatedTeam[] = Array.from(
-    { length: config.teamCount },
-    (_, index) => ({
-      id: index + 1,
-      name: makeTeamName(index),
-      playerCount: config.playersPerTeam,
-    }),
-  );
+  const teams: SimulatedTeam[] = Array.from({ length: config.teamCount }, (_, index) => ({
+    id: index + 1,
+    name: makeTeamName(index),
+    playerCount: config.playersPerTeam,
+  }));
 
   const games: SimulatedGame[] = [];
   let round = 0;
 
   for (let index = 0; index < config.gameCount; index += 1) {
     const homeIndex = index % config.teamCount;
-    let awayIndex =
-      (index + 1 + round * 3) % config.teamCount;
+    let awayIndex = (index + 1 + round * 3) % config.teamCount;
 
     if (awayIndex === homeIndex) {
       awayIndex = (awayIndex + 1) % config.teamCount;
@@ -188,8 +169,7 @@ export function generateTournamentPlan(
       rink: (index % config.rinkCount) + 1,
       homeTeamId: teams[homeIndex]!.id,
       awayTeamId: teams[awayIndex]!.id,
-      scheduledOffsetMinutes:
-        Math.floor(index / config.rinkCount) * 90,
+      scheduledOffsetMinutes: Math.floor(index / config.rinkCount) * 90,
       expectedGoals,
       expectedPenalties,
     });
@@ -207,14 +187,8 @@ export function generateTournamentPlan(
     games,
     totals: {
       players: teams.reduce((sum, team) => sum + team.playerCount, 0),
-      expectedGoals: games.reduce(
-        (sum, game) => sum + game.expectedGoals,
-        0,
-      ),
-      expectedPenalties: games.reduce(
-        (sum, game) => sum + game.expectedPenalties,
-        0,
-      ),
+      expectedGoals: games.reduce((sum, game) => sum + game.expectedGoals, 0),
+      expectedPenalties: games.reduce((sum, game) => sum + game.expectedPenalties, 0),
     },
   };
 }
@@ -229,11 +203,7 @@ export function generateGameEventStream(
   let sequence = 1;
   let elapsed = 0;
 
-  const push = (
-    type: SimulatedGameEventType,
-    side?: "home" | "away",
-    detail?: string,
-  ): void => {
+  const push = (type: SimulatedGameEventType, side?: "home" | "away", detail?: string): void => {
     events.push({
       sequence,
       gameId: game.id,

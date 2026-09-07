@@ -1,8 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  applyGameEngineAction,
-  type GameEngineState,
-} from "../src/modules/games/engine.js";
+import { applyGameEngineAction, type GameEngineState } from "../src/modules/games/engine.js";
 
 const poolExecute = vi.fn();
 const applyGameScoringAction = vi.fn();
@@ -21,9 +18,7 @@ const { processAutomaticLifecycleTransitions } = await import(
   "../src/modules/games/runtime-supervisor.js"
 );
 
-function state(
-  overrides: Partial<GameEngineState> = {},
-): GameEngineState {
+function state(overrides: Partial<GameEngineState> = {}): GameEngineState {
   return {
     homeScore: 0,
     awayScore: 0,
@@ -60,12 +55,13 @@ describe("game engine stress and reliability", () => {
       }),
     );
 
-    const results = games.map((game, index) =>
-      applyGameEngineAction(game, {
-        action: "adjustScore",
-        side: index % 2 === 0 ? "home" : "away",
-        amount: 1,
-      }).state,
+    const results = games.map(
+      (game, index) =>
+        applyGameEngineAction(game, {
+          action: "adjustScore",
+          side: index % 2 === 0 ? "home" : "away",
+          amount: 1,
+        }).state,
     );
 
     for (let index = 0; index < games.length; index += 1) {
@@ -167,9 +163,7 @@ describe("game engine stress and reliability", () => {
       period: index % 2 === 0 ? 1 : 2,
     }));
 
-    poolExecute
-      .mockResolvedValueOnce([candidates])
-      .mockResolvedValueOnce([[]]);
+    poolExecute.mockResolvedValueOnce([candidates]).mockResolvedValueOnce([[]]);
 
     applyGameScoringAction.mockResolvedValue({
       game: {},
@@ -183,9 +177,7 @@ describe("game engine stress and reliability", () => {
 
     expect(applyGameScoringAction).toHaveBeenCalledTimes(100);
 
-    const commandIds = applyGameScoringAction.mock.calls.map(
-      (call) => call[2],
-    );
+    const commandIds = applyGameScoringAction.mock.calls.map((call) => call[2]);
 
     expect(new Set(commandIds).size).toBe(100);
   });
@@ -197,9 +189,7 @@ describe("game engine stress and reliability", () => {
       period: index % 2 === 0 ? 1 : 2,
     }));
 
-    poolExecute
-      .mockResolvedValueOnce([[]])
-      .mockResolvedValueOnce([candidates]);
+    poolExecute.mockResolvedValueOnce([[]]).mockResolvedValueOnce([candidates]);
 
     applyGameScoringAction.mockResolvedValue({
       game: {},
@@ -221,9 +211,7 @@ describe("game engine stress and reliability", () => {
       period: 1,
     }));
 
-    poolExecute
-      .mockResolvedValueOnce([candidates])
-      .mockResolvedValueOnce([[]]);
+    poolExecute.mockResolvedValueOnce([candidates]).mockResolvedValueOnce([[]]);
 
     applyGameScoringAction.mockResolvedValue(null);
 

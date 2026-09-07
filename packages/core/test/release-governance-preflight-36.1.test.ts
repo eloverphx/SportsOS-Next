@@ -1,22 +1,10 @@
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const preflight = fs.readFileSync(
-  "scripts/release-governance-preflight.sh",
-  "utf8",
-);
-const ci = fs.readFileSync(
-  ".github/workflows/ci.yml",
-  "utf8",
-);
-const dependabot = fs.readFileSync(
-  ".github/dependabot.yml",
-  "utf8",
-);
-const prTemplate = fs.readFileSync(
-  ".github/PULL_REQUEST_TEMPLATE.md",
-  "utf8",
-);
+const preflight = fs.readFileSync("scripts/release-governance-preflight.sh", "utf8");
+const ci = fs.readFileSync(".github/workflows/ci.yml", "utf8");
+const dependabot = fs.readFileSync(".github/dependabot.yml", "utf8");
+const prTemplate = fs.readFileSync(".github/PULL_REQUEST_TEMPLATE.md", "utf8");
 
 describe("Milestone 36.1 release governance baseline", () => {
   it("preserves least-privilege CI and the full repository verification path", () => {

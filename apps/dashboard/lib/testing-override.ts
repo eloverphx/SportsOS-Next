@@ -1,18 +1,12 @@
 export const SPORTSOS_TEST_OVERRIDE_STORAGE_KEY =
   "sportsos:tournament-game-operations:test-override";
 
-export const SPORTSOS_TEST_OVERRIDE_EVENT =
-  "sportsos:test-override-changed";
+export const SPORTSOS_TEST_OVERRIDE_EVENT = "sportsos:test-override-changed";
 
 export function isLocalTestingHost(hostname: string): boolean {
   const host = hostname.trim().toLowerCase();
 
-  if (
-    host === "localhost" ||
-    host === "127.0.0.1" ||
-    host === "::1" ||
-    host.endsWith(".local")
-  ) {
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1" || host.endsWith(".local")) {
     return true;
   }
 
@@ -31,14 +25,11 @@ export function isLocalTestingHost(hostname: string): boolean {
 
 export function canUseTestingOverride(hostname: string): boolean {
   return (
-    process.env.NEXT_PUBLIC_SPORTSOS_ENABLE_TEST_OVERRIDE === "true" ||
-    isLocalTestingHost(hostname)
+    process.env.NEXT_PUBLIC_SPORTSOS_ENABLE_TEST_OVERRIDE === "true" || isLocalTestingHost(hostname)
   );
 }
 
-export function readTestingOverride(
-  storage: Pick<Storage, "getItem">,
-): boolean {
+export function readTestingOverride(storage: Pick<Storage, "getItem">): boolean {
   return storage.getItem(SPORTSOS_TEST_OVERRIDE_STORAGE_KEY) === "enabled";
 }
 
@@ -50,9 +41,6 @@ export function writeTestingOverride(
   else storage.removeItem(SPORTSOS_TEST_OVERRIDE_STORAGE_KEY);
 }
 
-export function effectiveReadiness(
-  actualReady: boolean,
-  testingOverrideEnabled: boolean,
-): boolean {
+export function effectiveReadiness(actualReady: boolean, testingOverrideEnabled: boolean): boolean {
   return actualReady || testingOverrideEnabled;
 }

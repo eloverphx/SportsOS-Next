@@ -126,31 +126,23 @@ describe("accelerated tournament runner", () => {
   });
 
   it("produces stable event counts for the same seeded tournament", async () => {
-    const first = await runTournamentSimulation(
-      adapter(),
-      {
-        seed: 999,
-        rinkCount: 6,
-        teamCount: 24,
-        gameCount: 36,
-      },
-    );
+    const first = await runTournamentSimulation(adapter(), {
+      seed: 999,
+      rinkCount: 6,
+      teamCount: 24,
+      gameCount: 36,
+    });
 
-    const second = await runTournamentSimulation(
-      adapter(),
-      {
-        seed: 999,
-        rinkCount: 6,
-        teamCount: 24,
-        gameCount: 36,
-      },
-    );
+    const second = await runTournamentSimulation(adapter(), {
+      seed: 999,
+      rinkCount: 6,
+      teamCount: 24,
+      gameCount: 36,
+    });
 
     expect(first.games).toBe(second.games);
     expect(first.processedEvents).toBe(second.processedEvents);
-    expect(
-      first.results.map((item) => item.processedEvents),
-    ).toEqual(
+    expect(first.results.map((item) => item.processedEvents)).toEqual(
       second.results.map((item) => item.processedEvents),
     );
   });

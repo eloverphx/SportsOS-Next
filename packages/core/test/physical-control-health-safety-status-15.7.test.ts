@@ -1,24 +1,14 @@
-import {
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 
 describe("Milestone 15.7 physical control health / safety status", () => {
   const service = fs.readFileSync(
-    new URL(
-      "../../../apps/api/src/services/scoreboardPhysicalControlHealth.ts",
-      import.meta.url,
-    ),
+    new URL("../../../apps/api/src/services/scoreboardPhysicalControlHealth.ts", import.meta.url),
     "utf8",
   );
 
   const route = fs.readFileSync(
-    new URL(
-      "../../../apps/api/src/routes/scoreboardControlPolicy.ts",
-      import.meta.url,
-    ),
+    new URL("../../../apps/api/src/routes/scoreboardControlPolicy.ts", import.meta.url),
     "utf8",
   );
 

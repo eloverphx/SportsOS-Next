@@ -1,7 +1,4 @@
-import type {
-  BracketMatchup,
-  BracketSeed,
-} from "./tournament-bracket-seeding";
+import type { BracketMatchup, BracketSeed } from "./tournament-bracket-seeding";
 
 export type BracketMatchupResult = {
   matchupId: string;
@@ -22,11 +19,7 @@ export type BracketAdvancementResult = {
 function isFinalStatus(status: string): boolean {
   const normalized = status.trim().toUpperCase();
 
-  return (
-    normalized === "FINAL" ||
-    normalized === "COMPLETE" ||
-    normalized === "COMPLETED"
-  );
+  return normalized === "FINAL" || normalized === "COMPLETE" || normalized === "COMPLETED";
 }
 
 function winnerFromResult(
@@ -37,52 +30,31 @@ function winnerFromResult(
     return matchup.homeSeed ?? matchup.awaySeed ?? null;
   }
 
-  if (
-    !matchup.homeSeed ||
-    !matchup.awaySeed ||
-    !result ||
-    !isFinalStatus(result.status)
-  ) {
+  if (!matchup.homeSeed || !matchup.awaySeed || !result || !isFinalStatus(result.status)) {
     return null;
   }
 
-  if (
-    !Number.isFinite(result.homeScore) ||
-    !Number.isFinite(result.awayScore)
-  ) {
-    throw new Error(
-      `Invalid score for matchup ${matchup.id}.`,
-    );
+  if (!Number.isFinite(result.homeScore) || !Number.isFinite(result.awayScore)) {
+    throw new Error(`Invalid score for matchup ${matchup.id}.`);
   }
 
   if (result.homeScore === result.awayScore) {
     return null;
   }
 
-  return result.homeScore > result.awayScore
-    ? matchup.homeSeed
-    : matchup.awaySeed;
+  return result.homeScore > result.awayScore ? matchup.homeSeed : matchup.awaySeed;
 }
 
 export function advanceBracketRound(
   round: BracketMatchup[],
   results: BracketMatchupResult[],
 ): BracketAdvancementResult {
-  const resultsById = new Map(
-    results.map((result) => [
-      result.matchupId,
-      result,
-    ]),
-  );
+  const resultsById = new Map(results.map((result) => [result.matchupId, result]));
 
-  const resolvedRound: ResolvedBracketMatchup[] =
-    round.map((matchup) => ({
-      ...matchup,
-      winner: winnerFromResult(
-        matchup,
-        resultsById.get(matchup.id),
-      ),
-    }));
+  const resolvedRound: ResolvedBracketMatchup[] = round.map((matchup) => ({
+    ...matchup,
+    winner: winnerFromResult(matchup, resultsById.get(matchup.id)),
+  }));
 
   if (resolvedRound.length <= 1) {
     return {
@@ -93,11 +65,7 @@ export function advanceBracketRound(
 
   const nextRound: BracketMatchup[] = [];
 
-  for (
-    let index = 0;
-    index < resolvedRound.length;
-    index += 2
-  ) {
+  for (let index = 0; index < resolvedRound.length; index += 2) {
     const left = resolvedRound[index];
     const right = resolvedRound[index + 1];
 

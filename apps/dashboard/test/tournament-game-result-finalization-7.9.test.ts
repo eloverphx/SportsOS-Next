@@ -1,17 +1,11 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
-import {
-  buildFinalizedGameResult,
-  resultLabel,
-} from "../lib/tournament-game-result-finalization";
+import { buildFinalizedGameResult, resultLabel } from "../lib/tournament-game-result-finalization";
 
 describe("Milestone 7.9 game completion / result finalization", () => {
   it("uses the real finishGame lifecycle command", () => {
     const route = fs.readFileSync(
-      new URL(
-        "../app/api/tournament/game-operations/[gameId]/finalize/route.ts",
-        import.meta.url,
-      ),
+      new URL("../app/api/tournament/game-operations/[gameId]/finalize/route.ts", import.meta.url),
       "utf8",
     );
 

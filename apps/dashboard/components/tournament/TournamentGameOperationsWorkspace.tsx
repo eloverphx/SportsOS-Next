@@ -52,9 +52,7 @@ import {
 } from "../../lib/tournament-game-start-authorization";
 import { GameLiveTransitionControl } from "./GameLiveTransitionControl";
 import { GameResultFinalizationControl } from "./GameResultFinalizationControl";
-import {
-  buildTournamentOperationsSummary,
-} from "../../lib/tournament-operations-dashboard";
+import { buildTournamentOperationsSummary } from "../../lib/tournament-operations-dashboard";
 
 type LoadState = "idle" | "loading" | "ready" | "error";
 
@@ -73,11 +71,7 @@ function StatusBadge({ value }: { value: string }) {
   );
 }
 
-function ReadinessStateBadge({
-  state,
-}: {
-  state: PregameReadinessCheck["state"];
-}) {
+function ReadinessStateBadge({ state }: { state: PregameReadinessCheck["state"] }) {
   const label =
     state === "PASS"
       ? "Ready"
@@ -99,26 +93,18 @@ function ReadinessStateBadge({
   return <span className={`text-sm font-semibold ${className}`}>{label}</span>;
 }
 
-function PregameReadinessRow({
-  check,
-}: {
-  check: PregameReadinessCheck;
-}) {
+function PregameReadinessRow({ check }: { check: PregameReadinessCheck }) {
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-slate-200">
-              {check.label}
-            </span>
+            <span className="text-sm font-semibold text-slate-200">{check.label}</span>
             <span className="rounded-full border border-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-500">
               {check.severity}
             </span>
           </div>
-          <p className="mt-1 text-xs leading-5 text-slate-500">
-            {check.detail}
-          </p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">{check.detail}</p>
         </div>
         <ReadinessStateBadge state={check.state} />
       </div>
@@ -126,21 +112,13 @@ function PregameReadinessRow({
   );
 }
 
-function ReadinessRow({
-  label,
-  ready,
-}: {
-  label: string;
-  ready: boolean;
-}) {
+function ReadinessRow({ label, ready }: { label: string; ready: boolean }) {
   return (
     <div className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2">
       <span className="text-sm text-slate-300">{label}</span>
       <span
         className={
-          ready
-            ? "text-sm font-semibold text-emerald-400"
-            : "text-sm font-semibold text-amber-400"
+          ready ? "text-sm font-semibold text-emerald-400" : "text-sm font-semibold text-amber-400"
         }
       >
         {ready ? "Ready" : "Needs attention"}
@@ -184,38 +162,31 @@ export function TournamentGameOperationsWorkspace() {
   const [gameStartAuthorization, setGameStartAuthorization] =
     useState<GameStartAuthorizationRecord | null>(null);
   const [authorizationOperator, setAuthorizationOperator] = useState("");
-  const [authorizationOverrideReason, setAuthorizationOverrideReason] =
-    useState("");
+  const [authorizationOverrideReason, setAuthorizationOverrideReason] = useState("");
 
-  const [teamCheckInState, setTeamCheckInState] =
-    useState<TeamCheckInState>({
-      home: false,
-      away: false,
-    });
-  const [rosterLockState, setRosterLockState] =
-    useState<RosterLockState>({
-      home: false,
-      away: false,
-    });
-  const [officialsAssignment, setOfficialsAssignment] =
-    useState<OfficialsAssignmentState>({
-      referee1: "",
-      referee2: "",
-      linesman1: "",
-      linesman2: "",
-    });
+  const [teamCheckInState, setTeamCheckInState] = useState<TeamCheckInState>({
+    home: false,
+    away: false,
+  });
+  const [rosterLockState, setRosterLockState] = useState<RosterLockState>({
+    home: false,
+    away: false,
+  });
+  const [officialsAssignment, setOfficialsAssignment] = useState<OfficialsAssignmentState>({
+    referee1: "",
+    referee2: "",
+    linesman1: "",
+    linesman2: "",
+  });
 
   const [games, setGames] = useState<TournamentGameOperationsGame[]>([]);
-  const [selectedGame, setSelectedGame] =
-    useState<TournamentGameOperationsGame | null>(null);
+  const [selectedGame, setSelectedGame] = useState<TournamentGameOperationsGame | null>(null);
   const [gameId, setGameId] = useState("");
   const [listState, setListState] = useState<LoadState>("idle");
   const [gameState, setGameState] = useState<LoadState>("idle");
   const [message, setMessage] = useState<string | null>(null);
-  const [testingOverrideAvailable, setTestingOverrideAvailable] =
-    useState(false);
-  const [testingOverrideEnabled, setTestingOverrideEnabled] =
-    useState(false);
+  const [testingOverrideAvailable, setTestingOverrideAvailable] = useState(false);
+  const [testingOverrideEnabled, setTestingOverrideEnabled] = useState(false);
 
   const loadGame = useCallback(async (requestedGameId: string) => {
     const normalized = requestedGameId.trim();
@@ -251,35 +222,23 @@ export function TournamentGameOperationsWorkspace() {
     } catch (error) {
       setSelectedGame(null);
       setGameState("error");
-      setMessage(
-        error instanceof Error ? error.message : "Unable to load the game.",
-      );
+      setMessage(error instanceof Error ? error.message : "Unable to load the game.");
     }
   }, []);
 
   useEffect(() => {
     const available = canUseTestingOverride(window.location.hostname);
     setTestingOverrideAvailable(available);
-    setTestingOverrideEnabled(
-      available ? readTestingOverride(window.localStorage) : false,
-    );
+    setTestingOverrideEnabled(available ? readTestingOverride(window.localStorage) : false);
 
     const handleOverrideChange = () => {
-      setTestingOverrideEnabled(
-        available ? readTestingOverride(window.localStorage) : false,
-      );
+      setTestingOverrideEnabled(available ? readTestingOverride(window.localStorage) : false);
     };
 
-    window.addEventListener(
-      SPORTSOS_TEST_OVERRIDE_EVENT,
-      handleOverrideChange,
-    );
+    window.addEventListener(SPORTSOS_TEST_OVERRIDE_EVENT, handleOverrideChange);
 
     return () => {
-      window.removeEventListener(
-        SPORTSOS_TEST_OVERRIDE_EVENT,
-        handleOverrideChange,
-      );
+      window.removeEventListener(SPORTSOS_TEST_OVERRIDE_EVENT, handleOverrideChange);
     };
   }, []);
 
@@ -295,9 +254,7 @@ export function TournamentGameOperationsWorkspace() {
         });
 
         if (!response.ok) {
-          throw new Error(
-            `Scheduled game request failed with status ${response.status}.`,
-          );
+          throw new Error(`Scheduled game request failed with status ${response.status}.`);
         }
 
         const payload: unknown = await response.json();
@@ -308,9 +265,7 @@ export function TournamentGameOperationsWorkspace() {
         setGames(normalizedGames);
         setListState("ready");
 
-        const initialGameId = new URL(window.location.href).searchParams.get(
-          "gameId",
-        );
+        const initialGameId = new URL(window.location.href).searchParams.get("gameId");
 
         if (initialGameId) {
           setGameId(initialGameId);
@@ -319,11 +274,7 @@ export function TournamentGameOperationsWorkspace() {
       } catch (error) {
         if (!active) return;
         setListState("error");
-        setMessage(
-          error instanceof Error
-            ? error.message
-            : "Unable to load scheduled games.",
-        );
+        setMessage(error instanceof Error ? error.message : "Unable to load scheduled games.");
       }
     }
 
@@ -352,7 +303,7 @@ export function TournamentGameOperationsWorkspace() {
     return selectedReadiness;
   }, [selectedGame, selectedReadiness, testingOverrideEnabled]);
 
-    useEffect(() => {
+  useEffect(() => {
     if (!selectedGame || typeof window === "undefined") {
       setTeamCheckInState({
         home: false,
@@ -361,9 +312,7 @@ export function TournamentGameOperationsWorkspace() {
       return;
     }
 
-    setTeamCheckInState(
-      readTeamCheckIn(window.localStorage, selectedGame.id),
-    );
+    setTeamCheckInState(readTeamCheckIn(window.localStorage, selectedGame.id));
   }, [selectedGame]);
 
   useEffect(() => {
@@ -375,9 +324,7 @@ export function TournamentGameOperationsWorkspace() {
       return;
     }
 
-    setRosterLockState(
-      readRosterLockState(window.localStorage, selectedGame.id),
-    );
+    setRosterLockState(readRosterLockState(window.localStorage, selectedGame.id));
   }, [selectedGame]);
 
   useEffect(() => {
@@ -391,12 +338,7 @@ export function TournamentGameOperationsWorkspace() {
       return;
     }
 
-    setOfficialsAssignment(
-      readOfficialsAssignment(
-        window.localStorage,
-        selectedGame.id,
-      ),
-    );
+    setOfficialsAssignment(readOfficialsAssignment(window.localStorage, selectedGame.id));
   }, [selectedGame]);
 
   useEffect(() => {
@@ -407,38 +349,26 @@ export function TournamentGameOperationsWorkspace() {
       return;
     }
 
-    const existing = readGameStartAuthorization(
-      window.localStorage,
-      selectedGame.id,
-    );
+    const existing = readGameStartAuthorization(window.localStorage, selectedGame.id);
 
     setGameStartAuthorization(existing);
     setAuthorizationOperator(existing?.authorizedBy ?? "");
-    setAuthorizationOverrideReason(
-      existing?.overrideReason ?? "",
-    );
+    setAuthorizationOverrideReason(existing?.overrideReason ?? "");
   }, [selectedGame]);
 
-const pregameReadinessSummary = useMemo(
+  const pregameReadinessSummary = useMemo(
     () =>
       selectedGame
-        ? buildPregameReadinessSummary(
-            selectedGame,
-            testingOverrideEnabled,
-            {
-              teamCheckInReady:
-                areBothTeamsCheckedIn(teamCheckInState),
-              rosterLockReady:
-                areBothRostersLocked(rosterLockState),
-              officialsReady:
-                hasRequiredOfficials(officialsAssignment),
-            },
-          )
+        ? buildPregameReadinessSummary(selectedGame, testingOverrideEnabled, {
+            teamCheckInReady: areBothTeamsCheckedIn(teamCheckInState),
+            rosterLockReady: areBothRostersLocked(rosterLockState),
+            officialsReady: hasRequiredOfficials(officialsAssignment),
+          })
         : null,
     [officialsAssignment, selectedGame, rosterLockState, teamCheckInState, testingOverrideEnabled],
   );
 
-      const tournamentOperationsSummary = useMemo(() => {
+  const tournamentOperationsSummary = useMemo(() => {
     if (!pregameReadinessSummary) {
       return null;
     }
@@ -463,66 +393,35 @@ const pregameReadinessSummary = useMemo(
     teamCheckInState,
   ]);
 
-const updateTeamCheckIn = (
-    side: TeamCheckInSide,
-    checkedIn: boolean,
-  ) => {
+  const updateTeamCheckIn = (side: TeamCheckInSide, checkedIn: boolean) => {
     if (!selectedGame || typeof window === "undefined") {
       return;
     }
 
-    const nextState = setTeamCheckedIn(
-      teamCheckInState,
-      side,
-      checkedIn,
-    );
+    const nextState = setTeamCheckedIn(teamCheckInState, side, checkedIn);
 
     setTeamCheckInState(nextState);
-    writeTeamCheckIn(
-      window.localStorage,
-      selectedGame.id,
-      nextState,
-    );
+    writeTeamCheckIn(window.localStorage, selectedGame.id, nextState);
   };
 
-  const updateRosterLock = (
-    side: RosterLockSide,
-    locked: boolean,
-  ) => {
+  const updateRosterLock = (side: RosterLockSide, locked: boolean) => {
     if (!selectedGame || typeof window === "undefined") {
       return;
     }
 
     const checkedIn = teamCheckInState[side];
 
-    if (
-      locked &&
-      !canLockRoster(
-        checkedIn,
-        testingOverrideEnabled,
-      )
-    ) {
+    if (locked && !canLockRoster(checkedIn, testingOverrideEnabled)) {
       return;
     }
 
-    const nextState = setRosterLocked(
-      rosterLockState,
-      side,
-      locked,
-    );
+    const nextState = setRosterLocked(rosterLockState, side, locked);
 
     setRosterLockState(nextState);
-    writeRosterLockState(
-      window.localStorage,
-      selectedGame.id,
-      nextState,
-    );
+    writeRosterLockState(window.localStorage, selectedGame.id, nextState);
   };
 
-  const updateOfficialAssignment = (
-    field: keyof OfficialsAssignmentState,
-    value: string,
-  ) => {
+  const updateOfficialAssignment = (field: keyof OfficialsAssignmentState, value: string) => {
     if (!selectedGame || typeof window === "undefined") {
       return;
     }
@@ -533,19 +432,11 @@ const updateTeamCheckIn = (
     };
 
     setOfficialsAssignment(nextState);
-    writeOfficialsAssignment(
-      window.localStorage,
-      selectedGame.id,
-      nextState,
-    );
+    writeOfficialsAssignment(window.localStorage, selectedGame.id, nextState);
   };
 
   const authorizeGameStart = () => {
-    if (
-      !selectedGame ||
-      !pregameReadinessSummary ||
-      typeof window === "undefined"
-    ) {
+    if (!selectedGame || !pregameReadinessSummary || typeof window === "undefined") {
       return;
     }
 
@@ -558,10 +449,7 @@ const updateTeamCheckIn = (
       overrideReason: authorizationOverrideReason,
     });
 
-    writeGameStartAuthorization(
-      window.localStorage,
-      record,
-    );
+    writeGameStartAuthorization(window.localStorage, record);
 
     setGameStartAuthorization(record);
   };
@@ -571,15 +459,12 @@ const updateTeamCheckIn = (
       return;
     }
 
-    clearGameStartAuthorization(
-      window.localStorage,
-      selectedGame.id,
-    );
+    clearGameStartAuthorization(window.localStorage, selectedGame.id);
 
     setGameStartAuthorization(null);
   };
 
-const toggleTestingOverride = () => {
+  const toggleTestingOverride = () => {
     if (!testingOverrideAvailable) return;
 
     const next = !testingOverrideEnabled;
@@ -598,9 +483,9 @@ const toggleTestingOverride = () => {
           <StatusBadge value="Milestone 7.1" />
         </div>
         <p className="max-w-3xl text-sm text-slate-400">
-          Select a tournament game and review the operational context that will
-          drive pregame readiness, game start authorization, live scoring, and
-          finalization in the remaining Milestone 7 work.
+          Select a tournament game and review the operational context that will drive pregame
+          readiness, game start authorization, live scoring, and finalization in the remaining
+          Milestone 7 work.
         </p>
       </header>
 
@@ -616,9 +501,7 @@ const toggleTestingOverride = () => {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="font-semibold text-slate-100">
-                  Testing override
-                </h2>
+                <h2 className="font-semibold text-slate-100">Testing override</h2>
                 <span
                   data-testid="testing-override-status"
                   className={
@@ -631,10 +514,9 @@ const toggleTestingOverride = () => {
                 </span>
               </div>
               <p className="mt-1 max-w-3xl text-sm text-slate-400">
-                Local-development helper. When enabled, readiness gates added
-                during Milestone 7 may treat missing setup information as
-                satisfied so game workflows can be exercised before every
-                dependency is configured. Actual readiness remains visible.
+                Local-development helper. When enabled, readiness gates added during Milestone 7 may
+                treat missing setup information as satisfied so game workflows can be exercised
+                before every dependency is configured. Actual readiness remains visible.
               </p>
             </div>
 
@@ -648,26 +530,21 @@ const toggleTestingOverride = () => {
                   : "rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-200"
               }
             >
-              {testingOverrideEnabled
-                ? "Disable testing override"
-                : "Enable testing override"}
+              {testingOverrideEnabled ? "Disable testing override" : "Enable testing override"}
             </button>
           </div>
 
           {testingOverrideEnabled ? (
             <p className="mt-3 text-xs font-semibold text-amber-300">
-              TESTING OVERRIDE ACTIVE — missing readiness data may be bypassed.
-              This does not change the stored game data.
+              TESTING OVERRIDE ACTIVE — missing readiness data may be bypassed. This does not change
+              the stored game data.
             </p>
           ) : null}
         </div>
       ) : null}
 
       <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
-        <label
-          htmlFor="game-operations-select"
-          className="text-sm font-semibold text-slate-200"
-        >
+        <label htmlFor="game-operations-select" className="text-sm font-semibold text-slate-200">
           Scheduled game
         </label>
 
@@ -684,14 +561,11 @@ const toggleTestingOverride = () => {
             className="min-h-10 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 text-sm text-slate-100"
           >
             <option value="">
-              {listState === "loading"
-                ? "Loading scheduled games..."
-                : "Select a game"}
+              {listState === "loading" ? "Loading scheduled games..." : "Select a game"}
             </option>
             {games.map((game) => (
               <option key={game.id} value={game.id}>
-                {game.homeTeamName} vs {game.awayTeamName} —{" "}
-                {formatStart(game.scheduledStart)}
+                {game.homeTeamName} vs {game.awayTeamName} — {formatStart(game.scheduledStart)}
               </option>
             ))}
           </select>
@@ -744,8 +618,7 @@ const toggleTestingOverride = () => {
                     data-testid="game-operations-matchup"
                     className="mt-1 text-2xl font-bold text-slate-100"
                   >
-                    {selectedGame.homeTeamName} vs{" "}
-                    {selectedGame.awayTeamName}
+                    {selectedGame.homeTeamName} vs {selectedGame.awayTeamName}
                   </h2>
                 </div>
                 <StatusBadge value={selectedGame.status} />
@@ -753,12 +626,8 @@ const toggleTestingOverride = () => {
 
               <dl className="mt-5 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500">
-                    Game ID
-                  </dt>
-                  <dd className="mt-1 break-all text-sm text-slate-200">
-                    {selectedGame.id}
-                  </dd>
+                  <dt className="text-xs uppercase tracking-wide text-slate-500">Game ID</dt>
+                  <dd className="mt-1 break-all text-sm text-slate-200">{selectedGame.id}</dd>
                 </div>
                 <div>
                   <dt className="text-xs uppercase tracking-wide text-slate-500">
@@ -769,33 +638,25 @@ const toggleTestingOverride = () => {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500">
-                    Venue
-                  </dt>
+                  <dt className="text-xs uppercase tracking-wide text-slate-500">Venue</dt>
                   <dd className="mt-1 text-sm text-slate-200">
                     {selectedGame.venueName ?? "Not assigned"}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500">
-                    Rink
-                  </dt>
+                  <dt className="text-xs uppercase tracking-wide text-slate-500">Rink</dt>
                   <dd className="mt-1 text-sm text-slate-200">
                     {selectedGame.rinkName ?? "Not assigned"}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs uppercase tracking-wide text-slate-500">
-                    Scoring status
-                  </dt>
-                  <dd className="mt-1 text-sm text-slate-200">
-                    {selectedGame.scoringStatus}
-                  </dd>
+                  <dt className="text-xs uppercase tracking-wide text-slate-500">Scoring status</dt>
+                  <dd className="mt-1 text-sm text-slate-200">{selectedGame.scoringStatus}</dd>
                 </div>
               </dl>
             </div>
 
-                                    {tournamentOperationsSummary ? (
+            {tournamentOperationsSummary ? (
               <section
                 data-testid="tournament-operations-overview"
                 className="rounded-xl border border-slate-800 bg-slate-950/40 p-5"
@@ -836,16 +697,14 @@ const toggleTestingOverride = () => {
                       Current blockers
                     </div>
                     <div className="mt-2 grid gap-2 md:grid-cols-2">
-                      {tournamentOperationsSummary.blockers.map(
-                        (blocker) => (
-                          <div
-                            key={blocker}
-                            className="rounded-lg border border-amber-900/50 bg-amber-950/20 px-3 py-2 text-xs text-amber-200"
-                          >
-                            {blocker}
-                          </div>
-                        ),
-                      )}
+                      {tournamentOperationsSummary.blockers.map((blocker) => (
+                        <div
+                          key={blocker}
+                          className="rounded-lg border border-amber-900/50 bg-amber-950/20 px-3 py-2 text-xs text-amber-200"
+                        >
+                          {blocker}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ) : (
@@ -856,15 +715,13 @@ const toggleTestingOverride = () => {
               </section>
             ) : null}
 
-<section
+            <section
               data-testid="team-check-in-panel"
               className="rounded-xl border border-slate-800 bg-slate-950/40 p-5"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="font-semibold text-slate-100">
-                    Team check-in
-                  </h2>
+                  <h2 className="font-semibold text-slate-100">Team check-in</h2>
                   <p className="mt-1 text-xs text-slate-500">
                     Confirm each team has arrived and reported for this game.
                   </p>
@@ -877,9 +734,7 @@ const toggleTestingOverride = () => {
                       : "text-sm font-semibold text-amber-400"
                   }
                 >
-                  {areBothTeamsCheckedIn(teamCheckInState)
-                    ? "Both checked in"
-                    : "Waiting"}
+                  {areBothTeamsCheckedIn(teamCheckInState) ? "Both checked in" : "Waiting"}
                 </span>
               </div>
 
@@ -906,9 +761,7 @@ const toggleTestingOverride = () => {
                           <div className="text-xs uppercase tracking-wide text-slate-500">
                             {side}
                           </div>
-                          <div className="mt-1 font-semibold text-slate-200">
-                            {label}
-                          </div>
+                          <div className="mt-1 font-semibold text-slate-200">{label}</div>
                         </div>
 
                         <span
@@ -925,14 +778,10 @@ const toggleTestingOverride = () => {
                       <button
                         type="button"
                         data-testid={`team-check-in-${side}`}
-                        onClick={() =>
-                          updateTeamCheckIn(side, !checkedIn)
-                        }
+                        onClick={() => updateTeamCheckIn(side, !checkedIn)}
                         className="mt-4 w-full rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-900"
                       >
-                        {checkedIn
-                          ? "Undo check-in"
-                          : "Mark checked in"}
+                        {checkedIn ? "Undo check-in" : "Mark checked in"}
                       </button>
                     </div>
                   );
@@ -940,9 +789,8 @@ const toggleTestingOverride = () => {
               </div>
 
               <p className="mt-3 text-xs leading-5 text-slate-500">
-                Check-in is stored per game for local operations testing.
-                Testing override may bypass readiness, but it does not alter
-                either team's actual check-in state.
+                Check-in is stored per game for local operations testing. Testing override may
+                bypass readiness, but it does not alter either team's actual check-in state.
               </p>
             </section>
 
@@ -952,9 +800,7 @@ const toggleTestingOverride = () => {
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="font-semibold text-slate-100">
-                    Roster locking
-                  </h2>
+                  <h2 className="font-semibold text-slate-100">Roster locking</h2>
                   <p className="mt-1 text-xs text-slate-500">
                     Freeze each team's game roster after check-in.
                   </p>
@@ -967,9 +813,7 @@ const toggleTestingOverride = () => {
                       : "text-sm font-semibold text-amber-400"
                   }
                 >
-                  {areBothRostersLocked(rosterLockState)
-                    ? "Both locked"
-                    : "Pending"}
+                  {areBothRostersLocked(rosterLockState) ? "Both locked" : "Pending"}
                 </span>
               </div>
 
@@ -986,10 +830,7 @@ const toggleTestingOverride = () => {
                 ].map(({ side, label }) => {
                   const locked = rosterLockState[side];
                   const checkedIn = teamCheckInState[side];
-                  const lockAllowed = canLockRoster(
-                    checkedIn,
-                    testingOverrideEnabled,
-                  );
+                  const lockAllowed = canLockRoster(checkedIn, testingOverrideEnabled);
 
                   return (
                     <div
@@ -1001,9 +842,7 @@ const toggleTestingOverride = () => {
                           <div className="text-xs uppercase tracking-wide text-slate-500">
                             {side}
                           </div>
-                          <div className="mt-1 font-semibold text-slate-200">
-                            {label}
-                          </div>
+                          <div className="mt-1 font-semibold text-slate-200">{label}</div>
                           <div className="mt-1 text-xs text-slate-500">
                             {checkedIn
                               ? "Team checked in"
@@ -1028,9 +867,7 @@ const toggleTestingOverride = () => {
                         type="button"
                         data-testid={`roster-lock-${side}`}
                         disabled={!locked && !lockAllowed}
-                        onClick={() =>
-                          updateRosterLock(side, !locked)
-                        }
+                        onClick={() => updateRosterLock(side, !locked)}
                         className="mt-4 w-full rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {locked ? "Unlock roster" : "Lock roster"}
@@ -1041,9 +878,9 @@ const toggleTestingOverride = () => {
               </div>
 
               <p className="mt-3 text-xs leading-5 text-slate-500">
-                Roster locks are per-game operational state in Milestone 7.4.
-                Testing override may bypass the prerequisite check-in gate but
-                does not silently mark the roster as locked.
+                Roster locks are per-game operational state in Milestone 7.4. Testing override may
+                bypass the prerequisite check-in gate but does not silently mark the roster as
+                locked.
               </p>
             </section>
 
@@ -1053,9 +890,7 @@ const toggleTestingOverride = () => {
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="font-semibold text-slate-100">
-                    Officials assignment
-                  </h2>
+                  <h2 className="font-semibold text-slate-100">Officials assignment</h2>
                   <p className="mt-1 text-xs text-slate-500">
                     Assign the on-ice crew for this game.
                   </p>
@@ -1104,9 +939,7 @@ const toggleTestingOverride = () => {
                     className="rounded-lg border border-slate-800 bg-slate-950/60 p-4"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold text-slate-200">
-                        {label}
-                      </span>
+                      <span className="text-sm font-semibold text-slate-200">{label}</span>
                       <span className="text-[10px] uppercase tracking-wide text-slate-500">
                         {required ? "required" : "optional"}
                       </span>
@@ -1116,12 +949,7 @@ const toggleTestingOverride = () => {
                       type="text"
                       data-testid={`official-${field}`}
                       value={officialsAssignment[field]}
-                      onChange={(event) =>
-                        updateOfficialAssignment(
-                          field,
-                          event.target.value,
-                        )
-                      }
+                      onChange={(event) => updateOfficialAssignment(field, event.target.value)}
                       placeholder="Official name"
                       className="mt-3 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-slate-500"
                     />
@@ -1130,9 +958,9 @@ const toggleTestingOverride = () => {
               </div>
 
               <p className="mt-3 text-xs leading-5 text-slate-500">
-                Milestone 7.5 treats two assigned referees as the required
-                readiness threshold. Linesmen remain visible as optional crew
-                positions until tournament rules make them mandatory.
+                Milestone 7.5 treats two assigned referees as the required readiness threshold.
+                Linesmen remain visible as optional crew positions until tournament rules make them
+                mandatory.
               </p>
             </section>
 
@@ -1142,12 +970,10 @@ const toggleTestingOverride = () => {
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-semibold text-slate-100">
-                    Game start authorization
-                  </h2>
+                  <h2 className="font-semibold text-slate-100">Game start authorization</h2>
                   <p className="mt-1 text-xs leading-5 text-slate-500">
-                    Record operator approval after readiness review. This
-                    authorization does not itself transition the game to LIVE.
+                    Record operator approval after readiness review. This authorization does not
+                    itself transition the game to LIVE.
                   </p>
                 </div>
 
@@ -1159,9 +985,7 @@ const toggleTestingOverride = () => {
                       : "text-sm font-semibold text-amber-400"
                   }
                 >
-                  {gameStartAuthorization
-                    ? "Authorized"
-                    : "Not authorized"}
+                  {gameStartAuthorization ? "Authorized" : "Not authorized"}
                 </span>
               </div>
 
@@ -1186,8 +1010,7 @@ const toggleTestingOverride = () => {
 
                   {gameStartAuthorization.mode === "testing-override" ? (
                     <div className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/20 px-3 py-2 text-xs text-amber-300">
-                      Actual readiness was BLOCKED when authorization was
-                      recorded. Reason:{" "}
+                      Actual readiness was BLOCKED when authorization was recorded. Reason:{" "}
                       {gameStartAuthorization.overrideReason}
                     </div>
                   ) : null}
@@ -1211,16 +1034,13 @@ const toggleTestingOverride = () => {
                       type="text"
                       data-testid="game-start-authorization-operator"
                       value={authorizationOperator}
-                      onChange={(event) =>
-                        setAuthorizationOperator(event.target.value)
-                      }
+                      onChange={(event) => setAuthorizationOperator(event.target.value)}
                       placeholder="Operator name"
                       className="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-slate-500"
                     />
                   </label>
 
-                  {!pregameReadinessSummary?.actualReady &&
-                  testingOverrideEnabled ? (
+                  {!pregameReadinessSummary?.actualReady && testingOverrideEnabled ? (
                     <label className="block">
                       <span className="text-xs font-semibold uppercase tracking-wide text-amber-400">
                         Testing override reason
@@ -1229,9 +1049,7 @@ const toggleTestingOverride = () => {
                         type="text"
                         data-testid="game-start-authorization-override-reason"
                         value={authorizationOverrideReason}
-                        onChange={(event) =>
-                          setAuthorizationOverrideReason(event.target.value)
-                        }
+                        onChange={(event) => setAuthorizationOverrideReason(event.target.value)}
                         placeholder="Why is the readiness gate being bypassed?"
                         className="mt-2 w-full rounded-lg border border-amber-800/60 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-amber-500"
                       />
@@ -1245,13 +1063,10 @@ const toggleTestingOverride = () => {
                       !pregameReadinessSummary ||
                       !canAuthorizeGameStart({
                         authorizedBy: authorizationOperator,
-                        actualReady:
-                          pregameReadinessSummary.actualReady,
-                        effectiveReady:
-                          pregameReadinessSummary.effectiveReady,
+                        actualReady: pregameReadinessSummary.actualReady,
+                        effectiveReady: pregameReadinessSummary.effectiveReady,
                         testingOverrideEnabled,
-                        overrideReason:
-                          authorizationOverrideReason,
+                        overrideReason: authorizationOverrideReason,
                       })
                     }
                     onClick={authorizeGameStart}
@@ -1263,11 +1078,10 @@ const toggleTestingOverride = () => {
               )}
 
               <p className="mt-3 text-xs leading-5 text-slate-500">
-                Security boundary: this browser-side authorization is an
-                operations record only. Milestone 7.7 will require an
-                authenticated server-side transition before a game can become
-                LIVE; local testing override state will never be accepted as
-                server authority.
+                Security boundary: this browser-side authorization is an operations record only.
+                Milestone 7.7 will require an authenticated server-side transition before a game can
+                become LIVE; local testing override state will never be accepted as server
+                authority.
               </p>
             </section>
 
@@ -1277,19 +1091,13 @@ const toggleTestingOverride = () => {
               authorization={gameStartAuthorization}
             />
 
-            <GameResultFinalizationControl
-              gameId={selectedGame.id}
-            />
+            <GameResultFinalizationControl gameId={selectedGame.id} />
 
-<aside className="rounded-xl border border-slate-800 bg-slate-950/40 p-5">
+            <aside className="rounded-xl border border-slate-800 bg-slate-950/40 p-5">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="font-semibold text-slate-100">
-                    Pregame readiness
-                  </h2>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Actual vs effective readiness
-                  </p>
+                  <h2 className="font-semibold text-slate-100">Pregame readiness</h2>
+                  <p className="mt-1 text-xs text-slate-500">Actual vs effective readiness</p>
                 </div>
                 <span
                   data-testid="game-operations-readiness-count"
@@ -1316,9 +1124,7 @@ const toggleTestingOverride = () => {
                         : "mt-1 font-semibold text-red-400"
                     }
                   >
-                    {pregameReadinessSummary?.actualReady
-                      ? "READY"
-                      : "BLOCKED"}
+                    {pregameReadinessSummary?.actualReady ? "READY" : "BLOCKED"}
                   </div>
                 </div>
 
@@ -1332,9 +1138,7 @@ const toggleTestingOverride = () => {
                         : "mt-1 font-semibold text-red-400"
                     }
                   >
-                    {pregameReadinessSummary?.effectiveReady
-                      ? "READY"
-                      : "BLOCKED"}
+                    {pregameReadinessSummary?.effectiveReady ? "READY" : "BLOCKED"}
                   </div>
                 </div>
               </div>
@@ -1344,28 +1148,25 @@ const toggleTestingOverride = () => {
                   data-testid="pregame-testing-override-applied"
                   className="mt-3 rounded-lg border border-amber-800/60 bg-amber-950/20 px-3 py-2 text-xs font-semibold text-amber-300"
                 >
-                  Testing override is bypassing one or more required readiness
-                  failures. Actual readiness remains BLOCKED.
+                  Testing override is bypassing one or more required readiness failures. Actual
+                  readiness remains BLOCKED.
                 </p>
               ) : null}
 
               <p className="mt-4 text-xs leading-5 text-slate-500">
-                Actual game data is never changed by testing override. Later
-                Milestone 7 readiness gates will consume the same local testing
-                override so incomplete setup can be bypassed during development
-                while the real readiness state remains visible.
+                Actual game data is never changed by testing override. Later Milestone 7 readiness
+                gates will consume the same local testing override so incomplete setup can be
+                bypassed during development while the real readiness state remains visible.
               </p>
             </aside>
           </div>
 
           <div>
-            <h2 className="text-lg font-semibold text-slate-100">
-              Operator actions
-            </h2>
+            <h2 className="text-lg font-semibold text-slate-100">Operator actions</h2>
             <p className="mt-1 text-sm text-slate-400">
-              Action surfaces are visible now so the workspace structure is
-              stable, but mutations remain disabled until their owning
-              milestones implement authorization, validation, and auditing.
+              Action surfaces are visible now so the workspace structure is stable, but mutations
+              remain disabled until their owning milestones implement authorization, validation, and
+              auditing.
             </p>
 
             <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">

@@ -21,14 +21,11 @@ type LifecycleFinalizeResponse = {
   };
 };
 
-export function GameResultFinalizationControl({
-  gameId,
-}: Props) {
+export function GameResultFinalizationControl({ gameId }: Props) {
   const [pending, setPending] = useState(false);
   const [confirmation, setConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] =
-    useState<FinalizedGameResult | null>(null);
+  const [result, setResult] = useState<FinalizedGameResult | null>(null);
 
   const finalizeGame = async () => {
     if (!confirmation || pending || result) return;
@@ -45,10 +42,7 @@ export function GameResultFinalizationControl({
       const body = await response.text();
 
       if (!response.ok) {
-        throw new Error(
-          body ||
-            `Game finalization request failed (${response.status}).`,
-        );
+        throw new Error(body || `Game finalization request failed (${response.status}).`);
       }
 
       let parsed: LifecycleFinalizeResponse;
@@ -56,15 +50,11 @@ export function GameResultFinalizationControl({
       try {
         parsed = JSON.parse(body) as LifecycleFinalizeResponse;
       } catch {
-        throw new Error(
-          "Game finalization succeeded but the API response could not be parsed.",
-        );
+        throw new Error("Game finalization succeeded but the API response could not be parsed.");
       }
 
       if (!parsed.game) {
-        throw new Error(
-          "Game finalization response did not include the authoritative game.",
-        );
+        throw new Error("Game finalization response did not include the authoritative game.");
       }
 
       setResult(
@@ -77,11 +67,7 @@ export function GameResultFinalizationControl({
         }),
       );
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Game finalization failed.",
-      );
+      setError(cause instanceof Error ? cause.message : "Game finalization failed.");
     } finally {
       setPending(false);
     }
@@ -94,12 +80,10 @@ export function GameResultFinalizationControl({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-semibold text-slate-100">
-            Game completion
-          </h2>
+          <h2 className="font-semibold text-slate-100">Game completion</h2>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            Finalize the game through the authenticated lifecycle API and
-            capture the authoritative final result.
+            Finalize the game through the authenticated lifecycle API and capture the authoritative
+            final result.
           </p>
         </div>
 
@@ -121,10 +105,7 @@ export function GameResultFinalizationControl({
             Authoritative final result
           </div>
 
-          <div
-            data-testid="final-game-score"
-            className="mt-2 text-3xl font-bold text-slate-100"
-          >
+          <div data-testid="final-game-score" className="mt-2 text-3xl font-bold text-slate-100">
             {result.homeScore} – {result.awayScore}
           </div>
 
@@ -132,9 +113,7 @@ export function GameResultFinalizationControl({
             {resultLabel(result)}
             {" · "}
             status {result.status}
-            {result.gamePhase
-              ? ` · phase ${result.gamePhase}`
-              : ""}
+            {result.gamePhase ? ` · phase ${result.gamePhase}` : ""}
           </div>
         </div>
       ) : (
@@ -144,15 +123,13 @@ export function GameResultFinalizationControl({
               type="checkbox"
               data-testid="confirm-game-finalization"
               checked={confirmation}
-              onChange={(event) =>
-                setConfirmation(event.target.checked)
-              }
+              onChange={(event) => setConfirmation(event.target.checked)}
               className="mt-0.5"
             />
 
             <span className="text-xs leading-5 text-amber-200">
-              I have reviewed the scoreboard and understand this will request
-              the server's final game lifecycle transition.
+              I have reviewed the scoreboard and understand this will request the server's final
+              game lifecycle transition.
             </span>
           </label>
 
@@ -178,8 +155,8 @@ export function GameResultFinalizationControl({
       ) : null}
 
       <p className="mt-3 text-xs leading-5 text-slate-500">
-        The API remains authoritative. Invalid phase, permission, or lifecycle
-        transitions are rejected server-side.
+        The API remains authoritative. Invalid phase, permission, or lifecycle transitions are
+        rejected server-side.
       </p>
     </section>
   );

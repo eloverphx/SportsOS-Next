@@ -90,8 +90,7 @@ function conflictForGame(
   conflicts: readonly ScheduleConflict[],
 ): "ERROR" | "WARNING" | null {
   const related = conflicts.filter(
-    (conflict) =>
-      conflict.gameId === gameId || conflict.relatedGameId === gameId,
+    (conflict) => conflict.gameId === gameId || conflict.relatedGameId === gameId,
   );
 
   if (related.some((conflict) => conflict.severity === "ERROR")) return "ERROR";
@@ -105,14 +104,12 @@ export function TournamentScheduleTimeline({ games }: Props) {
       games
         .filter(
           (game) =>
-            game.status !== "CANCELED" &&
-            Number.isFinite(new Date(game.scheduledStart).getTime()),
+            game.status !== "CANCELED" && Number.isFinite(new Date(game.scheduledStart).getTime()),
         )
         .slice()
         .sort(
           (left, right) =>
-            new Date(left.scheduledStart).getTime() -
-            new Date(right.scheduledStart).getTime(),
+            new Date(left.scheduledStart).getTime() - new Date(right.scheduledStart).getTime(),
         ),
     [games],
   );
@@ -135,9 +132,7 @@ export function TournamentScheduleTimeline({ games }: Props) {
     if (!availableDays.length) return;
 
     if (!availableDays.includes(selectedDay)) {
-      setSelectedDay(
-        availableDays.includes(todayKey) ? todayKey : (availableDays[0] ?? todayKey),
-      );
+      setSelectedDay(availableDays.includes(todayKey) ? todayKey : (availableDays[0] ?? todayKey));
     }
   }, [availableDays, selectedDay, todayKey]);
 
@@ -182,9 +177,7 @@ export function TournamentScheduleTimeline({ games }: Props) {
     if (!targetGame || dayKey(targetGame.scheduledStart) !== selectedDay) return;
 
     const frame = window.requestAnimationFrame(() => {
-      const element = document.getElementById(
-        `director-timeline-game-${targetGameId}`,
-      );
+      const element = document.getElementById(`director-timeline-game-${targetGameId}`);
 
       element?.scrollIntoView({
         behavior: "smooth",
@@ -196,10 +189,7 @@ export function TournamentScheduleTimeline({ games }: Props) {
     return () => window.cancelAnimationFrame(frame);
   }, [activeGames, selectedDay, targetGameId]);
 
-  const conflicts = useMemo(
-    () => detectScheduleConflicts(dayGames),
-    [dayGames],
-  );
+  const conflicts = useMemo(() => detectScheduleConflicts(dayGames), [dayGames]);
 
   const rinks = useMemo(() => {
     const map = new Map<string, ScheduleGame[]>();
@@ -216,8 +206,7 @@ export function TournamentScheduleTimeline({ games }: Props) {
         rink,
         games: rinkGames.sort(
           (left, right) =>
-            new Date(left.scheduledStart).getTime() -
-            new Date(right.scheduledStart).getTime(),
+            new Date(left.scheduledStart).getTime() - new Date(right.scheduledStart).getTime(),
         ),
       }))
       .sort((left, right) => left.rink.localeCompare(right.rink));
@@ -227,9 +216,7 @@ export function TournamentScheduleTimeline({ games }: Props) {
     if (!dayGames.length) return null;
 
     const starts = dayGames.map((game) => new Date(game.scheduledStart).getTime());
-    const ends = dayGames.map(
-      (game) => new Date(game.scheduledStart).getTime() + durationMs(game),
-    );
+    const ends = dayGames.map((game) => new Date(game.scheduledStart).getTime() + durationMs(game));
 
     const min = floorToHalfHour(Math.min(...starts) - 30 * 60_000);
     const max = ceilToHalfHour(Math.max(...ends) + 30 * 60_000);
@@ -244,28 +231,17 @@ export function TournamentScheduleTimeline({ games }: Props) {
     if (!range) return [];
 
     const values: number[] = [];
-    for (
-      let value = range.startMs;
-      value <= range.endMs;
-      value += MINUTES_PER_TICK * 60_000
-    ) {
+    for (let value = range.startMs; value <= range.endMs; value += MINUTES_PER_TICK * 60_000) {
       values.push(value);
     }
     return values;
   }, [range]);
 
   const totalWidth = range
-    ? Math.max(
-        720,
-        ((range.endMs - range.startMs) / (60 * 60_000)) * PIXELS_PER_HOUR,
-      )
+    ? Math.max(720, ((range.endMs - range.startMs) / (60 * 60_000)) * PIXELS_PER_HOUR)
     : 720;
 
-  const showNow =
-    range &&
-    selectedDay === todayKey &&
-    now >= range.startMs &&
-    now <= range.endMs;
+  const showNow = range && selectedDay === todayKey && now >= range.startMs && now <= range.endMs;
 
   const nowLeft = showNow
     ? ((now - range.startMs) / (range.endMs - range.startMs)) * totalWidth
@@ -283,18 +259,15 @@ export function TournamentScheduleTimeline({ games }: Props) {
           <span className="tournamentTimelineEyebrow">Schedule visualization</span>
           <h2 id="tournament-timeline-heading">Rink timeline</h2>
           <p>
-            Read-only tournament-day view. Each block uses the game&apos;s configured
-            expected duration and links directly to Scorekeeper.
+            Read-only tournament-day view. Each block uses the game&apos;s configured expected
+            duration and links directly to Scorekeeper.
           </p>
         </div>
 
         {availableDays.length > 0 ? (
           <label className="tournamentTimelineDaySelect">
             Tournament day
-            <select
-              value={selectedDay}
-              onChange={(event) => setSelectedDay(event.target.value)}
-            >
+            <select value={selectedDay} onChange={(event) => setSelectedDay(event.target.value)}>
               {availableDays.map((key) => (
                 <option key={key} value={key}>
                   {displayDay(key)}
@@ -312,28 +285,31 @@ export function TournamentScheduleTimeline({ games }: Props) {
       ) : (
         <>
           <div className="tournamentTimelineLegend" aria-label="Timeline legend">
-            <span><i className="scheduled" /> Scheduled</span>
-            <span><i className="live" /> Live</span>
-            <span><i className="final" /> Final</span>
-            <span><i className="warning" /> Warning</span>
-            <span><i className="error" /> Hard conflict</span>
+            <span>
+              <i className="scheduled" /> Scheduled
+            </span>
+            <span>
+              <i className="live" /> Live
+            </span>
+            <span>
+              <i className="final" /> Final
+            </span>
+            <span>
+              <i className="warning" /> Warning
+            </span>
+            <span>
+              <i className="error" /> Hard conflict
+            </span>
           </div>
 
           <div className="tournamentTimelineScroller">
-            <div
-              className="tournamentTimelineCanvas"
-              style={{ width: `${totalWidth + 170}px` }}
-            >
+            <div className="tournamentTimelineCanvas" style={{ width: `${totalWidth + 170}px` }}>
               <div className="tournamentTimelineAxis">
                 <div className="tournamentTimelineRinkLabel">Rink</div>
-                <div
-                  className="tournamentTimelineTimeAxis"
-                  style={{ width: `${totalWidth}px` }}
-                >
+                <div className="tournamentTimelineTimeAxis" style={{ width: `${totalWidth}px` }}>
                   {ticks.map((tick) => {
                     const left =
-                      ((tick - range.startMs) / (range.endMs - range.startMs)) *
-                      totalWidth;
+                      ((tick - range.startMs) / (range.endMs - range.startMs)) * totalWidth;
 
                     return (
                       <div
@@ -352,17 +328,15 @@ export function TournamentScheduleTimeline({ games }: Props) {
                 <div className="tournamentTimelineRow" key={rink}>
                   <div className="tournamentTimelineRinkLabel">
                     <strong>{rink}</strong>
-                    <small>{rinkGames.length} game{rinkGames.length === 1 ? "" : "s"}</small>
+                    <small>
+                      {rinkGames.length} game{rinkGames.length === 1 ? "" : "s"}
+                    </small>
                   </div>
 
-                  <div
-                    className="tournamentTimelineTrack"
-                    style={{ width: `${totalWidth}px` }}
-                  >
+                  <div className="tournamentTimelineTrack" style={{ width: `${totalWidth}px` }}>
                     {ticks.map((tick) => {
                       const left =
-                        ((tick - range.startMs) / (range.endMs - range.startMs)) *
-                        totalWidth;
+                        ((tick - range.startMs) / (range.endMs - range.startMs)) * totalWidth;
 
                       return (
                         <i
@@ -386,9 +360,7 @@ export function TournamentScheduleTimeline({ games }: Props) {
                       const start = new Date(game.scheduledStart).getTime();
                       const end = start + durationMs(game);
                       const left =
-                        ((start - range.startMs) /
-                          (range.endMs - range.startMs)) *
-                        totalWidth;
+                        ((start - range.startMs) / (range.endMs - range.startMs)) * totalWidth;
                       const width = Math.max(
                         MIN_BLOCK_WIDTH,
                         ((end - start) / (range.endMs - range.startMs)) * totalWidth,

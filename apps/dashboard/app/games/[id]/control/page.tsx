@@ -160,12 +160,7 @@ export default function ScorekeeperConsolePage() {
       );
     }
 
-    return effectiveClock(
-      game.clockRemainingMs,
-      game.clockRunning,
-      game.clockStartedAt,
-      now,
-    );
+    return effectiveClock(game.clockRemainingMs, game.clockRunning, game.clockStartedAt, now);
   }, [game, now]);
 
   const load = useCallback(async () => {
@@ -175,19 +170,14 @@ export default function ScorekeeperConsolePage() {
     }
 
     try {
-      const [
-        gameResponse,
-        eventResponse,
-        playerResponse,
-        penaltyResponse,
-        deviceResponse,
-      ] = await Promise.all([
-        api<{ game: Game }>(`/games/${gameId}`),
-        api<{ events: GameEvent[] }>(`/games/${gameId}/events`),
-        api<{ players: PlayerOption[] }>(`/games/${gameId}/event-players`),
-        api<{ penalties: ActivePenalty[] }>(`/games/${gameId}/penalties`),
-        api<{ devices: Device[] }>("/scoreboard-devices"),
-      ]);
+      const [gameResponse, eventResponse, playerResponse, penaltyResponse, deviceResponse] =
+        await Promise.all([
+          api<{ game: Game }>(`/games/${gameId}`),
+          api<{ events: GameEvent[] }>(`/games/${gameId}/events`),
+          api<{ players: PlayerOption[] }>(`/games/${gameId}/event-players`),
+          api<{ penalties: ActivePenalty[] }>(`/games/${gameId}/penalties`),
+          api<{ devices: Device[] }>("/scoreboard-devices"),
+        ]);
 
       setGame(gameResponse.game);
       setEvents(eventResponse.events);
@@ -505,7 +495,11 @@ export default function ScorekeeperConsolePage() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") {
+      if (
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT"
+      ) {
         return;
       }
 
@@ -551,22 +545,14 @@ export default function ScorekeeperConsolePage() {
   const activeEvents = events.filter((event) => !event.voidedAt);
   const onlineDevices = devices.filter((device) => device.status === "ONLINE").length;
   const goalTeamId =
-    goalSide === "home"
-      ? game.homeTeamId
-      : goalSide === "away"
-        ? game.awayTeamId
-        : null;
+    goalSide === "home" ? game.homeTeamId : goalSide === "away" ? game.awayTeamId : null;
   const goalPlayers = players.filter((player) => player.teamId === goalTeamId);
   const assist1Players = goalPlayers.filter((player) => String(player.id) !== scorerId);
   const assist2Players = goalPlayers.filter(
     (player) => String(player.id) !== scorerId && String(player.id) !== assist1Id,
   );
   const penaltyTeamId =
-    penaltySide === "home"
-      ? game.homeTeamId
-      : penaltySide === "away"
-        ? game.awayTeamId
-        : null;
+    penaltySide === "home" ? game.homeTeamId : penaltySide === "away" ? game.awayTeamId : null;
   const penaltyPlayers = players.filter((player) => player.teamId === penaltyTeamId);
   const visiblePenalties = activePenalties
     .map((penalty) => ({
@@ -645,10 +631,7 @@ export default function ScorekeeperConsolePage() {
       key: "scoreboard-online",
       label: "Scoreboard online",
       ready: devices.length === 0 || onlineDevices > 0,
-      detail:
-        devices.length === 0
-          ? "Not required"
-          : `${onlineDevices}/${devices.length} online`,
+      detail: devices.length === 0 ? "Not required" : `${onlineDevices}/${devices.length} online`,
     },
     {
       key: "overlay",
@@ -665,8 +648,7 @@ export default function ScorekeeperConsolePage() {
   ];
 
   const requiredReady = requiredReadiness.every((item) => item.ready);
-  const pregameVisible =
-    game.status === "SCHEDULED" || game.gamePhase === "PREGAME";
+  const pregameVisible = game.status === "SCHEDULED" || game.gamePhase === "PREGAME";
 
   const goalEvents = activeEvents.filter((event) => event.type === "GOAL");
   const penaltyEvents = activeEvents.filter((event) => event.type === "PENALTY");
@@ -690,8 +672,12 @@ export default function ScorekeeperConsolePage() {
         <header className={styles.topbar}>
           <div>
             <span className={styles.eyebrow}>Live scorekeeper</span>
-            <h1>{game.homeTeamName} vs {game.awayTeamName}</h1>
-            <p>{game.venue || game.organizationName} · {game.seasonName}</p>
+            <h1>
+              {game.homeTeamName} vs {game.awayTeamName}
+            </h1>
+            <p>
+              {game.venue || game.organizationName} · {game.seasonName}
+            </p>
           </div>
 
           <div className={styles.topActions}>
@@ -734,12 +720,16 @@ export default function ScorekeeperConsolePage() {
               <article>
                 <span>Goals</span>
                 <strong>{goalEvents.length}</strong>
-                <small>{homeGoals.length} home · {awayGoals.length} away</small>
+                <small>
+                  {homeGoals.length} home · {awayGoals.length} away
+                </small>
               </article>
               <article>
                 <span>Penalties</span>
                 <strong>{penaltyEvents.length}</strong>
-                <small>{homePenalties.length} home · {awayPenalties.length} away</small>
+                <small>
+                  {homePenalties.length} home · {awayPenalties.length} away
+                </small>
               </article>
               <article>
                 <span>Recorded events</span>
@@ -749,7 +739,9 @@ export default function ScorekeeperConsolePage() {
               <article>
                 <span>Active penalties</span>
                 <strong>{visiblePenalties.length}</strong>
-                <small>{visiblePenalties.length === 0 ? "All cleared" : "Review before leaving"}</small>
+                <small>
+                  {visiblePenalties.length === 0 ? "All cleared" : "Review before leaving"}
+                </small>
               </article>
             </div>
 
@@ -763,7 +755,9 @@ export default function ScorekeeperConsolePage() {
                     <div className={styles.recapRow} key={event.id}>
                       <div>
                         <strong>{sideLabel(game, event.side)}</strong>
-                        <span>P{event.period} · {formatClock(event.clockRemainingMs)}</span>
+                        <span>
+                          P{event.period} · {formatClock(event.clockRemainingMs)}
+                        </span>
                       </div>
                       <div>
                         <strong>
@@ -786,7 +780,9 @@ export default function ScorekeeperConsolePage() {
                     <div className={styles.recapRow} key={event.id}>
                       <div>
                         <strong>{sideLabel(game, event.side)}</strong>
-                        <span>P{event.period} · {formatClock(event.clockRemainingMs)}</span>
+                        <span>
+                          P{event.period} · {formatClock(event.clockRemainingMs)}
+                        </span>
                       </div>
                       <div>
                         <strong>{event.penaltyCode || "Penalty"}</strong>
@@ -820,8 +816,8 @@ export default function ScorekeeperConsolePage() {
                 <span className={styles.eyebrow}>Pregame</span>
                 <h2>Game-day readiness</h2>
                 <p>
-                  Required checks must be green before SportsOS will start the game.
-                  Recommended checks can be bypassed when operating manually.
+                  Required checks must be green before SportsOS will start the game. Recommended
+                  checks can be bypassed when operating manually.
                 </p>
               </div>
 
@@ -891,11 +887,7 @@ export default function ScorekeeperConsolePage() {
                 className={styles.startGameButton}
                 disabled={!requiredReady || busy || game.status !== "SCHEDULED"}
                 onClick={() => {
-                  if (
-                    window.confirm(
-                      `Start ${game.homeTeamName} vs ${game.awayTeamName}?`,
-                    )
-                  ) {
+                  if (window.confirm(`Start ${game.homeTeamName} vs ${game.awayTeamName}?`)) {
                     void startGame();
                   }
                 }}
@@ -955,10 +947,30 @@ export default function ScorekeeperConsolePage() {
             </button>
 
             <div className={styles.clockAdjustments}>
-              <button disabled={!canScore || busy || inIntermission} onClick={() => void score({ action: "adjustClock", amountMs: -1000 })}>−1s</button>
-              <button disabled={!canScore || busy || inIntermission} onClick={() => void score({ action: "adjustClock", amountMs: 1000 })}>+1s</button>
-              <button disabled={!canScore || busy || inIntermission} onClick={() => void score({ action: "adjustClock", amountMs: -10000 })}>−10s</button>
-              <button disabled={!canScore || busy || inIntermission} onClick={() => void score({ action: "adjustClock", amountMs: 10000 })}>+10s</button>
+              <button
+                disabled={!canScore || busy || inIntermission}
+                onClick={() => void score({ action: "adjustClock", amountMs: -1000 })}
+              >
+                −1s
+              </button>
+              <button
+                disabled={!canScore || busy || inIntermission}
+                onClick={() => void score({ action: "adjustClock", amountMs: 1000 })}
+              >
+                +1s
+              </button>
+              <button
+                disabled={!canScore || busy || inIntermission}
+                onClick={() => void score({ action: "adjustClock", amountMs: -10000 })}
+              >
+                −10s
+              </button>
+              <button
+                disabled={!canScore || busy || inIntermission}
+                onClick={() => void score({ action: "adjustClock", amountMs: 10000 })}
+              >
+                +10s
+              </button>
             </div>
 
             {displayedClockMs === 0 && game.status !== "FINAL" ? (
@@ -968,9 +980,16 @@ export default function ScorekeeperConsolePage() {
                 ) : (
                   <>
                     {game.overtimeEnabled ? (
-                      <button onClick={() => void score({ action: "startOvertime" })}>START OVERTIME</button>
+                      <button onClick={() => void score({ action: "startOvertime" })}>
+                        START OVERTIME
+                      </button>
                     ) : null}
-                    <button className={styles.dangerButton} onClick={() => void score({ action: "finishGame" })}>FINAL</button>
+                    <button
+                      className={styles.dangerButton}
+                      onClick={() => void score({ action: "finishGame" })}
+                    >
+                      FINAL
+                    </button>
                   </>
                 )}
               </div>
@@ -1098,13 +1117,13 @@ export default function ScorekeeperConsolePage() {
               </div>
 
               <div className={styles.goalSummary}>
-                <strong>{penaltyCode} · {penaltyMinutes}:00</strong>
+                <strong>
+                  {penaltyCode} · {penaltyMinutes}:00
+                </strong>
                 <span>
                   {penaltyPlayerId
                     ? playerLabel(
-                        penaltyPlayers.find(
-                          (player) => String(player.id) === penaltyPlayerId,
-                        )!,
+                        penaltyPlayers.find((player) => String(player.id) === penaltyPlayerId)!,
                       )
                     : "Unassigned player"}
                 </span>
@@ -1163,7 +1182,8 @@ export default function ScorekeeperConsolePage() {
 
               {goalTeamId === null ? (
                 <p className={styles.modalNotice}>
-                  This is an external team without a SportsOS roster. You can record the goal unassigned.
+                  This is an external team without a SportsOS roster. You can record the goal
+                  unassigned.
                 </p>
               ) : goalPlayers.length === 0 ? (
                 <p className={styles.modalNotice}>
@@ -1283,9 +1303,7 @@ export default function ScorekeeperConsolePage() {
             <div>
               <span className={styles.eyebrow}>Game completion</span>
               <h2>Close out this game</h2>
-              <p>
-                Pause the game clock and confirm the final score before finishing.
-              </p>
+              <p>Pause the game clock and confirm the final score before finishing.</p>
             </div>
 
             <button
@@ -1382,7 +1400,9 @@ export default function ScorekeeperConsolePage() {
                       <span>{sideLabel(game, event.side)}</span>
                     </div>
                     <div>
-                      <span>P{event.period} · {formatClock(event.clockRemainingMs)}</span>
+                      <span>
+                        P{event.period} · {formatClock(event.clockRemainingMs)}
+                      </span>
                       <span>
                         {event.playerName
                           ? `${event.playerJerseyNumber ? `#${event.playerJerseyNumber} ` : ""}${event.playerName}`
@@ -1414,7 +1434,13 @@ export default function ScorekeeperConsolePage() {
               </div>
               <div>
                 <span>Scoreboard devices</span>
-                <strong className={onlineDevices === devices.length && devices.length > 0 ? styles.good : styles.neutral}>
+                <strong
+                  className={
+                    onlineDevices === devices.length && devices.length > 0
+                      ? styles.good
+                      : styles.neutral
+                  }
+                >
                   {onlineDevices}/{devices.length} ONLINE
                 </strong>
               </div>

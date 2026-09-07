@@ -1,11 +1,7 @@
 import type { RowDataPacket } from "mysql2/promise";
 import { pool } from "../../infrastructure/database.js";
 
-export type EngineGameState =
-  | "HEALTHY"
-  | "TRANSITION_PENDING"
-  | "OPERATOR_REQUIRED"
-  | "WARNING";
+export type EngineGameState = "HEALTHY" | "TRANSITION_PENDING" | "OPERATOR_REQUIRED" | "WARNING";
 
 export interface EngineWarning {
   code: string;
@@ -241,8 +237,7 @@ export async function getGameEngineTelemetry(
   recentTransitions: EngineTransitionHistoryItem[];
 }> {
   const params: number[] = [];
-  const organizationFilter =
-    organizationId === undefined ? "" : "AND g.organization_id = ?";
+  const organizationFilter = organizationId === undefined ? "" : "AND g.organization_id = ?";
 
   if (organizationId !== undefined) params.push(organizationId);
 
@@ -308,9 +303,7 @@ export async function getGameEngineTelemetry(
 
   return {
     status:
-      summary.operatorRequired > 0 ||
-      summary.warnings > 0 ||
-      summary.transitionPending > 0
+      summary.operatorRequired > 0 || summary.warnings > 0 || summary.transitionPending > 0
         ? "attention"
         : "healthy",
     summary,

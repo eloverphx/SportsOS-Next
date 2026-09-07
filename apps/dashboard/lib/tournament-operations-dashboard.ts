@@ -1,8 +1,4 @@
-export type TournamentOperationsStage =
-  | "PREGAME"
-  | "AUTHORIZED"
-  | "LIVE"
-  | "FINAL";
+export type TournamentOperationsStage = "PREGAME" | "AUTHORIZED" | "LIVE" | "FINAL";
 
 export type TournamentOperationsSummaryInput = {
   actualReady: boolean;
@@ -41,9 +37,7 @@ export function buildTournamentOperationsSummary(
 
   const completedSteps = steps.filter(Boolean).length;
   const totalSteps = steps.length;
-  const completionPercent = Math.round(
-    (completedSteps / totalSteps) * 100,
-  );
+  const completionPercent = Math.round((completedSteps / totalSteps) * 100);
 
   const blockers: string[] = [];
 

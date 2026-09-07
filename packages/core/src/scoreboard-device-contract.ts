@@ -1,10 +1,6 @@
 export const SCOREBOARD_DEVICE_PROTOCOL_VERSION = 1 as const;
 
-export type ScoreboardDeviceConnectionState =
-  | "OFFLINE"
-  | "CONNECTING"
-  | "ONLINE"
-  | "DEGRADED";
+export type ScoreboardDeviceConnectionState = "OFFLINE" | "CONNECTING" | "ONLINE" | "DEGRADED";
 
 export type ScoreboardDeviceClockState = {
   remainingMs: number;
@@ -61,16 +57,10 @@ export type ScoreboardDeviceCommand =
       protocolVersion: typeof SCOREBOARD_DEVICE_PROTOCOL_VERSION;
       commandId: string;
       type: "SYNC_STATE";
-      snapshot: Omit<
-        ScoreboardDeviceSnapshot,
-        "connectionState" | "updatedAt"
-      >;
+      snapshot: Omit<ScoreboardDeviceSnapshot, "connectionState" | "updatedAt">;
     };
 
-function assertNonNegativeInteger(
-  value: number,
-  label: string,
-): void {
+function assertNonNegativeInteger(value: number, label: string): void {
   if (!Number.isInteger(value) || value < 0) {
     throw new Error(`${label} must be a non-negative integer.`);
   }
@@ -79,13 +69,8 @@ function assertNonNegativeInteger(
 export function validateScoreboardDeviceCommand(
   command: ScoreboardDeviceCommand,
 ): ScoreboardDeviceCommand {
-  if (
-    command.protocolVersion !==
-    SCOREBOARD_DEVICE_PROTOCOL_VERSION
-  ) {
-    throw new Error(
-      "Unsupported scoreboard device protocol version.",
-    );
+  if (command.protocolVersion !== SCOREBOARD_DEVICE_PROTOCOL_VERSION) {
+    throw new Error("Unsupported scoreboard device protocol version.");
   }
 
   if (!command.commandId.trim()) {
@@ -102,24 +87,14 @@ export function validateScoreboardDeviceCommand(
       return command;
 
     case "SET_CLOCK":
-      if (
-        !Number.isFinite(command.remainingMs) ||
-        command.remainingMs < 0
-      ) {
-        throw new Error(
-          "remainingMs must be a non-negative number.",
-        );
+      if (!Number.isFinite(command.remainingMs) || command.remainingMs < 0) {
+        throw new Error("remainingMs must be a non-negative number.");
       }
       return command;
 
     case "SET_PERIOD":
-      if (
-        command.period !== null &&
-        (!Number.isInteger(command.period) || command.period < 1)
-      ) {
-        throw new Error(
-          "period must be null or a positive integer.",
-        );
+      if (command.period !== null && (!Number.isInteger(command.period) || command.period < 1)) {
+        throw new Error("period must be null or a positive integer.");
       }
       return command;
 
@@ -127,22 +102,14 @@ export function validateScoreboardDeviceCommand(
       return command;
 
     case "SYNC_STATE":
-      assertNonNegativeInteger(
-        command.snapshot.homeScore,
-        "homeScore",
-      );
-      assertNonNegativeInteger(
-        command.snapshot.awayScore,
-        "awayScore",
-      );
+      assertNonNegativeInteger(command.snapshot.homeScore, "homeScore");
+      assertNonNegativeInteger(command.snapshot.awayScore, "awayScore");
 
       if (
         !Number.isFinite(command.snapshot.clock.remainingMs) ||
         command.snapshot.clock.remainingMs < 0
       ) {
-        throw new Error(
-          "remainingMs must be a non-negative number.",
-        );
+        throw new Error("remainingMs must be a non-negative number.");
       }
 
       return command;
@@ -150,37 +117,23 @@ export function validateScoreboardDeviceCommand(
 }
 
 export function buildScoreboardDeviceSnapshot(
-  input: Omit<
-    ScoreboardDeviceSnapshot,
-    "protocolVersion" | "updatedAt"
-  > & {
+  input: Omit<ScoreboardDeviceSnapshot, "protocolVersion" | "updatedAt"> & {
     updatedAt?: Date;
   },
 ): ScoreboardDeviceSnapshot {
   assertNonNegativeInteger(input.homeScore, "homeScore");
   assertNonNegativeInteger(input.awayScore, "awayScore");
 
-  if (
-    !Number.isFinite(input.clock.remainingMs) ||
-    input.clock.remainingMs < 0
-  ) {
-    throw new Error(
-      "remainingMs must be a non-negative number.",
-    );
+  if (!Number.isFinite(input.clock.remainingMs) || input.clock.remainingMs < 0) {
+    throw new Error("remainingMs must be a non-negative number.");
   }
 
-  if (
-    input.period !== null &&
-    (!Number.isInteger(input.period) || input.period < 1)
-  ) {
-    throw new Error(
-      "period must be null or a positive integer.",
-    );
+  if (input.period !== null && (!Number.isInteger(input.period) || input.period < 1)) {
+    throw new Error("period must be null or a positive integer.");
   }
 
   return {
-    protocolVersion:
-      SCOREBOARD_DEVICE_PROTOCOL_VERSION,
+    protocolVersion: SCOREBOARD_DEVICE_PROTOCOL_VERSION,
     deviceId: input.deviceId,
     gameId: input.gameId,
     connectionState: input.connectionState,
@@ -189,8 +142,6 @@ export function buildScoreboardDeviceSnapshot(
     period: input.period,
     clock: input.clock,
     hornActive: input.hornActive,
-    updatedAt: (
-      input.updatedAt ?? new Date()
-    ).toISOString(),
+    updatedAt: (input.updatedAt ?? new Date()).toISOString(),
   };
 }

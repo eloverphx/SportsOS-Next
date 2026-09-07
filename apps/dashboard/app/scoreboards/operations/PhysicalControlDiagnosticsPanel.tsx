@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type AuditRecord = {
   auditId: string;
@@ -13,42 +9,29 @@ type AuditRecord = {
   inputId: string;
   inputType: string;
   sequence: number;
-  disposition:
-    | "ACCEPTED"
-    | "REJECTED"
-    | "IGNORED_DUPLICATE"
-    | "EXECUTION_FAILED";
+  disposition: "ACCEPTED" | "REJECTED" | "IGNORED_DUPLICATE" | "EXECUTION_FAILED";
   error: string | null;
   createdAt: string;
 };
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://192.168.5.3:4001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://192.168.5.3:4001";
 
 export function PhysicalControlDiagnosticsPanel() {
-  const [records, setRecords] =
-    useState<AuditRecord[]>([]);
-  const [loading, setLoading] =
-    useState(true);
+  const [records, setRecords] = useState<AuditRecord[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
-        const response =
-          await fetch(
-            `${API_BASE}/scoreboard-control-audit?limit=50`,
-            { cache: "no-store" },
-          );
-        const json =
-          await response.json();
+        const response = await fetch(`${API_BASE}/scoreboard-control-audit?limit=50`, {
+          cache: "no-store",
+        });
+        const json = await response.json();
 
         if (!cancelled) {
-          setRecords(
-            json?.data?.records ?? [],
-          );
+          setRecords(json?.data?.records ?? []);
         }
       } finally {
         if (!cancelled) {
@@ -59,13 +42,9 @@ export function PhysicalControlDiagnosticsPanel() {
 
     void load();
 
-    const interval =
-      window.setInterval(
-        () => {
-          void load();
-        },
-        5000,
-      );
+    const interval = window.setInterval(() => {
+      void load();
+    }, 5000);
 
     return () => {
       cancelled = true;
@@ -73,45 +52,29 @@ export function PhysicalControlDiagnosticsPanel() {
     };
   }, []);
 
-  const stats =
-    useMemo(() => {
-      const accepted =
-        records.filter(
-          (record) =>
-            record.disposition ===
-            "ACCEPTED",
-        ).length;
+  const stats = useMemo(() => {
+    const accepted = records.filter((record) => record.disposition === "ACCEPTED").length;
 
-      const rejected =
-        records.filter(
-          (record) =>
-            record.disposition ===
-              "REJECTED" ||
-            record.disposition ===
-              "EXECUTION_FAILED",
-        ).length;
+    const rejected = records.filter(
+      (record) => record.disposition === "REJECTED" || record.disposition === "EXECUTION_FAILED",
+    ).length;
 
-      const duplicates =
-        records.filter(
-          (record) =>
-            record.disposition ===
-            "IGNORED_DUPLICATE",
-        ).length;
+    const duplicates = records.filter(
+      (record) => record.disposition === "IGNORED_DUPLICATE",
+    ).length;
 
-      return {
-        accepted,
-        rejected,
-        duplicates,
-      };
-    }, [records]);
+    return {
+      accepted,
+      rejected,
+      duplicates,
+    };
+  }, [records]);
 
   return (
     <section className="mt-8 rounded-xl border border-slate-800 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold">
-            Physical Control Diagnostics
-          </h2>
+          <h2 className="text-xl font-semibold">Physical Control Diagnostics</h2>
           <p className="mt-1 text-sm text-slate-400">
             Recent ESP32 button input decisions and execution results.
           </p>
@@ -131,13 +94,9 @@ export function PhysicalControlDiagnosticsPanel() {
       </div>
 
       {loading ? (
-        <p className="mt-4 text-sm text-slate-500">
-          Loading physical control audit…
-        </p>
+        <p className="mt-4 text-sm text-slate-500">Loading physical control audit…</p>
       ) : records.length === 0 ? (
-        <p className="mt-4 text-sm text-slate-500">
-          No physical control events recorded yet.
-        </p>
+        <p className="mt-4 text-sm text-slate-500">No physical control events recorded yet.</p>
       ) : (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -152,33 +111,16 @@ export function PhysicalControlDiagnosticsPanel() {
               </tr>
             </thead>
             <tbody>
-              {records.map(
-                (record) => (
-                  <tr
-                    key={record.auditId}
-                    className="border-t border-slate-800"
-                  >
-                    <td className="py-3 pr-4 text-xs text-slate-400">
-                      {record.createdAt}
-                    </td>
-                    <td className="py-3 pr-4 font-mono text-xs">
-                      {record.deviceId}
-                    </td>
-                    <td className="py-3 pr-4 font-mono text-xs">
-                      {record.gameId ?? "—"}
-                    </td>
-                    <td className="py-3 pr-4">
-                      {record.inputType}
-                    </td>
-                    <td className="py-3 pr-4">
-                      {record.disposition}
-                    </td>
-                    <td className="py-3 text-slate-400">
-                      {record.error ?? "—"}
-                    </td>
-                  </tr>
-                ),
-              )}
+              {records.map((record) => (
+                <tr key={record.auditId} className="border-t border-slate-800">
+                  <td className="py-3 pr-4 text-xs text-slate-400">{record.createdAt}</td>
+                  <td className="py-3 pr-4 font-mono text-xs">{record.deviceId}</td>
+                  <td className="py-3 pr-4 font-mono text-xs">{record.gameId ?? "—"}</td>
+                  <td className="py-3 pr-4">{record.inputType}</td>
+                  <td className="py-3 pr-4">{record.disposition}</td>
+                  <td className="py-3 text-slate-400">{record.error ?? "—"}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

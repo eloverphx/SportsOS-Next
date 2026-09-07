@@ -138,10 +138,7 @@ export async function runScheduleConcurrencyQualification(): Promise<ScheduleCon
         `DELETE FROM games
          WHERE id IN (${placeholders})
            AND notes = ?`,
-        [
-          ...createdGameIds,
-          "SportsOS Milestone 6.14 temporary concurrency qualification",
-        ],
+        [...createdGameIds, "SportsOS Milestone 6.14 temporary concurrency qualification"],
       );
     }
   }

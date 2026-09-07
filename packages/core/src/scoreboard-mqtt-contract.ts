@@ -19,10 +19,7 @@ export type ScoreboardMqttCommandEnvelope = {
   command: ScoreboardDeviceCommand;
 };
 
-export type ScoreboardMqttAcknowledgementStatus =
-  | "ACCEPTED"
-  | "REJECTED"
-  | "APPLIED";
+export type ScoreboardMqttAcknowledgementStatus = "ACCEPTED" | "REJECTED" | "APPLIED";
 
 export type ScoreboardMqttAcknowledgement = {
   deviceId: string;
@@ -93,9 +90,7 @@ function assertDeviceId(deviceId: string): string {
   }
 
   if (!/^[A-Za-z0-9._-]+$/.test(normalized)) {
-    throw new Error(
-      "deviceId contains unsupported MQTT topic characters.",
-    );
+    throw new Error("deviceId contains unsupported MQTT topic characters.");
   }
 
   return normalized;
@@ -111,9 +106,7 @@ function assertCommandId(commandId: string): string {
   return normalized;
 }
 
-export function scoreboardMqttTopics(
-  deviceId: string,
-): ScoreboardMqttTopicSet {
+export function scoreboardMqttTopics(deviceId: string): ScoreboardMqttTopicSet {
   const id = assertDeviceId(deviceId);
   const base = `${SCOREBOARD_MQTT_ROOT}/${id}`;
 
@@ -139,10 +132,7 @@ export function buildScoreboardMqttCommandEnvelope(
 }
 
 export function buildScoreboardMqttAcknowledgement(
-  input: Omit<
-    ScoreboardMqttAcknowledgement,
-    "acknowledgedAt"
-  > & {
+  input: Omit<ScoreboardMqttAcknowledgement, "acknowledgedAt"> & {
     acknowledgedAt?: Date;
   },
 ): ScoreboardMqttAcknowledgement {
@@ -151,9 +141,7 @@ export function buildScoreboardMqttAcknowledgement(
     commandId: assertCommandId(input.commandId),
     status: input.status,
     message: input.message,
-    acknowledgedAt: (
-      input.acknowledgedAt ?? new Date()
-    ).toISOString(),
+    acknowledgedAt: (input.acknowledgedAt ?? new Date()).toISOString(),
   };
 }
 
@@ -170,41 +158,23 @@ export function buildScoreboardMqttPresence(
 }
 
 export function buildScoreboardMqttTelemetry(
-  input: Omit<
-    ScoreboardMqttTelemetry,
-    "reportedAt"
-  > & {
+  input: Omit<ScoreboardMqttTelemetry, "reportedAt"> & {
     reportedAt?: Date;
   },
 ): ScoreboardMqttTelemetry {
-  if (
-    !Number.isFinite(input.uptimeSeconds) ||
-    input.uptimeSeconds < 0
-  ) {
-    throw new Error(
-      "uptimeSeconds must be a non-negative number.",
-    );
+  if (!Number.isFinite(input.uptimeSeconds) || input.uptimeSeconds < 0) {
+    throw new Error("uptimeSeconds must be a non-negative number.");
   }
 
-  if (
-    input.wifiRssi !== null &&
-    !Number.isFinite(input.wifiRssi)
-  ) {
-    throw new Error(
-      "wifiRssi must be null or a finite number.",
-    );
+  if (input.wifiRssi !== null && !Number.isFinite(input.wifiRssi)) {
+    throw new Error("wifiRssi must be null or a finite number.");
   }
 
   if (
     input.freeHeapBytes !== null &&
-    (
-      !Number.isFinite(input.freeHeapBytes) ||
-      input.freeHeapBytes < 0
-    )
+    (!Number.isFinite(input.freeHeapBytes) || input.freeHeapBytes < 0)
   ) {
-    throw new Error(
-      "freeHeapBytes must be null or a non-negative number.",
-    );
+    throw new Error("freeHeapBytes must be null or a non-negative number.");
   }
 
   return {
@@ -214,9 +184,7 @@ export function buildScoreboardMqttTelemetry(
     wifiRssi: input.wifiRssi,
     uptimeSeconds: input.uptimeSeconds,
     freeHeapBytes: input.freeHeapBytes,
-    reportedAt: (
-      input.reportedAt ?? new Date()
-    ).toISOString(),
+    reportedAt: (input.reportedAt ?? new Date()).toISOString(),
   };
 }
 

@@ -22,6 +22,7 @@ Describe what changed and why.
 List migrations, environment changes, rebuild requirements, or operational checks. Write "None" when not applicable.
 
 <!-- SPORTSOS_M36_1_RELEASE_GOVERNANCE -->
+
 ## Release and dependency governance
 
 - [ ] The branch is based on the current `main` release lineage.

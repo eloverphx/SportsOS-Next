@@ -15,9 +15,7 @@ import {
 import { qualifySimulationRun } from "./qualification.js";
 import { ROLES } from "../auth/index.js";
 
-export async function simulationRoutes(
-  app: FastifyInstance,
-): Promise<void> {
+export async function simulationRoutes(app: FastifyInstance): Promise<void> {
   app.post("/simulation/tournaments/preview", async (request) => {
     await requirePermission(request, {
       permission: PERMISSIONS.GAME_READ,
@@ -129,11 +127,7 @@ export async function simulationRoutes(
     const runId = (request.params as { runId: string }).runId;
     const body = (request.body ?? {}) as { concurrency?: number };
 
-    return executeProvisionedSimulationRun(
-      runId,
-      identity.sub,
-      body.concurrency,
-    );
+    return executeProvisionedSimulationRun(runId, identity.sub, body.concurrency);
   });
 
   app.delete("/simulation/runs/:runId", async (request, reply) => {
@@ -186,10 +180,7 @@ export async function simulationRoutes(
       organizationId: Number(body.organizationId),
       seasonId: Number(body.seasonId),
       actorUserId: identity.sub,
-      concurrency:
-        body.concurrency === undefined
-          ? undefined
-          : Number(body.concurrency),
+      concurrency: body.concurrency === undefined ? undefined : Number(body.concurrency),
       cleanupOnPass: body.cleanupOnPass ?? false,
       config: body.config ?? {},
     });

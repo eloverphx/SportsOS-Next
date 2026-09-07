@@ -12,7 +12,7 @@ const director = {
   permissions: [
     "game.read",
     "game.manage",
-        "game.schedule.override",
+    "game.schedule.override",
     "game.score",
     "scoreboard.read",
     "scoreboard.manage",
@@ -61,8 +61,7 @@ async function installRealtimeFixture(page: Page) {
       return route.fulfill({
         status: 200,
         contentType: "text/plain; charset=UTF-8",
-        body:
-          '0{"sid":"sportsos-610-e2e","upgrades":[],"pingInterval":25000,"pingTimeout":20000,"maxPayload":1000000}',
+        body: '0{"sid":"sportsos-610-e2e","upgrades":[],"pingInterval":25000,"pingTimeout":20000,"maxPayload":1000000}',
       });
     }
 
@@ -187,17 +186,11 @@ test.describe("Tournament Operations 6.10", () => {
     await installSession(page);
     await installRealtimeFixture(page);
 
-    await page.route("**/auth/me", (route) =>
-      json(route, { user: director }),
-    );
+    await page.route("**/auth/me", (route) => json(route, { user: director }));
 
-    await page.route("**/games", (route) =>
-      json(route, { games }),
-    );
+    await page.route("**/games", (route) => json(route, { games }));
 
-    await page.route("**/scoreboard-devices", (route) =>
-      json(route, { devices }),
-    );
+    await page.route("**/scoreboard-devices", (route) => json(route, { devices }));
 
     await page.route("**/system/game-engine", (route) =>
       json(route, {
@@ -259,35 +252,21 @@ test.describe("Tournament Operations 6.10", () => {
       }),
     );
 
-    await page.route("**/games/101/penalties", (route) =>
-      json(route, { penalties: [] }),
-    );
+    await page.route("**/games/101/penalties", (route) => json(route, { penalties: [] }));
 
-    await page.route("**/games/102/penalties", (route) =>
-      json(route, { penalties: [] }),
-    );
+    await page.route("**/games/102/penalties", (route) => json(route, { penalties: [] }));
 
-    await page.route("**/games/103/penalties", (route) =>
-      json(route, { penalties: [] }),
-    );
+    await page.route("**/games/103/penalties", (route) => json(route, { penalties: [] }));
 
-    await page.route("**/games/101", (route) =>
-      json(route, { game: games[0] }),
-    );
+    await page.route("**/games/101", (route) => json(route, { game: games[0] }));
 
-    await page.route("**/games/102", (route) =>
-      json(route, { game: games[1] }),
-    );
+    await page.route("**/games/102", (route) => json(route, { game: games[1] }));
 
-    await page.route("**/games/103", (route) =>
-      json(route, { game: games[2] }),
-    );
+    await page.route("**/games/103", (route) => json(route, { game: games[2] }));
 
     await page.goto("/tournament-director");
 
-    await expect(
-      page.getByRole("heading", { name: "Tournament Director" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Tournament Director" })).toBeVisible();
 
     const workflow = page.getByTestId("tournament-workflow-nav");
     await expect(workflow).toBeVisible();
@@ -318,16 +297,12 @@ test.describe("Tournament Operations 6.10", () => {
     await expect(attention).toContainText("Game #103 is late");
 
     const focus = page.getByTestId("director-focus");
-    await expect(
-      focus.getByText("#101 · Prior Lake Lakers vs Edina Hornets"),
-    ).toBeVisible();
+    await expect(focus.getByText("#101 · Prior Lake Lakers vs Edina Hornets")).toBeVisible();
 
     await focus.getByLabel("Urgency").selectOption("LIVE");
 
     const focusGames = page.getByTestId("director-focus-games");
-    await expect(focusGames).toContainText(
-      "#101 · Prior Lake Lakers vs Edina Hornets",
-    );
+    await expect(focusGames).toContainText("#101 · Prior Lake Lakers vs Edina Hornets");
     await expect(focusGames).not.toContainText("Burnsville");
 
     const timeline = page.getByTestId("director-timeline");
@@ -336,8 +311,6 @@ test.describe("Tournament Operations 6.10", () => {
 
     const scheduling = page.getByTestId("director-scheduling");
     await expect(scheduling).toContainText("Move a scheduled game");
-    await expect(scheduling).toContainText(
-      "authoritative server conflict engine",
-    );
+    await expect(scheduling).toContainText("authoritative server conflict engine");
   });
 });

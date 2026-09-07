@@ -11,10 +11,7 @@ vi.mock("../src/modules/game-events/repository.js", () => ({
   createGameEvent,
 }));
 
-const {
-  createSportsOSSimulationAdapter,
-  SimulationBindingError,
-} = await import(
+const { createSportsOSSimulationAdapter, SimulationBindingError } = await import(
   "../src/modules/simulation/sportsos-adapter.js"
 );
 

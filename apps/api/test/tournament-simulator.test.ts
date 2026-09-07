@@ -12,9 +12,7 @@ describe("tournament simulator foundation", () => {
     const first = createSimulationRandom(42);
     const second = createSimulationRandom(42);
 
-    expect(
-      Array.from({ length: 10 }, () => first()),
-    ).toEqual(
+    expect(Array.from({ length: 10 }, () => first())).toEqual(
       Array.from({ length: 10 }, () => second()),
     );
   });
@@ -28,9 +26,7 @@ describe("tournament simulator foundation", () => {
       playersPerTeam: 15,
     };
 
-    expect(generateTournamentPlan(config)).toEqual(
-      generateTournamentPlan(config),
-    );
+    expect(generateTournamentPlan(config)).toEqual(generateTournamentPlan(config));
   });
 
   it("generates different tournament plans from different seeds", () => {
@@ -54,11 +50,7 @@ describe("tournament simulator foundation", () => {
       gameCount: 1_000,
     });
 
-    expect(
-      plan.games.every(
-        (game) => game.homeTeamId !== game.awayTeamId,
-      ),
-    ).toBe(true);
+    expect(plan.games.every((game) => game.homeTeamId !== game.awayTeamId)).toBe(true);
   });
 
   it("keeps every generated game assigned to an available rink", () => {
@@ -67,11 +59,7 @@ describe("tournament simulator foundation", () => {
       gameCount: 500,
     });
 
-    expect(
-      plan.games.every(
-        (game) => game.rink >= 1 && game.rink <= 8,
-      ),
-    ).toBe(true);
+    expect(plan.games.every((game) => game.rink >= 1 && game.rink <= 8)).toBe(true);
   });
 
   it("generates the configured number of goals and penalties per game", () => {
@@ -87,13 +75,9 @@ describe("tournament simulator foundation", () => {
 
     const events = generateGameEventStream(game, config);
 
-    expect(
-      events.filter((event) => event.type === "GOAL"),
-    ).toHaveLength(game.expectedGoals);
+    expect(events.filter((event) => event.type === "GOAL")).toHaveLength(game.expectedGoals);
 
-    expect(
-      events.filter((event) => event.type === "PENALTY"),
-    ).toHaveLength(game.expectedPenalties);
+    expect(events.filter((event) => event.type === "PENALTY")).toHaveLength(game.expectedPenalties);
 
     expect(events.at(-1)?.type).toBe("FINAL");
   });

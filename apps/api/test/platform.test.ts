@@ -20,7 +20,6 @@ describe("platform HTTP API", () => {
     });
 
     await app.ready();
-
   }, 30_000);
 
   afterAll(async () => {

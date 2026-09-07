@@ -1,32 +1,19 @@
-import {
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 
 describe("Milestone 15.4 control role / permission enforcement", () => {
   const authz = fs.readFileSync(
-    new URL(
-      "../../../apps/api/src/services/scoreboardControlAuthorization.ts",
-      import.meta.url,
-    ),
+    new URL("../../../apps/api/src/services/scoreboardControlAuthorization.ts", import.meta.url),
     "utf8",
   );
 
   const policyRoute = fs.readFileSync(
-    new URL(
-      "../../../apps/api/src/routes/scoreboardControlPolicy.ts",
-      import.meta.url,
-    ),
+    new URL("../../../apps/api/src/routes/scoreboardControlPolicy.ts", import.meta.url),
     "utf8",
   );
 
   const inputRoute = fs.readFileSync(
-    new URL(
-      "../../../apps/api/src/routes/scoreboardControlInputs.ts",
-      import.meta.url,
-    ),
+    new URL("../../../apps/api/src/routes/scoreboardControlInputs.ts", import.meta.url),
     "utf8",
   );
 

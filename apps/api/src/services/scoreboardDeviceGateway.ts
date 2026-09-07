@@ -1,7 +1,4 @@
-import mqtt, {
-  type IClientOptions,
-  type MqttClient,
-} from "mqtt";
+import mqtt, { type IClientOptions, type MqttClient } from "mqtt";
 import {
   buildScoreboardMqttCommandEnvelope,
   scoreboardMqttTopics,
@@ -26,21 +23,18 @@ export type ScoreboardPresenceListener = (
 ) => void | Promise<void>;
 
 export class ScoreboardDeviceGateway {
-  private readonly presenceListeners =
-    new Set<ScoreboardPresenceListener>();
+  private readonly presenceListeners = new Set<ScoreboardPresenceListener>();
 
   private readonly client: MqttClient;
-  private readonly devices =
-    new Map<string, ScoreboardDeviceRuntime>();
+  private readonly devices = new Map<string, ScoreboardDeviceRuntime>();
 
-  public constructor(options: {
-    mqttUrl?: string;
-    mqttOptions?: IClientOptions;
-  } = {}) {
-    const mqttUrl =
-      options.mqttUrl ??
-      process.env.MQTT_URL ??
-      "mqtt://sportsos_mqtt:1883";
+  public constructor(
+    options: {
+      mqttUrl?: string;
+      mqttOptions?: IClientOptions;
+    } = {},
+  ) {
+    const mqttUrl = options.mqttUrl ?? process.env.MQTT_URL ?? "mqtt://sportsos_mqtt:1883";
 
     this.client = mqtt.connect(mqttUrl, options.mqttOptions);
 
@@ -58,25 +52,16 @@ export class ScoreboardDeviceGateway {
     });
   }
 
-  public onPresence(
-    listener: ScoreboardPresenceListener,
-  ): () => void {
-    this.presenceListeners.add(
-      listener,
-    );
+  public onPresence(listener: ScoreboardPresenceListener): () => void {
+    this.presenceListeners.add(listener);
 
     return () => {
-      this.presenceListeners.delete(
-        listener,
-      );
+      this.presenceListeners.delete(listener);
     };
   }
 
   public listDevices(): ScoreboardDeviceRuntime[] {
-    return Array.from(
-      this.devices.values(),
-      (device) => structuredClone(device),
-    );
+    return Array.from(this.devices.values(), (device) => structuredClone(device));
   }
 
   public getDevice(deviceId: string): ScoreboardDeviceRuntime | null {
@@ -84,13 +69,9 @@ export class ScoreboardDeviceGateway {
     return device ? structuredClone(device) : null;
   }
 
-  public async sendCommand(
-    deviceId: string,
-    command: ScoreboardDeviceCommand,
-  ): Promise<void> {
+  public async sendCommand(deviceId: string, command: ScoreboardDeviceCommand): Promise<void> {
     const mqttTopics = scoreboardMqttTopics(deviceId);
-    const envelope =
-      buildScoreboardMqttCommandEnvelope(deviceId, command);
+    const envelope = buildScoreboardMqttCommandEnvelope(deviceId, command);
 
     await new Promise<void>((resolve, reject) => {
       this.client.publish(
@@ -127,9 +108,7 @@ export class ScoreboardDeviceGateway {
   }
 
   private handleMessage(topic: string, payloadText: string): void {
-    const match = topic.match(
-      /^sportsos\/scoreboards\/([^/]+)\/(state|presence|telemetry|ack)$/,
-    );
+    const match = topic.match(/^sportsos\/scoreboards\/([^/]+)\/(state|presence|telemetry|ack)$/);
 
     if (!match) {
       return;
@@ -157,20 +136,12 @@ export class ScoreboardDeviceGateway {
         device.state = payload as ScoreboardDeviceSnapshot;
         break;
       case "presence": {
-        const presence =
-          payload as ScoreboardMqttPresence;
+        const presence = payload as ScoreboardMqttPresence;
 
-        device.presence =
-          presence;
+        device.presence = presence;
 
-        for (
-          const listener
-          of this.presenceListeners
-        ) {
-          void listener(
-            deviceId,
-            presence.online,
-          );
+        for (const listener of this.presenceListeners) {
+          void listener(deviceId, presence.online);
         }
 
         break;
@@ -179,13 +150,11 @@ export class ScoreboardDeviceGateway {
         device.telemetry = payload as ScoreboardMqttTelemetry;
         break;
       case "ack":
-        device.lastAcknowledgement =
-          payload as ScoreboardMqttAcknowledgement;
+        device.lastAcknowledgement = payload as ScoreboardMqttAcknowledgement;
         break;
     }
   }
 }
-
 
 export async function publishCommissioningSelfTestCommand(
   deviceId: string,
@@ -196,26 +165,18 @@ export async function publishCommissioningSelfTestCommand(
     requestedAt: string;
   },
 ): Promise<void> {
-  const transport =
-    (
-      globalThis as unknown as {
-        __sportsosScoreboardCommandPublisher?: (
-          deviceId: string,
-          payload: string,
-        ) => Promise<void> | void;
-      }
-    ).__sportsosScoreboardCommandPublisher;
+  const transport = (
+    globalThis as unknown as {
+      __sportsosScoreboardCommandPublisher?: (
+        deviceId: string,
+        payload: string,
+      ) => Promise<void> | void;
+    }
+  ).__sportsosScoreboardCommandPublisher;
 
   if (!transport) {
-    throw new Error(
-      "Scoreboard command publisher is unavailable.",
-    );
+    throw new Error("Scoreboard command publisher is unavailable.");
   }
 
-  await transport(
-    deviceId,
-    JSON.stringify(
-      command,
-    ),
-  );
+  await transport(deviceId, JSON.stringify(command));
 }

@@ -1,17 +1,10 @@
-import {
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 
 describe("Milestone 11.9 segment backend and firmware simulator", () => {
   it("defines a concrete shift-register segment backend", () => {
     const source = fs.readFileSync(
-      new URL(
-        "../../../firmware/esp32-scoreboard/src/SegmentDisplayBackend.cpp",
-        import.meta.url,
-      ),
+      new URL("../../../firmware/esp32-scoreboard/src/SegmentDisplayBackend.cpp", import.meta.url),
       "utf8",
     );
 
@@ -22,10 +15,7 @@ describe("Milestone 11.9 segment backend and firmware simulator", () => {
 
   it("maps decimal digits to seven-segment bit patterns", () => {
     const source = fs.readFileSync(
-      new URL(
-        "../../../firmware/esp32-scoreboard/src/SegmentDisplayBackend.cpp",
-        import.meta.url,
-      ),
+      new URL("../../../firmware/esp32-scoreboard/src/SegmentDisplayBackend.cpp", import.meta.url),
       "utf8",
     );
 
@@ -42,12 +32,7 @@ describe("Milestone 11.9 segment backend and firmware simulator", () => {
       "utf8",
     );
 
-    for (const field of [
-      "dataPin",
-      "clockPin",
-      "latchPin",
-      "activeHigh",
-    ]) {
+    for (const field of ["dataPin", "clockPin", "latchPin", "activeHigh"]) {
       expect(header).toContain(field);
     }
   });
@@ -68,10 +53,7 @@ describe("Milestone 11.9 segment backend and firmware simulator", () => {
 
   it("adds standalone simulator tests without PlatformIO", () => {
     const packageJson = fs.readFileSync(
-      new URL(
-        "../../../firmware/esp32-scoreboard/simulator/package.json",
-        import.meta.url,
-      ),
+      new URL("../../../firmware/esp32-scoreboard/simulator/package.json", import.meta.url),
       "utf8",
     );
 

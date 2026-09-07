@@ -1,10 +1,7 @@
 import type { FastifyRequest } from "fastify";
 import { AuthorizationError } from "./authorization-error.js";
 import { authenticatedIdentity } from "./identity.js";
-import {
-  roleHasPermission,
-  type Permission,
-} from "./permissions.js";
+import { roleHasPermission, type Permission } from "./permissions.js";
 import { ROLES } from "./roles.js";
 import type { AuthenticatedIdentity } from "./types.js";
 
@@ -26,9 +23,7 @@ export function assertPermission(
     identity.role !== ROLES.SYSTEM_ADMIN &&
     identity.organizationId !== requirement.organizationId
   ) {
-    throw new AuthorizationError(
-      "You do not have access to this organization",
-    );
+    throw new AuthorizationError("You do not have access to this organization");
   }
 }
 

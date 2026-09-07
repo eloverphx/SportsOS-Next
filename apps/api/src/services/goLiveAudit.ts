@@ -30,41 +30,18 @@ type Store = {
   events: GoLiveAuditEvent[];
 };
 
-const DATA_DIR =
-  process.env.SPORTSOS_DATA_DIR ??
-  path.resolve(
-    process.cwd(),
-    "data",
-  );
+const DATA_DIR = process.env.SPORTSOS_DATA_DIR ?? path.resolve(process.cwd(), "data");
 
-const STORE_FILE =
-  path.join(
-    DATA_DIR,
-    "go-live-audit.json",
-  );
+const STORE_FILE = path.join(DATA_DIR, "go-live-audit.json");
 
-let store =
-  loadStore();
+let store = loadStore();
 
 function loadStore(): Store {
   try {
-    const parsed =
-      JSON.parse(
-        fs.readFileSync(
-          STORE_FILE,
-          "utf8",
-        ),
-      ) as Store;
+    const parsed = JSON.parse(fs.readFileSync(STORE_FILE, "utf8")) as Store;
 
-    if (
-      parsed.version !== 1 ||
-      !Array.isArray(
-        parsed.events,
-      )
-    ) {
-      throw new Error(
-        "Invalid go-live audit store.",
-      );
+    if (parsed.version !== 1 || !Array.isArray(parsed.events)) {
+      throw new Error("Invalid go-live audit store.");
     }
 
     return parsed;
@@ -77,22 +54,11 @@ function loadStore(): Store {
 }
 
 function persistStore(): void {
-  fs.mkdirSync(
-    DATA_DIR,
-    {
-      recursive: true,
-    },
-  );
+  fs.mkdirSync(DATA_DIR, {
+    recursive: true,
+  });
 
-  fs.writeFileSync(
-    STORE_FILE,
-    JSON.stringify(
-      store,
-      null,
-      2,
-    ),
-    "utf8",
-  );
+  fs.writeFileSync(STORE_FILE, JSON.stringify(store, null, 2), "utf8");
 }
 
 export function recordGoLiveAuditEvent(input: {
@@ -102,34 +68,18 @@ export function recordGoLiveAuditEvent(input: {
   operator?: string | null;
 }): GoLiveAuditEvent {
   const event: GoLiveAuditEvent = {
-    id:
-      `go-live-audit-${input.gameId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    gameId:
-      input.gameId,
-    type:
-      input.type,
-    timestamp:
-      new Date().toISOString(),
-    detail:
-      input.detail ??
-      null,
-    operator:
-      input.operator ??
-      null,
+    id: `go-live-audit-${input.gameId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    gameId: input.gameId,
+    type: input.type,
+    timestamp: new Date().toISOString(),
+    detail: input.detail ?? null,
+    operator: input.operator ?? null,
   };
 
-  store.events.push(
-    event,
-  );
+  store.events.push(event);
 
-  if (
-    store.events.length >
-    2000
-  ) {
-    store.events =
-      store.events.slice(
-        -2000,
-      );
+  if (store.events.length > 2000) {
+    store.events = store.events.slice(-2000);
   }
 
   persistStore();
@@ -139,34 +89,14 @@ export function recordGoLiveAuditEvent(input: {
   };
 }
 
-export function listGoLiveAuditEvents(
-  gameId: string,
-  limit = 100,
-): GoLiveAuditEvent[] {
-  const safeLimit =
-    Math.max(
-      1,
-      Math.min(
-        Math.floor(
-          limit,
-        ),
-        250,
-      ),
-    );
+export function listGoLiveAuditEvents(gameId: string, limit = 100): GoLiveAuditEvent[] {
+  const safeLimit = Math.max(1, Math.min(Math.floor(limit), 250));
 
   return store.events
-    .filter(
-      (event) =>
-        event.gameId ===
-        gameId,
-    )
-    .slice(
-      -safeLimit,
-    )
+    .filter((event) => event.gameId === gameId)
+    .slice(-safeLimit)
     .reverse()
-    .map(
-      (event) => ({
-        ...event,
-      }),
-    );
+    .map((event) => ({
+      ...event,
+    }));
 }

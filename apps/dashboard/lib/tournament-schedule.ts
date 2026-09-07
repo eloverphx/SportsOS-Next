@@ -38,10 +38,7 @@ export const DEFAULT_SCHEDULE_RULES: ScheduleRules = {
   fallbackGameDurationMs: 90 * 60_000,
 };
 
-function gameDurationMs(
-  game: ScheduleGame,
-  rules: ScheduleRules = DEFAULT_SCHEDULE_RULES,
-): number {
+function gameDurationMs(game: ScheduleGame, rules: ScheduleRules = DEFAULT_SCHEDULE_RULES): number {
   const periods = game.regulationPeriods;
   const periodLength = game.regulationPeriodLengthMs;
   const intermissionLength = game.intermissionLengthMs;
@@ -56,9 +53,7 @@ function gameDurationMs(
     const regulation = (periods ?? 0) * (periodLength ?? 0);
     const intermissions = Math.max(0, (periods ?? 1) - 1) * (intermissionLength ?? 0);
     const overtime =
-      game.overtimeEnabled && (game.overtimeLengthMs ?? 0) > 0
-        ? game.overtimeLengthMs ?? 0
-        : 0;
+      game.overtimeEnabled && (game.overtimeLengthMs ?? 0) > 0 ? (game.overtimeLengthMs ?? 0) : 0;
 
     return regulation + intermissions + overtime;
   }
@@ -98,11 +93,7 @@ function sameTeam(left: ScheduleGame, right: ScheduleGame): string | null {
   return null;
 }
 
-function overlaps(
-  left: ScheduleGame,
-  right: ScheduleGame,
-  rules: ScheduleRules,
-): boolean {
+function overlaps(left: ScheduleGame, right: ScheduleGame, rules: ScheduleRules): boolean {
   return startMs(left) < endMs(right, rules) && startMs(right) < endMs(left, rules);
 }
 
@@ -112,9 +103,7 @@ export function detectScheduleConflicts(
 ): ScheduleConflict[] {
   const games = sourceGames.filter(
     (game) =>
-      game.status !== "CANCELED" &&
-      game.status !== "FINAL" &&
-      Number.isFinite(startMs(game)),
+      game.status !== "CANCELED" && game.status !== "FINAL" && Number.isFinite(startMs(game)),
   );
 
   const conflicts: ScheduleConflict[] = [];

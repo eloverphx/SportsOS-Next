@@ -11,14 +11,8 @@ export interface TournamentRunnerAdapter {
   startGame(game: SimulatedGame): Promise<void>;
   pauseClock(game: SimulatedGame): Promise<void>;
   resumeClock(game: SimulatedGame): Promise<void>;
-  recordGoal(
-    game: SimulatedGame,
-    side: "home" | "away",
-  ): Promise<void>;
-  recordPenalty(
-    game: SimulatedGame,
-    side: "home" | "away",
-  ): Promise<void>;
+  recordGoal(game: SimulatedGame, side: "home" | "away"): Promise<void>;
+  recordPenalty(game: SimulatedGame, side: "home" | "away"): Promise<void>;
   beginIntermission(game: SimulatedGame): Promise<void>;
   startNextPeriod(game: SimulatedGame): Promise<void>;
   finishGame(game: SimulatedGame): Promise<void>;
@@ -149,10 +143,7 @@ export async function runTournamentSimulation(
   };
 
   await Promise.all(
-    Array.from(
-      { length: Math.min(concurrency, plan.games.length) },
-      () => worker(),
-    ),
+    Array.from({ length: Math.min(concurrency, plan.games.length) }, () => worker()),
   );
 
   results.sort((left, right) => left.gameId - right.gameId);
@@ -168,10 +159,7 @@ export async function runTournamentSimulation(
     games: results.length,
     succeeded,
     failed,
-    processedEvents: results.reduce(
-      (sum, result) => sum + result.processedEvents,
-      0,
-    ),
+    processedEvents: results.reduce((sum, result) => sum + result.processedEvents, 0),
     results,
   };
 }

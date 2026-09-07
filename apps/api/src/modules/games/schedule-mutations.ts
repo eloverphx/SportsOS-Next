@@ -74,12 +74,7 @@ async function evaluateInsideTransaction(
     listGameTeamOptionsUsingConnection(connection),
   ]);
 
-  return evaluateGameInputScheduleAgainstExisting(
-    gameId,
-    input,
-    existingGames,
-    teamOptions,
-  );
+  return evaluateGameInputScheduleAgainstExisting(gameId, input, existingGames, teamOptions);
 }
 
 async function loadCommittedGame(id: number): Promise<Game> {
@@ -145,10 +140,7 @@ export async function updateGameWithScheduleTransaction(
     if (scheduleChanged) {
       await lockOrganizations(
         connection,
-        scheduleMutationOrganizationIds(
-          existing.organizationId,
-          input.organizationId,
-        ),
+        scheduleMutationOrganizationIds(existing.organizationId, input.organizationId),
       );
     }
 
@@ -165,11 +157,7 @@ export async function updateGameWithScheduleTransaction(
       };
     }
 
-    const updated = await updateGameUsingConnection(
-      connection,
-      existing.id,
-      input,
-    );
+    const updated = await updateGameUsingConnection(connection, existing.id, input);
 
     if (!updated) {
       await connection.rollback();

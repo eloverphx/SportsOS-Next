@@ -14,8 +14,7 @@ async function mutateIncident(
   formData: FormData,
 ): Promise<IncidentActionState> {
   const enabled =
-    process.env.SPORTSOS_OPERATIONS_DASHBOARD_ENABLED?.trim().toLowerCase() ===
-    "true";
+    process.env.SPORTSOS_OPERATIONS_DASHBOARD_ENABLED?.trim().toLowerCase() === "true";
   if (!enabled) return { ok: false, message: "Operations Dashboard is disabled." };
 
   const token = process.env.SPORTSOS_OPERATIONS_STATUS_TOKEN?.trim() ?? "";
@@ -31,8 +30,7 @@ async function mutateIncident(
   if (!actor) return { ok: false, message: "Operator name is required." };
 
   const baseUrl =
-    process.env.SPORTSOS_API_INTERNAL_URL?.trim().replace(/\/$/, "") ||
-    "http://api:4001";
+    process.env.SPORTSOS_API_INTERNAL_URL?.trim().replace(/\/$/, "") || "http://api:4001";
 
   try {
     const response = await fetch(
@@ -50,9 +48,9 @@ async function mutateIncident(
     );
 
     if (!response.ok) {
-      const body = (await response.json().catch(() => null)) as
-        | { error?: { message?: string } }
-        | null;
+      const body = (await response.json().catch(() => null)) as {
+        error?: { message?: string };
+      } | null;
       return {
         ok: false,
         message: body?.error?.message ?? `Incident action failed with HTTP ${response.status}.`,

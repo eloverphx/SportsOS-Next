@@ -5,10 +5,7 @@ const lock = JSON.parse(readFileSync("package-lock.json", "utf8"));
 const root = JSON.parse(readFileSync("package.json", "utf8"));
 const dashboard = JSON.parse(readFileSync("apps/dashboard/package.json", "utf8"));
 const api = JSON.parse(readFileSync("apps/api/package.json", "utf8"));
-const doc = readFileSync(
-  "docs/MILESTONE-36-FAST-URI-NANOID-SECURITY-REMEDIATION.md",
-  "utf8",
-);
+const doc = readFileSync("docs/MILESTONE-36-FAST-URI-NANOID-SECURITY-REMEDIATION.md", "utf8");
 
 const parts = (v: string) => v.split(".").map(Number);
 const gte = (v: string, min: string) => {
@@ -24,9 +21,7 @@ const gte = (v: string, min: string) => {
 describe("Milestone 36.7 fast-uri/nanoid security remediation", () => {
   it("resolves patched fast-uri versions without crossing majors", () => {
     const f3 = lock.packages["node_modules/fast-uri"].version;
-    const f4 =
-      lock.packages["node_modules/fast-json-stringify/node_modules/fast-uri"]
-        .version;
+    const f4 = lock.packages["node_modules/fast-json-stringify/node_modules/fast-uri"].version;
 
     expect(f3.startsWith("3.")).toBe(true);
     expect(f4.startsWith("4.")).toBe(true);

@@ -2,10 +2,7 @@ import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("Milestone 29.12.1 Unraid schedule verifier repair", () => {
-  const script = fs.readFileSync(
-    "scripts/verify-scheduled-production-operations.sh",
-    "utf8",
-  );
+  const script = fs.readFileSync("scripts/verify-scheduled-production-operations.sh", "utf8");
 
   it("verifies SportsOS ownership through executable wrappers", () => {
     expect(script).toContain('grep -Fq "SportsOS-Next"');

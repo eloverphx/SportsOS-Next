@@ -121,11 +121,8 @@ describe("Milestone 7.1.1 testing override", () => {
   });
 
   it("persists testing override state without mutating game data", async () => {
-    const {
-      readTestingOverride,
-      writeTestingOverride,
-      SPORTSOS_TEST_OVERRIDE_STORAGE_KEY,
-    } = await import("../lib/testing-override");
+    const { readTestingOverride, writeTestingOverride, SPORTSOS_TEST_OVERRIDE_STORAGE_KEY } =
+      await import("../lib/testing-override");
 
     const values = new Map<string, string>();
     const storage = {

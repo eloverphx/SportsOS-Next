@@ -18,9 +18,7 @@ vi.mock("../src/modules/simulation/provisioner.js", () => ({
   getProvisionedSimulationRun: vi.fn(),
 }));
 
-const { qualifySimulationRun } = await import(
-  "../src/modules/simulation/qualification.js"
-);
+const { qualifySimulationRun } = await import("../src/modules/simulation/qualification.js");
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -156,9 +154,7 @@ describe("live simulation qualification", () => {
     });
 
     expect(report.overall).toBe("FAIL");
-    expect(report.games[0]?.failures).toContain(
-      "Expected FINAL status, found LIVE",
-    );
+    expect(report.games[0]?.failures).toContain("Expected FINAL status, found LIVE");
   });
 
   it("cleans up only after a successful qualification when requested", async () => {

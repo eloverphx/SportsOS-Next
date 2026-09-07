@@ -1,20 +1,12 @@
-import {
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {
-  evaluateExternalRealtimeReadiness,
-} from "../../../apps/api/src/services/externalRealtimeReadiness";
+import { evaluateExternalRealtimeReadiness } from "../../../apps/api/src/services/externalRealtimeReadiness";
 
 describe("Milestone 27.7 external realtime readiness", () => {
-  it("derives wss and polling targets",()=> {
-    const result =
-      evaluateExternalRealtimeReadiness({
-        DASHBOARD_ORIGIN:
-          "https://sports.example.com",
-      });
+  it("derives wss and polling targets", () => {
+    const result = evaluateExternalRealtimeReadiness({
+      DASHBOARD_ORIGIN: "https://sports.example.com",
+    });
 
     expect(result.ready).toBe(true);
 
@@ -27,11 +19,10 @@ describe("Milestone 27.7 external realtime readiness", () => {
     );
   });
 
-  it("rejects HTTP dashboard origin",()=> {
+  it("rejects HTTP dashboard origin", () => {
     expect(
       evaluateExternalRealtimeReadiness({
-        DASHBOARD_ORIGIN:
-          "http://sports.example.com",
+        DASHBOARD_ORIGIN: "http://sports.example.com",
       }).ready,
     ).toBe(false);
   });

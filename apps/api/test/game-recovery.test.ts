@@ -30,9 +30,7 @@ vi.mock("../src/modules/penalties/repository.js", () => ({
   materializePenaltyClocks,
 }));
 
-const { recoverGameClocksOnStartup } = await import(
-  "../src/modules/games/clock-expiration.js"
-);
+const { recoverGameClocksOnStartup } = await import("../src/modules/games/clock-expiration.js");
 
 function candidate(id: number, overrides: Record<string, unknown> = {}) {
   return {

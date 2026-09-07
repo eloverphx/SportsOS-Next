@@ -1,6 +1,4 @@
-import {
-  ScoreboardDeviceOperations,
-} from "../../components/scoreboards/ScoreboardDeviceOperations";
+import { ScoreboardDeviceOperations } from "../../components/scoreboards/ScoreboardDeviceOperations";
 
 export default function ScoreboardsPage() {
   return (
@@ -10,13 +8,11 @@ export default function ScoreboardsPage() {
           SportsOS Hardware
         </div>
 
-        <h1 className="mt-2 text-3xl font-bold text-slate-100">
-          Scoreboard Devices
-        </h1>
+        <h1 className="mt-2 text-3xl font-bold text-slate-100">Scoreboard Devices</h1>
 
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-          Monitor physical and simulated scoreboard devices connected through
-          MQTT, review telemetry and state, and send safe device test commands.
+          Monitor physical and simulated scoreboard devices connected through MQTT, review telemetry
+          and state, and send safe device test commands.
         </p>
       </div>
 

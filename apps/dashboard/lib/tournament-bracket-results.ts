@@ -1,9 +1,5 @@
-import type {
-  BracketMatchup,
-} from "./tournament-bracket-seeding";
-import type {
-  BracketMatchupResult,
-} from "./tournament-bracket-advancement";
+import type { BracketMatchup } from "./tournament-bracket-seeding";
+import type { BracketMatchupResult } from "./tournament-bracket-advancement";
 
 export type AuthoritativeTournamentGame = {
   id: string;
@@ -17,17 +13,10 @@ export type AuthoritativeTournamentGame = {
 function isFinalStatus(status: string): boolean {
   const normalized = status.trim().toUpperCase();
 
-  return (
-    normalized === "FINAL" ||
-    normalized === "COMPLETE" ||
-    normalized === "COMPLETED"
-  );
+  return normalized === "FINAL" || normalized === "COMPLETE" || normalized === "COMPLETED";
 }
 
-function samePair(
-  matchup: BracketMatchup,
-  game: AuthoritativeTournamentGame,
-): boolean {
+function samePair(matchup: BracketMatchup, game: AuthoritativeTournamentGame): boolean {
   if (!matchup.homeSeed || !matchup.awaySeed) {
     return false;
   }
@@ -36,10 +25,8 @@ function samePair(
   const bracketAway = matchup.awaySeed.teamId;
 
   return (
-    (game.homeTeamId === bracketHome &&
-      game.awayTeamId === bracketAway) ||
-    (game.homeTeamId === bracketAway &&
-      game.awayTeamId === bracketHome)
+    (game.homeTeamId === bracketHome && game.awayTeamId === bracketAway) ||
+    (game.homeTeamId === bracketAway && game.awayTeamId === bracketHome)
   );
 }
 
@@ -74,27 +61,21 @@ export function deriveBracketResultsFromGames(
   matchups: BracketMatchup[],
   games: AuthoritativeTournamentGame[],
 ): BracketMatchupResult[] {
-  const finalizedGames = games.filter((game) =>
-    isFinalStatus(game.status),
-  );
+  const finalizedGames = games.filter((game) => isFinalStatus(game.status));
 
   return matchups.flatMap((matchup) => {
     if (matchup.bye || !matchup.homeSeed || !matchup.awaySeed) {
       return [];
     }
 
-    const matches = finalizedGames.filter((game) =>
-      samePair(matchup, game),
-    );
+    const matches = finalizedGames.filter((game) => samePair(matchup, game));
 
     if (matches.length === 0) {
       return [];
     }
 
     if (matches.length > 1) {
-      throw new Error(
-        `Multiple finalized games match bracket matchup ${matchup.id}.`,
-      );
+      throw new Error(`Multiple finalized games match bracket matchup ${matchup.id}.`);
     }
 
     const game = matches[0];
@@ -103,19 +84,11 @@ export function deriveBracketResultsFromGames(
       return [];
     }
 
-    if (
-      !Number.isFinite(game.homeScore) ||
-      !Number.isFinite(game.awayScore)
-    ) {
-      throw new Error(
-        `Invalid authoritative score for game ${game.id}.`,
-      );
+    if (!Number.isFinite(game.homeScore) || !Number.isFinite(game.awayScore)) {
+      throw new Error(`Invalid authoritative score for game ${game.id}.`);
     }
 
-    const oriented = normalizeScoreOrientation(
-      matchup,
-      game,
-    );
+    const oriented = normalizeScoreOrientation(matchup, game);
 
     return [
       {

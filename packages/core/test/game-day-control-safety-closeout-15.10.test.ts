@@ -1,24 +1,14 @@
-import {
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 
 describe("Milestone 15.10 game-day control safety acceptance / closeout", () => {
   const runner = fs.readFileSync(
-    new URL(
-      "../../../scripts/run-game-day-control-safety-acceptance.sh",
-      import.meta.url,
-    ),
+    new URL("../../../scripts/run-game-day-control-safety-acceptance.sh", import.meta.url),
     "utf8",
   );
 
   const checklist = fs.readFileSync(
-    new URL(
-      "../../../docs/GAME-DAY-CONTROL-SAFETY-ACCEPTANCE.md",
-      import.meta.url,
-    ),
+    new URL("../../../docs/GAME-DAY-CONTROL-SAFETY-ACCEPTANCE.md", import.meta.url),
     "utf8",
   );
 
@@ -50,24 +40,16 @@ describe("Milestone 15.10 game-day control safety acceptance / closeout", () => 
   });
 
   it("requires server authority for safety decisions", () => {
-    expect(checklist).toContain(
-      "Server owns physical-control policy state.",
-    );
+    expect(checklist).toContain("Server owns physical-control policy state.");
 
-    expect(checklist).toContain(
-      "Dashboard/localStorage state is not authority.",
-    );
+    expect(checklist).toContain("Dashboard/localStorage state is not authority.");
   });
 
   it("requires emergency lock enforcement before mutation", () => {
-    expect(checklist).toContain(
-      "Lock state is checked before authoritative execution.",
-    );
+    expect(checklist).toContain("Lock state is checked before authoritative execution.");
   });
 
   it("documents the final browser E2E gate", () => {
-    expect(checklist).toContain(
-      "npm run test:e2e:docker",
-    );
+    expect(checklist).toContain("npm run test:e2e:docker");
   });
 });

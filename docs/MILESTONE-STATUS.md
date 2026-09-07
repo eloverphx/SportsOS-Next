@@ -7,21 +7,27 @@ SportsOS Next has completed the core platform, game engine, scoreboard-device, f
 ## Recent milestone groups
 
 ### Milestones 9–12
+
 Scoreboard synchronization, device protocol, simulator support, and core hardware integration.
 
 ### Milestones 13–14
+
 Firmware release/rollout behavior and physical control transport.
 
 ### Milestone 15
+
 Physical-control audit, safety, readiness, incident, and recovery behavior.
 
 ### Milestone 16
+
 Pregame scoreboard readiness and authoritative start protection.
 
 ### Milestone 17
+
 Commissioning lifecycle, validation, wizard, remediation, hardware self-test, remote self-test correlation, transport execution, and acceptance.
 
 ### Milestone 18
+
 Game-day preflight, freshness, start enforcement, assignment binding, emergency override, audit visibility, countdown guidance, auto-rerun, deployment acceptance, and authoritative assignment-bound start-gate correction.
 
 ## Current state
@@ -47,7 +53,6 @@ docker compose up -d --build api dashboard
 npm run test:e2e:docker
 ```
 
-
 ### Milestone 19
 
 Broadcast operations foundation:
@@ -64,7 +69,6 @@ Broadcast operations foundation:
 - local audio test/readiness controls
 - broadcast operations acceptance
 
-
 ### Milestone 20
 
 Streaming output and encoder operations.
@@ -72,7 +76,6 @@ Streaming output and encoder operations.
 Current work:
 
 - 20.1 stream destination profile foundation
-
 
 ### Milestone 20
 
@@ -102,7 +105,6 @@ Production streaming orchestration and game-day go-live.
 Current work:
 
 - 21.1 production go-live session foundation
-
 
 ## Milestone 21 closeout
 

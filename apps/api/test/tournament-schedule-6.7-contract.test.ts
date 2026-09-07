@@ -2,10 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const timeline = readFileSync(
-  new URL(
-    "../../dashboard/components/tournament/TournamentScheduleTimeline.tsx",
-    import.meta.url,
-  ),
+  new URL("../../dashboard/components/tournament/TournamentScheduleTimeline.tsx", import.meta.url),
   "utf8",
 );
 
@@ -47,7 +44,7 @@ describe("Tournament schedule 6.7 timeline contract", () => {
   });
 
   it("links game blocks directly to Scorekeeper", () => {
-    expect(timeline).toContain('href={`/games/${game.id}/control`}');
+    expect(timeline).toContain("href={`/games/${game.id}/control`}");
   });
 
   it("shows a live now marker when the selected day is today", () => {

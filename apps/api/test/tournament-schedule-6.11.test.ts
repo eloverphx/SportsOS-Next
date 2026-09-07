@@ -5,10 +5,7 @@ import {
   parseScheduleOverride,
 } from "../src/modules/games/schedule-enforcement.js";
 
-const routes = readFileSync(
-  new URL("../src/modules/games/routes.ts", import.meta.url),
-  "utf8",
-);
+const routes = readFileSync(new URL("../src/modules/games/routes.ts", import.meta.url), "utf8");
 
 const mutations = readFileSync(
   new URL("../src/modules/games/schedule-mutations.ts", import.meta.url),
@@ -16,10 +13,7 @@ const mutations = readFileSync(
 );
 
 const editor = readFileSync(
-  new URL(
-    "../../dashboard/components/tournament/TournamentScheduleEditor.tsx",
-    import.meta.url,
-  ),
+  new URL("../../dashboard/components/tournament/TournamentScheduleEditor.tsx", import.meta.url),
   "utf8",
 );
 
@@ -45,8 +39,7 @@ describe("Tournament scheduling 6.11 hardening", () => {
     expect(
       parseScheduleOverride({
         scheduleConflictOverride: true,
-        scheduleConflictOverrideReason:
-          "  Tournament director approved rink exception  ",
+        scheduleConflictOverrideReason: "  Tournament director approved rink exception  ",
       }),
     ).toEqual({
       override: true,
@@ -58,9 +51,7 @@ describe("Tournament scheduling 6.11 hardening", () => {
   it("detects oversized override reasons", () => {
     const parsed = parseScheduleOverride({
       scheduleConflictOverride: true,
-      scheduleConflictOverrideReason: "x".repeat(
-        MAX_SCHEDULE_OVERRIDE_REASON_LENGTH + 1,
-      ),
+      scheduleConflictOverrideReason: "x".repeat(MAX_SCHEDULE_OVERRIDE_REASON_LENGTH + 1),
     });
 
     expect(parsed.override).toBe(true);
@@ -78,24 +69,17 @@ describe("Tournament scheduling 6.11 hardening", () => {
     expect(post).toContain('code: "SCHEDULE_CONFLICT"');
     expect(post).toContain("reason: scheduleOverride.reason");
 
-    expect(mutations).toContain(
-      "evaluateGameInputScheduleAgainstExisting(",
-    );
+    expect(mutations).toContain("evaluateGameInputScheduleAgainstExisting(");
   });
 
   it("requires and audits a reason for PUT hard-conflict overrides", () => {
     const putStart = routes.indexOf('app.put("/games/:id"');
-    const previewStart = routes.indexOf(
-      'app.post("/games/:id/schedule-preview"',
-      putStart,
-    );
+    const previewStart = routes.indexOf('app.post("/games/:id/schedule-preview"', putStart);
     const put = routes.slice(putStart, previewStart);
 
     expect(put).toContain("parseScheduleOverride(request.body)");
     expect(put).toContain("updateGameWithScheduleTransaction(");
-    expect(put).toContain(
-      "scheduleConflictOverrideReason: scheduleOverride.reason",
-    );
+    expect(put).toContain("scheduleConflictOverrideReason: scheduleOverride.reason");
     expect(put).toContain("reason: scheduleOverride.reason");
   });
 
@@ -103,9 +87,7 @@ describe("Tournament scheduling 6.11 hardening", () => {
     expect(editor).toContain("scheduleOverrideReason");
     expect(editor).toContain("Override reason");
     expect(editor).toContain("maxLength={500}");
-    expect(editor).toContain(
-      "Enter a reason for overriding the hard schedule conflict.",
-    );
+    expect(editor).toContain("Enter a reason for overriding the hard schedule conflict.");
     expect(editor).toContain("scheduleConflictOverrideReason:");
     expect(editor).toContain("This reason is stored");
   });

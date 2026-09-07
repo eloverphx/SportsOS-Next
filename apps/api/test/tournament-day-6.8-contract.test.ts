@@ -2,10 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const ops = readFileSync(
-  new URL(
-    "../../dashboard/components/tournament/TournamentDayOperations.tsx",
-    import.meta.url,
-  ),
+  new URL("../../dashboard/components/tournament/TournamentDayOperations.tsx", import.meta.url),
   "utf8",
 );
 
@@ -47,8 +44,8 @@ describe("Tournament day 6.8 operations contract", () => {
 
   it("prioritizes critical items and links to operator surfaces", () => {
     expect(ops).toContain("right.priority - left.priority");
-    expect(ops).toContain('href={`/games/${issue.gameId}/control`}');
-    expect(ops).toContain('href={`/games/${issue.gameId}/scoreboard`}');
+    expect(ops).toContain("href={`/games/${issue.gameId}/control`}");
+    expect(ops).toContain("href={`/games/${issue.gameId}/scoreboard`}");
   });
 
   it("remains read-only", () => {

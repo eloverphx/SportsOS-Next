@@ -1,15 +1,8 @@
-import {
-  getEmergencyPhysicalControlLock,
-} from "./scoreboardEmergencyControlLock.js";
+import { getEmergencyPhysicalControlLock } from "./scoreboardEmergencyControlLock.js";
 
-import {
-  listScoreboardPhysicalControlPolicies,
-} from "./scoreboardControlPolicy.js";
+import { listScoreboardPhysicalControlPolicies } from "./scoreboardControlPolicy.js";
 
-export type PhysicalControlSafetyLevel =
-  | "SAFE"
-  | "RESTRICTED"
-  | "EMERGENCY_LOCKED";
+export type PhysicalControlSafetyLevel = "SAFE" | "RESTRICTED" | "EMERGENCY_LOCKED";
 
 export type PhysicalControlHealthStatus = {
   level: PhysicalControlSafetyLevel;
@@ -21,19 +14,12 @@ export type PhysicalControlHealthStatus = {
   summary: string;
 };
 
-export function getPhysicalControlHealthStatus():
-  PhysicalControlHealthStatus {
-  const emergencyLock =
-    getEmergencyPhysicalControlLock();
+export function getPhysicalControlHealthStatus(): PhysicalControlHealthStatus {
+  const emergencyLock = getEmergencyPhysicalControlLock();
 
-  const policies =
-    listScoreboardPhysicalControlPolicies();
+  const policies = listScoreboardPhysicalControlPolicies();
 
-  const lockedPolicies =
-    policies.filter(
-      (policy) =>
-        policy.mode === "LOCKED",
-    );
+  const lockedPolicies = policies.filter((policy) => policy.mode === "LOCKED");
 
   if (emergencyLock.active) {
     return {
@@ -43,9 +29,7 @@ export function getPhysicalControlHealthStatus():
       activePolicyCount: policies.length,
       lockedPolicyCount: lockedPolicies.length,
       generatedAt: new Date().toISOString(),
-      summary:
-        emergencyLock.reason ??
-        "Emergency physical-control lock is active.",
+      summary: emergencyLock.reason ?? "Emergency physical-control lock is active.",
     };
   }
 
@@ -57,8 +41,7 @@ export function getPhysicalControlHealthStatus():
       activePolicyCount: policies.length,
       lockedPolicyCount: lockedPolicies.length,
       generatedAt: new Date().toISOString(),
-      summary:
-        `${lockedPolicies.length} physical-control policy scope(s) are locked.`,
+      summary: `${lockedPolicies.length} physical-control policy scope(s) are locked.`,
     };
   }
 

@@ -8,14 +8,11 @@ export default function TournamentBracketPage() {
           SportsOS Tournament Operations
         </div>
 
-        <h1 className="mt-2 text-3xl font-bold text-slate-100">
-          Tournament Bracket
-        </h1>
+        <h1 className="mt-2 text-3xl font-bold text-slate-100">Tournament Bracket</h1>
 
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-          Bracket seeds are generated directly from the current tournament
-          standings. Seeding logic remains centralized in the shared bracket
-          engine.
+          Bracket seeds are generated directly from the current tournament standings. Seeding logic
+          remains centralized in the shared bracket engine.
         </p>
       </div>
 

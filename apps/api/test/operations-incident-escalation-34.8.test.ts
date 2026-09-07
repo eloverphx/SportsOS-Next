@@ -3,15 +3,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../../..",
-);
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
-const script = readFileSync(
-  path.join(root, "scripts/operations-incident-escalation.sh"),
-  "utf8",
-);
+const script = readFileSync(path.join(root, "scripts/operations-incident-escalation.sh"), "utf8");
 
 describe("Milestone 34.8 incident escalation policy", () => {
   it("defines bounded warning and critical escalation thresholds", () => {

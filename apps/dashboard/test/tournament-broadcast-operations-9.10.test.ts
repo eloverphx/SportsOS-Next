@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fs from "node:fs";
-import {
-  buildBroadcastOperationsSummary,
-} from "../lib/tournament-broadcast-operations";
+import { buildBroadcastOperationsSummary } from "../lib/tournament-broadcast-operations";
 
 describe("Milestone 9.10 broadcast operations dashboard", () => {
   it("reports ready when the stream can go live", () => {
@@ -53,31 +51,18 @@ describe("Milestone 9.10 broadcast operations dashboard", () => {
       "utf8",
     );
 
-    expect(component).toContain(
-      'data-testid="broadcast-operations-dashboard"',
-    );
-    expect(component).toContain(
-      'data-testid="broadcast-overlay-url"',
-    );
-    expect(component).toContain(
-      "TournamentBroadcastOperatorPanel",
-    );
+    expect(component).toContain('data-testid="broadcast-operations-dashboard"');
+    expect(component).toContain('data-testid="broadcast-overlay-url"');
+    expect(component).toContain("TournamentBroadcastOperatorPanel");
   });
 
   it("provides the broadcast operations page", () => {
     const page = fs.readFileSync(
-      new URL(
-        "../app/tournament/broadcast/operations/page.tsx",
-        import.meta.url,
-      ),
+      new URL("../app/tournament/broadcast/operations/page.tsx", import.meta.url),
       "utf8",
     );
 
-    expect(page).toContain(
-      "Broadcast Operations Dashboard",
-    );
-    expect(page).toContain(
-      "TournamentBroadcastOperationsDashboard",
-    );
+    expect(page).toContain("Broadcast Operations Dashboard");
+    expect(page).toContain("TournamentBroadcastOperationsDashboard");
   });
 });

@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildBroadcastSessionSummary,
-} from "../lib/tournament-broadcast-session";
+import { buildBroadcastSessionSummary } from "../lib/tournament-broadcast-session";
 
 describe("Milestone 9.1 broadcast session state", () => {
   it("reports ready when all broadcast prerequisites are satisfied", () => {
@@ -33,9 +31,7 @@ describe("Milestone 9.1 broadcast session state", () => {
     });
 
     expect(summary.status).toBe("NOT_READY");
-    expect(summary.blockers).toContain(
-      "Broadcast operator is not assigned.",
-    );
+    expect(summary.blockers).toContain("Broadcast operator is not assigned.");
   });
 
   it("blocks when the stream destination is not configured", () => {
@@ -50,9 +46,7 @@ describe("Milestone 9.1 broadcast session state", () => {
     });
 
     expect(summary.ready).toBe(false);
-    expect(summary.blockers).toContain(
-      "Stream destination is not configured.",
-    );
+    expect(summary.blockers).toContain("Stream destination is not configured.");
   });
 
   it("reports live when game and transport are both live", () => {
@@ -83,9 +77,7 @@ describe("Milestone 9.1 broadcast session state", () => {
     });
 
     expect(summary.status).toBe("DEGRADED");
-    expect(summary.warnings).toContain(
-      "Game is live but broadcast transport is not live.",
-    );
+    expect(summary.warnings).toContain("Game is live but broadcast transport is not live.");
   });
 
   it("warns when transport is live before the game", () => {
@@ -100,9 +92,7 @@ describe("Milestone 9.1 broadcast session state", () => {
     });
 
     expect(summary.status).toBe("DEGRADED");
-    expect(summary.warnings).toContain(
-      "Broadcast transport is live before the game is live.",
-    );
+    expect(summary.warnings).toContain("Broadcast transport is live before the game is live.");
   });
 
   it("keeps overlay eligibility separate from transport readiness", () => {
@@ -117,8 +107,6 @@ describe("Milestone 9.1 broadcast session state", () => {
     });
 
     expect(summary.overlayEligible).toBe(false);
-    expect(summary.warnings).toContain(
-      "Broadcast overlay is disabled.",
-    );
+    expect(summary.warnings).toContain("Broadcast overlay is disabled.");
   });
 });

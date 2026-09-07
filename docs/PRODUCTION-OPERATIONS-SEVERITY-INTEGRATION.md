@@ -1,4 +1,3 @@
-
 ## Milestone 29.9.1 page repair
 
 The original 29.9 installer successfully updated the schema-v2 snapshot and dashboard helper, but the page insertion failed because the existing JSX did not contain the assumed grid marker.

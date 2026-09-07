@@ -54,10 +54,7 @@ A scoreboard assignment change invalidates the prior preflight.
 The authoritative start guard must call:
 
 ```ts
-evaluateGameStartPreflight(
-  gameId,
-  assignedDeviceId,
-);
+evaluateGameStartPreflight(gameId, assignedDeviceId);
 ```
 
 ## Emergency override

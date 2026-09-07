@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildTournamentOperationsSummary,
-} from "../lib/tournament-operations-dashboard";
+import { buildTournamentOperationsSummary } from "../lib/tournament-operations-dashboard";
 
 describe("Milestone 7.10 tournament operations dashboard", () => {
   it("reports pregame blockers", () => {
@@ -21,9 +19,7 @@ describe("Milestone 7.10 tournament operations dashboard", () => {
     expect(summary.stage).toBe("PREGAME");
     expect(summary.blockers).toContain("Home team not checked in");
     expect(summary.blockers).toContain("Home roster not locked");
-    expect(summary.blockers).toContain(
-      "Required officials not assigned",
-    );
+    expect(summary.blockers).toContain("Required officials not assigned");
   });
 
   it("reports authorized stage before live start", () => {

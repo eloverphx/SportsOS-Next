@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildTournamentStandings,
-} from "../lib/tournament-standings";
+import { buildTournamentStandings } from "../lib/tournament-standings";
 
 describe("Milestone 8.1 tournament standings engine", () => {
   const teams = [
@@ -15,12 +13,7 @@ describe("Milestone 8.1 tournament standings engine", () => {
 
     expect(standings).toHaveLength(3);
     expect(
-      standings.every(
-        (row) =>
-          row.gamesPlayed === 0 &&
-          row.points === 0 &&
-          row.goalsFor === 0,
-      ),
+      standings.every((row) => row.gamesPlayed === 0 && row.points === 0 && row.goalsFor === 0),
     ).toBe(true);
   });
 
@@ -107,9 +100,7 @@ describe("Milestone 8.1 tournament standings engine", () => {
       },
     );
 
-    expect(
-      standings.find((row) => row.teamId === "a")?.points,
-    ).toBe(3);
+    expect(standings.find((row) => row.teamId === "a")?.points).toBe(3);
   });
 
   it("sorts by points, wins, goal differential, goals for, then name", () => {
@@ -167,9 +158,7 @@ describe("Milestone 8.1 tournament standings engine", () => {
       },
     ]);
 
-    expect(
-      standings.find((row) => row.teamId === "a")?.gamesPlayed,
-    ).toBe(0);
+    expect(standings.find((row) => row.teamId === "a")?.gamesPlayed).toBe(0);
   });
 
   it("rejects invalid finalized scores", () => {

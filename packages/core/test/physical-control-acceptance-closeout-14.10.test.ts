@@ -1,8 +1,4 @@
-import {
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 
 describe("Milestone 14.10 physical control acceptance / closeout", () => {
@@ -46,9 +42,7 @@ describe("Milestone 14.10 physical control acceptance / closeout", () => {
       "Audit/diagnostics acceptance",
       "Offline/retry acceptance",
     ]) {
-      expect(checklist).toContain(
-        heading,
-      );
+      expect(checklist).toContain(heading);
     }
   });
 
@@ -61,9 +55,7 @@ describe("Milestone 14.10 physical control acceptance / closeout", () => {
       "utf8",
     );
 
-    expect(checklist).toContain(
-      "The ESP32 does not directly modify authoritative game state.",
-    );
+    expect(checklist).toContain("The ESP32 does not directly modify authoritative game state.");
   });
 
   it("requires duplicate-safe retry", () => {
@@ -75,13 +67,9 @@ describe("Milestone 14.10 physical control acceptance / closeout", () => {
       "utf8",
     );
 
-    expect(checklist).toContain(
-      "Offline retry reuses the original sequence number.",
-    );
+    expect(checklist).toContain("Offline retry reuses the original sequence number.");
 
-    expect(checklist).toContain(
-      "Retries cannot create a second authoritative mutation.",
-    );
+    expect(checklist).toContain("Retries cannot create a second authoritative mutation.");
   });
 
   it("documents final browser E2E gate", () => {
@@ -93,26 +81,17 @@ describe("Milestone 14.10 physical control acceptance / closeout", () => {
       "utf8",
     );
 
-    expect(checklist).toContain(
-      "npm run test:e2e:docker",
-    );
+    expect(checklist).toContain("npm run test:e2e:docker");
   });
 
   it("documents the Milestone 14 closeout runner", () => {
     const readme = fs.readFileSync(
-      new URL(
-        "../../../firmware/esp32-scoreboard/README.md",
-        import.meta.url,
-      ),
+      new URL("../../../firmware/esp32-scoreboard/README.md", import.meta.url),
       "utf8",
     );
 
-    expect(readme).toContain(
-      "Milestone 14.10",
-    );
+    expect(readme).toContain("Milestone 14.10");
 
-    expect(readme).toContain(
-      "run-physical-control-acceptance.sh",
-    );
+    expect(readme).toContain("run-physical-control-acceptance.sh");
   });
 });

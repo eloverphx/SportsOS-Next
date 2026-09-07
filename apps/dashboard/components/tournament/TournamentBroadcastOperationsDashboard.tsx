@@ -1,9 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  buildBroadcastOperationsSummary,
-} from "../../lib/tournament-broadcast-operations";
+import { buildBroadcastOperationsSummary } from "../../lib/tournament-broadcast-operations";
 import { TournamentBroadcastOperatorPanel } from "./TournamentBroadcastOperatorPanel";
 
 export function TournamentBroadcastOperationsDashboard() {
@@ -25,26 +23,14 @@ export function TournamentBroadcastOperationsDashboard() {
         overlayEligible,
         realtimeConnected,
       }),
-    [
-      canGoLive,
-      gameLive,
-      overlayEligible,
-      realtimeConnected,
-      sessionReady,
-      transportLive,
-    ],
+    [canGoLive, gameLive, overlayEligible, realtimeConnected, sessionReady, transportLive],
   );
 
   const overlayPath =
-    gameId.trim().length > 0
-      ? `/broadcast/overlay/${encodeURIComponent(gameId.trim())}`
-      : null;
+    gameId.trim().length > 0 ? `/broadcast/overlay/${encodeURIComponent(gameId.trim())}` : null;
 
   return (
-    <section
-      data-testid="broadcast-operations-dashboard"
-      className="space-y-6"
-    >
+    <section data-testid="broadcast-operations-dashboard" className="space-y-6">
       <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -52,18 +38,12 @@ export function TournamentBroadcastOperationsDashboard() {
               Broadcast operations
             </div>
 
-            <div className="mt-1 text-2xl font-bold text-slate-100">
-              {summary.stage}
-            </div>
+            <div className="mt-1 text-2xl font-bold text-slate-100">{summary.stage}</div>
           </div>
 
           <div className="text-right">
-            <div className="text-3xl font-bold text-slate-100">
-              {summary.progressPercent}%
-            </div>
-            <div className="text-xs text-slate-500">
-              readiness
-            </div>
+            <div className="text-3xl font-bold text-slate-100">{summary.progressPercent}%</div>
+            <div className="text-xs text-slate-500">readiness</div>
           </div>
         </div>
 
@@ -153,11 +133,7 @@ export function TournamentBroadcastOperationsDashboard() {
               type="checkbox"
               checked={Boolean(checked)}
               onChange={(event) =>
-                (
-                  setter as React.Dispatch<
-                    React.SetStateAction<boolean>
-                  >
-                )(event.target.checked)
+                (setter as React.Dispatch<React.SetStateAction<boolean>>)(event.target.checked)
               }
             />
             {String(label)}

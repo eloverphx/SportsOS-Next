@@ -1,9 +1,7 @@
 [
   {
     "file": "apps/api/src/services/scoreboardDeviceGateway.ts",
-    "exports": [
-      "ScoreboardDeviceGateway"
-    ],
+    "exports": ["ScoreboardDeviceGateway"],
     "hornMentions": [],
     "commandMentions": [
       "  buildScoreboardMqttCommandEnvelope,",
@@ -17,9 +15,7 @@
   },
   {
     "file": "apps/api/src/routes/scoreboardDevices.ts",
-    "exports": [
-      "scoreboardDevicesRoutes"
-    ],
+    "exports": ["scoreboardDevicesRoutes"],
     "hornMentions": [],
     "commandMentions": [
       "  validateScoreboardDeviceCommand,",

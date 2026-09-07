@@ -1,7 +1,4 @@
-import {
-  NextResponse,
-  type NextRequest,
-} from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
@@ -23,58 +20,29 @@ const CONTENT_SECURITY_POLICY = [
 // SPORTSOS_M30_3_2_CONTENT_SECURITY_POLICY
 
 const SECURITY_HEADERS = {
-  "Content-Security-Policy":
-    CONTENT_SECURITY_POLICY,
-  "Cross-Origin-Opener-Policy":
-    "same-origin",
-  "Cross-Origin-Resource-Policy":
-    "same-origin",
-  "Permissions-Policy":
-    "camera=(), microphone=(), geolocation=()",
-  "Referrer-Policy":
-    "no-referrer",
-  "X-Content-Type-Options":
-    "nosniff",
-  "X-Frame-Options":
-    "DENY",
+  "Content-Security-Policy": CONTENT_SECURITY_POLICY,
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "Referrer-Policy": "no-referrer",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
 } as const;
 
-export function middleware(
-  request: NextRequest,
-) {
-  const response =
-    NextResponse.next();
+export function middleware(request: NextRequest) {
+  const response = NextResponse.next();
 
-  for (
-    const [
-      name,
-      value,
-    ]
-    of Object.entries(
-      SECURITY_HEADERS,
-    )
-  ) {
-    response.headers.set(
-      name,
-      value,
-    );
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    response.headers.set(name, value);
   }
 
-  if (
-    process.env.NODE_ENV ===
-    "production"
-  ) {
-    response.headers.set(
-      "Strict-Transport-Security",
-      "max-age=31536000; includeSubDomains",
-    );
+  if (process.env.NODE_ENV === "production") {
+    response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   }
 
   return response;
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

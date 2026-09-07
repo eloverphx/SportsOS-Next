@@ -14,12 +14,9 @@ describe("Milestone 7.5 officials assignment", () => {
   });
 
   it("defaults to an empty assignment", () => {
-    expect(
-      readOfficialsAssignment(
-        { getItem: () => null },
-        "game-75",
-      ),
-    ).toEqual(EMPTY_OFFICIALS_ASSIGNMENT);
+    expect(readOfficialsAssignment({ getItem: () => null }, "game-75")).toEqual(
+      EMPTY_OFFICIALS_ASSIGNMENT,
+    );
   });
 
   it("requires two referees for required readiness", () => {
@@ -80,12 +77,7 @@ describe("Milestone 7.5 officials assignment", () => {
   });
 
   it("fails closed for malformed persisted data", () => {
-    expect(
-      readOfficialsAssignment(
-        { getItem: () => "{bad-json" },
-        "game-75",
-      ),
-    ).toEqual({
+    expect(readOfficialsAssignment({ getItem: () => "{bad-json" }, "game-75")).toEqual({
       referee1: "",
       referee2: "",
       linesman1: "",

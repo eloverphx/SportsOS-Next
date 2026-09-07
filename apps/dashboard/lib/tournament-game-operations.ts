@@ -77,9 +77,7 @@ function teamName(value: unknown, fallback: string): string {
   );
 }
 
-export function normalizeTournamentGame(
-  value: unknown,
-): TournamentGameOperationsGame | null {
+export function normalizeTournamentGame(value: unknown): TournamentGameOperationsGame | null {
   if (!isRecord(value)) return null;
 
   const homeTeam = firstRecord(value.homeTeam, value.home_team);
@@ -99,17 +97,8 @@ export function normalizeTournamentGame(
     "Away team unassigned",
   );
 
-  const venueName = firstString(
-    venue?.name,
-    value.venueName,
-    value.venue_name,
-  );
-  const rinkName = firstString(
-    rink?.name,
-    value.rinkName,
-    value.rink_name,
-    value.rink,
-  );
+  const venueName = firstString(venue?.name, value.venueName, value.venue_name);
+  const rinkName = firstString(rink?.name, value.rinkName, value.rink_name, value.rink);
   const scheduledStart = firstString(
     value.scheduledStart,
     value.scheduled_start,
@@ -138,17 +127,14 @@ export function normalizeTournamentGame(
     scoringStatus,
     readiness: {
       teamsAssigned:
-        homeTeamName !== "Home team unassigned" &&
-        awayTeamName !== "Away team unassigned",
+        homeTeamName !== "Home team unassigned" && awayTeamName !== "Away team unassigned",
       rinkAssigned: Boolean(rinkName),
       scheduledStartAssigned: Boolean(scheduledStart),
     },
   };
 }
 
-export function extractTournamentGameList(
-  payload: unknown,
-): TournamentGameOperationsGame[] {
+export function extractTournamentGameList(payload: unknown): TournamentGameOperationsGame[] {
   let candidates: unknown[] = [];
 
   if (Array.isArray(payload)) {
@@ -169,9 +155,7 @@ export function extractTournamentGameList(
     .filter((game) => game.status !== "CANCELED");
 }
 
-export function extractTournamentGame(
-  payload: unknown,
-): TournamentGameOperationsGame | null {
+export function extractTournamentGame(payload: unknown): TournamentGameOperationsGame | null {
   if (isRecord(payload)) {
     if ("game" in payload) {
       const game = normalizeTournamentGame(payload.game);

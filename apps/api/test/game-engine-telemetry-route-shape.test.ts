@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  classifyEngineGame,
-  type EngineTelemetryRow,
-} from "../src/modules/games/telemetry.js";
+import { classifyEngineGame, type EngineTelemetryRow } from "../src/modules/games/telemetry.js";
 
 function row(overrides: Partial<EngineTelemetryRow> = {}): EngineTelemetryRow {
   return {

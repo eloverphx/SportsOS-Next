@@ -8,13 +8,11 @@ export default function TournamentBroadcastPage() {
           SportsOS Broadcast Operations
         </div>
 
-        <h1 className="mt-2 text-3xl font-bold text-slate-100">
-          Broadcast Operator
-        </h1>
+        <h1 className="mt-2 text-3xl font-bold text-slate-100">Broadcast Operator</h1>
 
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-          Validate per-game streaming readiness before connecting an
-          external transport such as OBS, RTMP, or another broadcast backend.
+          Validate per-game streaming readiness before connecting an external transport such as OBS,
+          RTMP, or another broadcast backend.
         </p>
       </div>
 

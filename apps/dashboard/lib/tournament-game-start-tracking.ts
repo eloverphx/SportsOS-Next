@@ -3,12 +3,7 @@ export type GameStartTiming = {
   actualStart: string | null;
   delayMs: number | null;
   delayMinutes: number | null;
-  state:
-    | "NOT_SCHEDULED"
-    | "NOT_STARTED"
-    | "EARLY"
-    | "ON_TIME"
-    | "DELAYED";
+  state: "NOT_SCHEDULED" | "NOT_STARTED" | "EARLY" | "ON_TIME" | "DELAYED";
 };
 
 export function computeGameStartTiming(
@@ -69,9 +64,7 @@ export function computeGameStartTiming(
   };
 }
 
-export function formatDelayLabel(
-  timing: GameStartTiming,
-): string {
+export function formatDelayLabel(timing: GameStartTiming): string {
   switch (timing.state) {
     case "NOT_SCHEDULED":
       return "Not scheduled";

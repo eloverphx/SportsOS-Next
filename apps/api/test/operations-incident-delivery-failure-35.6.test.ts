@@ -10,12 +10,9 @@ import {
   resolveOperationsIncident,
 } from "../src/services/operationsIncidentJournal.js";
 
-const ORIGINAL_ENABLED =
-  process.env.SPORTSOS_OPERATIONS_STATUS_API_ENABLED;
-const ORIGINAL_TOKEN =
-  process.env.SPORTSOS_OPERATIONS_STATUS_TOKEN;
-const ORIGINAL_DIR =
-  process.env.SPORTSOS_OPERATIONS_INCIDENT_DIR;
+const ORIGINAL_ENABLED = process.env.SPORTSOS_OPERATIONS_STATUS_API_ENABLED;
+const ORIGINAL_TOKEN = process.env.SPORTSOS_OPERATIONS_STATUS_TOKEN;
+const ORIGINAL_DIR = process.env.SPORTSOS_OPERATIONS_INCIDENT_DIR;
 
 const TOKEN = "m35-6-test-token-0123456789-abcdefghijklmnopqrstuvwxyz";
 
@@ -47,9 +44,7 @@ afterEach(async () => {
 });
 
 async function createApp() {
-  tempDir = await fs.mkdtemp(
-    path.join(os.tmpdir(), "sportsos-m35-6-"),
-  );
+  tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "sportsos-m35-6-"));
 
   process.env.SPORTSOS_OPERATIONS_STATUS_API_ENABLED = "true";
   process.env.SPORTSOS_OPERATIONS_STATUS_TOKEN = TOKEN;
@@ -66,8 +61,7 @@ describe("Milestone 35.6 delivery failure incident integration", () => {
 
     const response = await app.inject({
       method: "POST",
-      url:
-        "/deployment/operations/incidents/signals/escalation-delivery-failure",
+      url: "/deployment/operations/incidents/signals/escalation-delivery-failure",
       payload: {
         incidentId: "inc-original",
         channel: "webhook",
@@ -84,8 +78,7 @@ describe("Milestone 35.6 delivery failure incident integration", () => {
     const signal = async (incidentId: string) =>
       app.inject({
         method: "POST",
-        url:
-          "/deployment/operations/incidents/signals/escalation-delivery-failure",
+        url: "/deployment/operations/incidents/signals/escalation-delivery-failure",
         headers: {
           authorization: `Bearer ${TOKEN}`,
         },
@@ -107,9 +100,7 @@ describe("Milestone 35.6 delivery failure incident integration", () => {
     expect(journal.incidents).toHaveLength(1);
 
     const incident = journal.incidents[0];
-    expect(incident?.fingerprint).toBe(
-      "operations:incident-escalation-delivery-failure",
-    );
+    expect(incident?.fingerprint).toBe("operations:incident-escalation-delivery-failure");
     expect(incident?.source).toBe("operations");
     expect(incident?.severity).toBe("critical");
     expect(incident?.occurrences).toBe(2);
@@ -122,8 +113,7 @@ describe("Milestone 35.6 delivery failure incident integration", () => {
 
     const first = await app.inject({
       method: "POST",
-      url:
-        "/deployment/operations/incidents/signals/escalation-delivery-failure",
+      url: "/deployment/operations/incidents/signals/escalation-delivery-failure",
       headers: {
         authorization: `Bearer ${TOKEN}`,
       },
@@ -144,8 +134,7 @@ describe("Milestone 35.6 delivery failure incident integration", () => {
 
     const second = await app.inject({
       method: "POST",
-      url:
-        "/deployment/operations/incidents/signals/escalation-delivery-failure",
+      url: "/deployment/operations/incidents/signals/escalation-delivery-failure",
       headers: {
         authorization: `Bearer ${TOKEN}`,
       },
@@ -165,9 +154,7 @@ describe("Milestone 35.6 delivery failure incident integration", () => {
     expect(incident?.id).toBe(incidentId);
     expect(incident?.status).toBe("open");
     expect(incident?.occurrences).toBe(2);
-    expect(
-      incident?.events.some((event) => event.type === "reopened"),
-    ).toBe(true);
+    expect(incident?.events.some((event) => event.type === "reopened")).toBe(true);
 
     await app.close();
   });
@@ -176,34 +163,18 @@ describe("Milestone 35.6 delivery failure incident integration", () => {
     // SPORTSOS_M35_6_3_STABLE_REPO_ROOT
     // Vitest may execute this workspace with process.cwd() === apps/api.
     // Resolve the repository root from this test file instead.
-    const repoRoot = path.resolve(
-      path.dirname(new URL(import.meta.url).pathname),
-      "../../..",
-    );
+    const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../../..");
 
     const escalation = await fs.readFile(
-      path.join(
-        repoRoot,
-        "scripts/operations-incident-escalation.sh",
-      ),
+      path.join(repoRoot, "scripts/operations-incident-escalation.sh"),
       "utf8",
     );
 
-    expect(escalation).toContain(
-      "SPORTSOS_M35_6_DELIVERY_FAILURE_SIGNAL",
-    );
-    expect(escalation).toContain(
-      "signals/escalation-delivery-failure",
-    );
-    expect(escalation).toContain(
-      "signalDeliveryFailure(incident, deliveryDetail);",
-    );
+    expect(escalation).toContain("SPORTSOS_M35_6_DELIVERY_FAILURE_SIGNAL");
+    expect(escalation).toContain("signals/escalation-delivery-failure");
+    expect(escalation).toContain("signalDeliveryFailure(incident, deliveryDetail);");
 
-    expect(escalation).not.toMatch(
-      /\bdocker\s+(restart|stop|kill|rm)\b/,
-    );
-    expect(escalation).not.toMatch(
-      /\bdocker\s+compose\s+(restart|stop|down|rm)\b/,
-    );
+    expect(escalation).not.toMatch(/\bdocker\s+(restart|stop|kill|rm)\b/);
+    expect(escalation).not.toMatch(/\bdocker\s+compose\s+(restart|stop|down|rm)\b/);
   });
 });

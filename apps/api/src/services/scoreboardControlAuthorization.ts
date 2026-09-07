@@ -1,8 +1,6 @@
 import type { FastifyRequest } from "fastify";
 
-export type ScoreboardControlPermission =
-  | "CONTROL_POLICY_READ"
-  | "CONTROL_POLICY_WRITE";
+export type ScoreboardControlPermission = "CONTROL_POLICY_READ" | "CONTROL_POLICY_WRITE";
 
 type Principal = {
   userId: string | null;
@@ -60,9 +58,7 @@ function collectRoles(source: unknown): string[] {
   return [...roles];
 }
 
-export function getScoreboardControlPrincipal(
-  request: FastifyRequest,
-): Principal {
+export function getScoreboardControlPrincipal(request: FastifyRequest): Principal {
   const extended = request as FastifyRequest & {
     user?: unknown;
     auth?: unknown;
@@ -72,11 +68,7 @@ export function getScoreboardControlPrincipal(
   const roles = new Set<string>();
   let userId: string | null = null;
 
-  for (const source of [
-    extended.user,
-    extended.auth,
-    extended.session,
-  ]) {
+  for (const source of [extended.user, extended.auth, extended.session]) {
     if (typeof source !== "object" || source === null) continue;
 
     for (const role of collectRoles(source)) roles.add(role);
@@ -99,10 +91,7 @@ export function hasScoreboardControlPermission(
 ): boolean {
   const principal = getScoreboardControlPrincipal(request);
 
-  const allowed =
-    permission === "CONTROL_POLICY_WRITE"
-      ? WRITE_ROLES
-      : READ_ROLES;
+  const allowed = permission === "CONTROL_POLICY_WRITE" ? WRITE_ROLES : READ_ROLES;
 
   return principal.roles.some((role) => allowed.has(role));
 }

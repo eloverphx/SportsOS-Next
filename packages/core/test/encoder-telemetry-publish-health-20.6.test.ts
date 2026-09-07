@@ -1,37 +1,24 @@
-import {
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 
 describe("Milestone 20.6 encoder telemetry / publish health", () => {
-  const runtime =
-    fs.readFileSync(
-      new URL(
-        "../../../apps/api/src/services/encoderRuntime.ts",
-        import.meta.url,
-      ),
-      "utf8",
-    );
+  const runtime = fs.readFileSync(
+    new URL("../../../apps/api/src/services/encoderRuntime.ts", import.meta.url),
+    "utf8",
+  );
 
-  const route =
-    fs.readFileSync(
-      new URL(
-        "../../../apps/api/src/routes/encoderSessions.ts",
-        import.meta.url,
-      ),
-      "utf8",
-    );
+  const route = fs.readFileSync(
+    new URL("../../../apps/api/src/routes/encoderSessions.ts", import.meta.url),
+    "utf8",
+  );
 
-  const panel =
-    fs.readFileSync(
-      new URL(
-        "../../../apps/dashboard/app/scoreboards/operations/StreamDestinationPanel.tsx",
-        import.meta.url,
-      ),
-      "utf8",
-    );
+  const panel = fs.readFileSync(
+    new URL(
+      "../../../apps/dashboard/app/scoreboards/operations/StreamDestinationPanel.tsx",
+      import.meta.url,
+    ),
+    "utf8",
+  );
 
   it("enables FFmpeg progress output", () => {
     expect(runtime).toContain('"-progress"');
@@ -58,9 +45,7 @@ describe("Milestone 20.6 encoder telemetry / publish health", () => {
   });
 
   it("provides a telemetry endpoint", () => {
-    expect(route).toContain(
-      '"/encoder-sessions/:gameId/telemetry"',
-    );
+    expect(route).toContain('"/encoder-sessions/:gameId/telemetry"');
   });
 
   it("shows publish health in the operator UI", () => {

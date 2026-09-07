@@ -12,21 +12,13 @@ describe("Milestone 33 recovery observability", () => {
   const policy = read("scripts/lib/recovery-policy.sh");
   const recoveryEngine = read("scripts/container-recovery-check.sh");
   const snapshot = read("scripts/operations-status-snapshot.sh");
-  const helper = read(
-    "apps/dashboard/app/dashboard/operations/operationsStatus.ts",
-  );
-  const page = read(
-    "apps/dashboard/app/dashboard/operations/page.tsx",
-  );
+  const helper = read("apps/dashboard/app/dashboard/operations/operationsStatus.ts");
+  const page = read("apps/dashboard/app/dashboard/operations/page.tsx");
 
   it("uses one canonical shared recovery policy", () => {
     expect(policy).toContain("SPORTSOS_M33_5_SHARED_RECOVERY_POLICY");
-    expect(recoveryEngine).toContain(
-      'source "${ROOT}/scripts/lib/recovery-policy.sh"',
-    );
-    expect(snapshot).toContain(
-      'source "${ROOT}/scripts/lib/recovery-policy.sh"',
-    );
+    expect(recoveryEngine).toContain('source "${ROOT}/scripts/lib/recovery-policy.sh"');
+    expect(snapshot).toContain('source "${ROOT}/scripts/lib/recovery-policy.sh"');
 
     for (const token of [
       "SPORTSOS_RECOVERY_RESTART_DELTA_THRESHOLD",
@@ -54,15 +46,11 @@ describe("Milestone 33 recovery observability", () => {
   });
 
   it("keeps recovery dry-run as the default authority mode", () => {
-    expect(recoveryEngine).toContain(
-      'APPLY_RECOVERY="${SPORTSOS_APPLY_RECOVERY:-0}"',
-    );
+    expect(recoveryEngine).toContain('APPLY_RECOVERY="${SPORTSOS_APPLY_RECOVERY:-0}"');
   });
 
   it("exposes recovery telemetry in the operations snapshot", () => {
-    expect(snapshot).toContain(
-      "SPORTSOS_M33_6_5_RECOVERY_GUARDRAIL_ENRICHMENT",
-    );
+    expect(snapshot).toContain("SPORTSOS_M33_6_5_RECOVERY_GUARDRAIL_ENRICHMENT");
 
     for (const field of [
       "guardrailState",
@@ -77,21 +65,11 @@ describe("Milestone 33 recovery observability", () => {
   });
 
   it("supports all operator guardrail states", () => {
-    for (const state of [
-      "ready",
-      "cooldown",
-      "budget-exhausted",
-      "monitor-only",
-    ]) {
+    for (const state of ["ready", "cooldown", "budget-exhausted", "monitor-only"]) {
       expect(snapshot).toContain(state);
     }
 
-    for (const label of [
-      "READY",
-      "COOLDOWN",
-      "BUDGET EXHAUSTED",
-      "MONITOR ONLY",
-    ]) {
+    for (const label of ["READY", "COOLDOWN", "BUDGET EXHAUSTED", "MONITOR ONLY"]) {
       expect(page).toContain(label);
     }
   });
@@ -107,9 +85,7 @@ describe("Milestone 33 recovery observability", () => {
     expect(page).toContain("Observability only");
 
     expect(page).not.toContain("SPORTSOS_OPERATIONS_STATUS_TOKEN");
-    expect(page).not.toContain(
-      "process.env.SPORTSOS_OPERATIONS_STATUS_TOKEN",
-    );
+    expect(page).not.toContain("process.env.SPORTSOS_OPERATIONS_STATUS_TOKEN");
   });
 
   it("does not move recovery authority into the dashboard", () => {

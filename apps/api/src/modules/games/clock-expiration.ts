@@ -251,9 +251,7 @@ export async function processExpiredGameClocks(nowMs = Date.now()): Promise<numb
  * remaining stay persisted with their original started_at timestamp, allowing
  * every reader to reconstruct the authoritative remaining time after restart.
  */
-export async function recoverGameClocksOnStartup(
-  nowMs = Date.now(),
-): Promise<number> {
+export async function recoverGameClocksOnStartup(nowMs = Date.now()): Promise<number> {
   return processExpiredGameClocks(nowMs);
 }
 

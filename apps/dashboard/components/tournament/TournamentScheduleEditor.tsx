@@ -2,11 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
-import {
-  PERMISSIONS,
-  getStoredUser,
-  userHasPermission,
-} from "../../lib/auth";
+import { PERMISSIONS, getStoredUser, userHasPermission } from "../../lib/auth";
 import type { ScheduleGame } from "../../lib/tournament-schedule";
 import "./tournament-schedule-editor.css";
 
@@ -29,11 +25,7 @@ type FullGame = ScheduleGame & {
 };
 
 type SchedulePreviewConflict = {
-  readonly code:
-    | "RINK_OVERLAP"
-    | "TEAM_OVERLAP"
-    | "TEAM_TURNAROUND"
-    | "MISSING_RINK";
+  readonly code: "RINK_OVERLAP" | "TEAM_OVERLAP" | "TEAM_TURNAROUND" | "MISSING_RINK";
   readonly severity: "ERROR" | "WARNING";
   readonly gameId: number;
   readonly relatedGameId: number | null;
@@ -68,10 +60,7 @@ function toLocalDateTime(value: string): string {
 export function TournamentScheduleEditor({ games, onSaved }: Props) {
   const user = getStoredUser();
   const canManage = userHasPermission(user, PERMISSIONS.GAME_MANAGE);
-  const canOverrideHardConflicts = userHasPermission(
-    user,
-    PERMISSIONS.GAME_SCHEDULE_OVERRIDE,
-  );
+  const canOverrideHardConflicts = userHasPermission(user, PERMISSIONS.GAME_SCHEDULE_OVERRIDE);
 
   const scheduledGames = useMemo(
     () => games.filter((game) => game.status === "SCHEDULED"),
@@ -90,8 +79,7 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
 
   const hardConflicts =
     preview?.conflicts.filter((conflict) => conflict.severity === "ERROR") ?? [];
-  const warnings =
-    preview?.conflicts.filter((conflict) => conflict.severity === "WARNING") ?? [];
+  const warnings = preview?.conflicts.filter((conflict) => conflict.severity === "WARNING") ?? [];
 
   useEffect(() => {
     if (!draft || !canManage || !draft.scheduledStart) {
@@ -106,16 +94,13 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
       setPreviewBusy(true);
       setPreviewError("");
 
-      void api<SchedulePreviewResponse>(
-        `/games/${draft.gameId}/schedule-preview`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            scheduledStart: new Date(draft.scheduledStart).toISOString(),
-            venue: draft.venue.trim() || null,
-          }),
-        },
-      )
+      void api<SchedulePreviewResponse>(`/games/${draft.gameId}/schedule-preview`, {
+        method: "POST",
+        body: JSON.stringify({
+          scheduledStart: new Date(draft.scheduledStart).toISOString(),
+          venue: draft.venue.trim() || null,
+        }),
+      })
         .then((response) => {
           if (cancelled) return;
           setPreview(response);
@@ -172,9 +157,7 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
     }
 
     if (preview.hardConflict && !canOverrideHardConflicts) {
-      setError(
-        "This hard schedule conflict requires elevated override permission.",
-      );
+      setError("This hard schedule conflict requires elevated override permission.");
       return;
     }
 
@@ -237,8 +220,7 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
           overtimeLengthMs: game.overtimeLengthMs,
           notes: game.notes,
           scheduleConflictOverride: overrideHardConflicts,
-          scheduleConflictOverrideReason:
-            scheduleOverrideReason.trim() || null,
+          scheduleConflictOverrideReason: scheduleOverrideReason.trim() || null,
         }),
       });
 
@@ -261,20 +243,23 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
   }
 
   return (
-    <section id="director-scheduling" data-testid="director-scheduling" className="scheduleEditorPanel" aria-labelledby="schedule-editor-heading">
+    <section
+      id="director-scheduling"
+      data-testid="director-scheduling"
+      className="scheduleEditorPanel"
+      aria-labelledby="schedule-editor-heading"
+    >
       <div className="scheduleEditorHeader">
         <div>
           <span className="scheduleEditorEyebrow">Interactive scheduling</span>
           <h2 id="schedule-editor-heading">Move a scheduled game</h2>
           <p>
-            Change rink and start time. Preview and final save are both validated
-            by the authoritative server conflict engine.
+            Change rink and start time. Preview and final save are both validated by the
+            authoritative server conflict engine.
           </p>
         </div>
 
-        {!canManage ? (
-          <span className="scheduleEditorReadOnly">Read-only</span>
-        ) : null}
+        {!canManage ? <span className="scheduleEditorReadOnly">Read-only</span> : null}
       </div>
 
       {error ? <div className="scheduleEditorError">{error}</div> : null}
@@ -288,9 +273,7 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
         <>
           <div className="scheduleGamePicker">
             {scheduledGames.length === 0 ? (
-              <span className="scheduleEditorMuted">
-                No scheduled games are available to move.
-              </span>
+              <span className="scheduleEditorMuted">No scheduled games are available to move.</span>
             ) : (
               scheduledGames.map((game) => (
                 <button
@@ -366,9 +349,7 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
                 </div>
               </div>
 
-              {previewError ? (
-                <div className="scheduleEditorError">{previewError}</div>
-              ) : null}
+              {previewError ? <div className="scheduleEditorError">{previewError}</div> : null}
 
               {preview && preview.conflicts.length > 0 ? (
                 <div className="schedulePreviewConflicts">
@@ -405,8 +386,8 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
                           if (!checked) setScheduleOverrideReason("");
                         }}
                       />
-                      I understand this change creates a hard tournament conflict and
-                      want to override the block.
+                      I understand this change creates a hard tournament conflict and want to
+                      override the block.
                     </label>
 
                     {overrideHardConflicts ? (
@@ -414,26 +395,23 @@ export function TournamentScheduleEditor({ games, onSaved }: Props) {
                         <span>Override reason</span>
                         <textarea
                           value={scheduleOverrideReason}
-                          onChange={(event) =>
-                            setScheduleOverrideReason(event.target.value)
-                          }
+                          onChange={(event) => setScheduleOverrideReason(event.target.value)}
                           maxLength={500}
                           rows={3}
                           required
                           placeholder="Explain why this hard conflict is being intentionally accepted."
                         />
                         <small>
-                          Required for hard-conflict overrides. This reason is stored
-                          in the audit trail.
+                          Required for hard-conflict overrides. This reason is stored in the audit
+                          trail.
                         </small>
                       </label>
                     ) : null}
                   </>
                 ) : (
                   <div className="schedulePreviewError">
-                    Hard schedule conflicts cannot be overridden by your account.
-                    An organization owner or system administrator must approve this
-                    schedule exception.
+                    Hard schedule conflicts cannot be overridden by your account. An organization
+                    owner or system administrator must approve this schedule exception.
                   </div>
                 )
               ) : null}

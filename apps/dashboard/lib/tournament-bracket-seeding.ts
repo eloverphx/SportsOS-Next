@@ -1,6 +1,4 @@
-import type {
-  TournamentStandingRow,
-} from "./tournament-standings";
+import type { TournamentStandingRow } from "./tournament-standings";
 
 export type BracketSeed = {
   seed: number;
@@ -36,30 +34,22 @@ function nextPowerOfTwo(value: number): number {
   return power;
 }
 
-function assertUniqueTeams(
-  standings: TournamentStandingRow[],
-): void {
+function assertUniqueTeams(standings: TournamentStandingRow[]): void {
   const seen = new Set<string>();
 
   for (const row of standings) {
     if (seen.has(row.teamId)) {
-      throw new Error(
-        `Duplicate team in standings: ${row.teamId}`,
-      );
+      throw new Error(`Duplicate team in standings: ${row.teamId}`);
     }
 
     seen.add(row.teamId);
   }
 }
 
-export function seedBracket(
-  standings: TournamentStandingRow[],
-): BracketSeedResult {
+export function seedBracket(standings: TournamentStandingRow[]): BracketSeedResult {
   assertUniqueTeams(standings);
 
-  const ranked = [...standings].sort(
-    (left, right) => left.rank - right.rank,
-  );
+  const ranked = [...standings].sort((left, right) => left.rank - right.rank);
 
   const seeds: BracketSeed[] = ranked.map((row, index) => ({
     seed: index + 1,
@@ -68,8 +58,7 @@ export function seedBracket(
   }));
 
   const fieldSize = seeds.length;
-  const bracketSize =
-    fieldSize === 0 ? 0 : nextPowerOfTwo(fieldSize);
+  const bracketSize = fieldSize === 0 ? 0 : nextPowerOfTwo(fieldSize);
 
   if (bracketSize === 0) {
     return {
@@ -80,18 +69,14 @@ export function seedBracket(
     };
   }
 
-  const slots = Array.from(
-    { length: bracketSize },
-    (_, index) => seeds[index] ?? null,
-  );
+  const slots = Array.from({ length: bracketSize }, (_, index) => seeds[index] ?? null);
 
   const firstRound: BracketMatchup[] = [];
   const matchupCount = bracketSize / 2;
 
   for (let index = 0; index < matchupCount; index += 1) {
     const highSeed = slots[index] ?? null;
-    const lowSeed =
-      slots[bracketSize - 1 - index] ?? null;
+    const lowSeed = slots[bracketSize - 1 - index] ?? null;
 
     firstRound.push({
       id: `round-1-slot-${index + 1}`,

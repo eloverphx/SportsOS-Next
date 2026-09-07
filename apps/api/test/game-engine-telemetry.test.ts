@@ -81,9 +81,7 @@ describe("game engine telemetry classification", () => {
     );
 
     expect(result.state).toBe("WARNING");
-    expect(result.warnings.map((warning) => warning.code)).toContain(
-      "CLOCK_STARTED_AT_MISSING",
-    );
+    expect(result.warnings.map((warning) => warning.code)).toContain("CLOCK_STARTED_AT_MISSING");
   });
 
   it("flags simultaneous game and intermission clocks", () => {
@@ -101,9 +99,7 @@ describe("game engine telemetry classification", () => {
     );
 
     expect(result.state).toBe("WARNING");
-    expect(result.warnings.map((warning) => warning.code)).toContain(
-      "DUAL_CLOCKS_RUNNING",
-    );
+    expect(result.warnings.map((warning) => warning.code)).toContain("DUAL_CLOCKS_RUNNING");
   });
 });
 

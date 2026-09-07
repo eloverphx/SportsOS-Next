@@ -12,12 +12,7 @@ import {
 } from "./sportsos-adapter.js";
 import { runTournamentSimulation } from "./tournament-runner.js";
 
-export type SimulationRunStatus =
-  | "PROVISIONED"
-  | "RUNNING"
-  | "COMPLETED"
-  | "FAILED"
-  | "CLEANED";
+export type SimulationRunStatus = "PROVISIONED" | "RUNNING" | "COMPLETED" | "FAILED" | "CLEANED";
 
 export interface ProvisionSimulationRunInput {
   runId: string;
@@ -59,10 +54,7 @@ function normalizeRunId(value: string): string {
   return normalized;
 }
 
-async function validateSimulationScope(
-  organizationId: number,
-  seasonId: number,
-): Promise<void> {
+async function validateSimulationScope(organizationId: number, seasonId: number): Promise<void> {
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT s.id
      FROM seasons s
@@ -73,9 +65,7 @@ async function validateSimulationScope(
   );
 
   if (!rows[0]) {
-    throw new Error(
-      "Simulation season was not found in the requested organization",
-    );
+    throw new Error("Simulation season was not found in the requested organization");
   }
 }
 
@@ -127,12 +117,8 @@ export async function provisionSimulationRun(
 
   try {
     for (const simulatedGame of plan.games) {
-      const homeTeam = plan.teams.find(
-        (team) => team.id === simulatedGame.homeTeamId,
-      );
-      const awayTeam = plan.teams.find(
-        (team) => team.id === simulatedGame.awayTeamId,
-      );
+      const homeTeam = plan.teams.find((team) => team.id === simulatedGame.homeTeamId);
+      const awayTeam = plan.teams.find((team) => team.id === simulatedGame.awayTeamId);
 
       if (!homeTeam || !awayTeam) {
         throw new Error(
@@ -179,12 +165,7 @@ export async function provisionSimulationRun(
         `INSERT INTO simulation_game_bindings
           (run_id, simulated_game_id, game_id, organization_id)
          VALUES (?, ?, ?, ?)`,
-        [
-          runId,
-          simulatedGame.id,
-          game.id,
-          input.organizationId,
-        ],
+        [runId, simulatedGame.id, game.id, input.organizationId],
       );
     }
   } catch (error) {
@@ -273,9 +254,7 @@ export async function executeProvisionedSimulationRun(
   }
 
   if (run.status !== "PROVISIONED" && run.status !== "FAILED") {
-    throw new Error(
-      `Simulation run ${run.runId} cannot execute from status ${run.status}`,
-    );
+    throw new Error(`Simulation run ${run.runId} cannot execute from status ${run.status}`);
   }
 
   await pool.execute(
@@ -292,17 +271,12 @@ export async function executeProvisionedSimulationRun(
       runId: run.runId,
     });
 
-    const result = await runTournamentSimulation(
-      adapter,
-      run.config,
-      {
-        concurrency: concurrency ?? run.config.rinkCount,
-        failFast: false,
-      },
-    );
+    const result = await runTournamentSimulation(adapter, run.config, {
+      concurrency: concurrency ?? run.config.rinkCount,
+      failFast: false,
+    });
 
-    const status: SimulationRunStatus =
-      result.failed === 0 ? "COMPLETED" : "FAILED";
+    const status: SimulationRunStatus = result.failed === 0 ? "COMPLETED" : "FAILED";
 
     await pool.execute(
       `UPDATE simulation_runs
@@ -358,10 +332,9 @@ export async function cleanupSimulationRun(
   let deletedGames = 0;
 
   for (const row of rows) {
-    const [result] = await pool.execute<ResultSetHeader>(
-      "DELETE FROM games WHERE id = ?",
-      [Number(row.game_id)],
-    );
+    const [result] = await pool.execute<ResultSetHeader>("DELETE FROM games WHERE id = ?", [
+      Number(row.game_id),
+    ]);
     deletedGames += result.affectedRows;
   }
 

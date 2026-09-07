@@ -2,13 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
-import type {
-  BroadcastOverlaySnapshot,
-} from "../../lib/broadcast-overlay-contract";
-import {
-  deriveSmoothedRemainingMs,
-  formatOverlayClock,
-} from "../../lib/broadcast-overlay-clock";
+import type { BroadcastOverlaySnapshot } from "../../lib/broadcast-overlay-contract";
+import { deriveSmoothedRemainingMs, formatOverlayClock } from "../../lib/broadcast-overlay-clock";
 import {
   buildBroadcastOverlayTheme,
   overlayDensityClasses,
@@ -27,24 +22,14 @@ type RealtimePayload = {
 };
 
 const SOCKET_URL =
-  process.env.NEXT_PUBLIC_SPORTSOS_SOCKET_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  "";
+  process.env.NEXT_PUBLIC_SPORTSOS_SOCKET_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "";
 
-export function BroadcastOverlayClient({
-  gameId,
-}: Props) {
-  const [snapshot, setSnapshot] =
-    useState<BroadcastOverlaySnapshot | null>(null);
+export function BroadcastOverlayClient({ gameId }: Props) {
+  const [snapshot, setSnapshot] = useState<BroadcastOverlaySnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [realtimeConnected, setRealtimeConnected] =
-    useState(false);
-  const [themeSettings, setThemeSettings] = useState(() =>
-    buildBroadcastOverlayTheme(),
-  );
-  const [clockNowMs, setClockNowMs] = useState(
-    () => Date.now(),
-  );
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+  const [themeSettings, setThemeSettings] = useState(() => buildBroadcastOverlayTheme());
+  const [clockNowMs, setClockNowMs] = useState(() => Date.now());
   const clockAnchorRef = useRef<{
     remainingMs: number;
     running: boolean;
@@ -55,8 +40,7 @@ export function BroadcastOverlayClient({
 
   useEffect(() => {
     let active = true;
-    let fallbackTimer: ReturnType<typeof setInterval> | null =
-      null;
+    let fallbackTimer: ReturnType<typeof setInterval> | null = null;
     let socket: Socket | null = null;
 
     const load = async () => {
@@ -75,13 +59,10 @@ export function BroadcastOverlayClient({
         );
 
         if (!response.ok) {
-          throw new Error(
-            `Overlay snapshot request failed (${response.status}).`,
-          );
+          throw new Error(`Overlay snapshot request failed (${response.status}).`);
         }
 
-        const payload =
-          (await response.json()) as BroadcastOverlaySnapshot;
+        const payload = (await response.json()) as BroadcastOverlaySnapshot;
 
         if (active) {
           setSnapshot(payload);
@@ -95,24 +76,15 @@ export function BroadcastOverlayClient({
         }
       } catch (cause) {
         if (active) {
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "Unable to load overlay snapshot.",
-          );
+          setError(cause instanceof Error ? cause.message : "Unable to load overlay snapshot.");
         }
       } finally {
         loadInFlight.current = false;
       }
     };
 
-    const refreshIfGameMatches = (
-      payload?: RealtimePayload,
-    ) => {
-      if (
-        !payload?.gameId ||
-        payload.gameId === gameId
-      ) {
+    const refreshIfGameMatches = (payload?: RealtimePayload) => {
+      if (!payload?.gameId || payload.gameId === gameId) {
         void load();
       }
     };
@@ -183,37 +155,24 @@ export function BroadcastOverlayClient({
   useEffect(() => {
     const refreshTheme = () => {
       setThemeSettings(
-        buildBroadcastOverlayTheme(
-          readBroadcastOverlayThemeSettings(
-            window.localStorage,
-          ),
-        ),
+        buildBroadcastOverlayTheme(readBroadcastOverlayThemeSettings(window.localStorage)),
       );
     };
 
     refreshTheme();
 
     const onStorage = (event: StorageEvent) => {
-      if (
-        !event.key ||
-        event.key === "sportsos:broadcast-overlay-theme"
-      ) {
+      if (!event.key || event.key === "sportsos:broadcast-overlay-theme") {
         refreshTheme();
       }
     };
 
     window.addEventListener("storage", onStorage);
-    window.addEventListener(
-      BROADCAST_THEME_CHANGED_EVENT,
-      refreshTheme,
-    );
+    window.addEventListener(BROADCAST_THEME_CHANGED_EVENT, refreshTheme);
 
     return () => {
       window.removeEventListener("storage", onStorage);
-      window.removeEventListener(
-        BROADCAST_THEME_CHANGED_EVENT,
-        refreshTheme,
-      );
+      window.removeEventListener(BROADCAST_THEME_CHANGED_EVENT, refreshTheme);
     };
   }, []);
 
@@ -224,21 +183,12 @@ export function BroadcastOverlayClient({
       return snapshot?.clock.remainingMs ?? 0;
     }
 
-    return deriveSmoothedRemainingMs(
-      anchor,
-      clockNowMs,
-    );
+    return deriveSmoothedRemainingMs(anchor, clockNowMs);
   }, [clockNowMs, snapshot]);
 
-  const theme = useMemo(
-    () => buildBroadcastOverlayTheme(themeSettings),
-    [themeSettings],
-  );
+  const theme = useMemo(() => buildBroadcastOverlayTheme(themeSettings), [themeSettings]);
 
-  const density = useMemo(
-    () => overlayDensityClasses(theme.density),
-    [theme.density],
-  );
+  const density = useMemo(() => overlayDensityClasses(theme.density), [theme.density]);
 
   const powerPlayLabel = useMemo(() => {
     if (!snapshot?.powerPlay) {
@@ -273,9 +223,7 @@ export function BroadcastOverlayClient({
   }
 
   if (!snapshot) {
-    return (
-      <div className="h-screen w-screen bg-transparent" />
-    );
+    return <div className="h-screen w-screen bg-transparent" />;
   }
 
   return (
@@ -298,18 +246,15 @@ export function BroadcastOverlayClient({
           }}
         >
           {theme.showLogos && snapshot.home.logoUrl ? (
-            <img
-              src={snapshot.home.logoUrl}
-              alt=""
-              className="h-12 w-12 shrink-0 object-contain"
-            />
+            <img src={snapshot.home.logoUrl} alt="" className="h-12 w-12 shrink-0 object-contain" />
           ) : null}
 
           <div className="min-w-0 flex-1">
-            <div className={`truncate ${density.team} font-semibold uppercase tracking-wide`}
-              style={{ color: theme.mutedTextColor }}>
-              {snapshot.home.shortName ??
-                snapshot.home.name}
+            <div
+              className={`truncate ${density.team} font-semibold uppercase tracking-wide`}
+              style={{ color: theme.mutedTextColor }}
+            >
+              {snapshot.home.shortName ?? snapshot.home.name}
             </div>
             <div
               data-testid="overlay-home-score"
@@ -331,7 +276,7 @@ export function BroadcastOverlayClient({
           <div className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
             {snapshot.period !== null
               ? `Period ${snapshot.period}`
-              : snapshot.phase ?? snapshot.status}
+              : (snapshot.phase ?? snapshot.status)}
           </div>
 
           {powerPlayLabel ? (
@@ -346,10 +291,11 @@ export function BroadcastOverlayClient({
 
         <div className="flex min-w-0 flex-1 items-center gap-4 px-5 py-4 text-right">
           <div className="min-w-0 flex-1">
-            <div className={`truncate ${density.team} font-semibold uppercase tracking-wide`}
-              style={{ color: theme.mutedTextColor }}>
-              {snapshot.away.shortName ??
-                snapshot.away.name}
+            <div
+              className={`truncate ${density.team} font-semibold uppercase tracking-wide`}
+              style={{ color: theme.mutedTextColor }}
+            >
+              {snapshot.away.shortName ?? snapshot.away.name}
             </div>
             <div
               data-testid="overlay-away-score"
@@ -360,11 +306,7 @@ export function BroadcastOverlayClient({
           </div>
 
           {theme.showLogos && snapshot.away.logoUrl ? (
-            <img
-              src={snapshot.away.logoUrl}
-              alt=""
-              className="h-12 w-12 shrink-0 object-contain"
-            />
+            <img src={snapshot.away.logoUrl} alt="" className="h-12 w-12 shrink-0 object-contain" />
           ) : null}
         </div>
       </div>
@@ -378,9 +320,7 @@ export function BroadcastOverlayClient({
               : "rounded-full bg-amber-950/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-300"
           }
         >
-          {realtimeConnected
-            ? "Realtime"
-            : "Fallback polling"}
+          {realtimeConnected ? "Realtime" : "Fallback polling"}
         </span>
 
         {error ? (

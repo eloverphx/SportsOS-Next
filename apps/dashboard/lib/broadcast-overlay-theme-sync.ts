@@ -4,8 +4,7 @@ import {
   type BroadcastOverlayThemeSettings,
 } from "./broadcast-overlay-theme-settings";
 
-export const BROADCAST_THEME_CHANGED_EVENT =
-  "sportsos:broadcast-overlay-theme-changed";
+export const BROADCAST_THEME_CHANGED_EVENT = "sportsos:broadcast-overlay-theme-changed";
 
 export function readBroadcastOverlayThemeSettings(
   storage: Pick<Storage, "getItem">,

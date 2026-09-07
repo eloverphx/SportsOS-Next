@@ -10,22 +10,13 @@ import {
 
 describe("Milestone 7.4 roster locking", () => {
   it("defaults both rosters to unlocked", () => {
-    expect(
-      readRosterLockState(
-        { getItem: () => null },
-        "game-74",
-      ),
-    ).toEqual(EMPTY_ROSTER_LOCK_STATE);
+    expect(readRosterLockState({ getItem: () => null }, "game-74")).toEqual(
+      EMPTY_ROSTER_LOCK_STATE,
+    );
   });
 
   it("locks one roster without mutating the other side", () => {
-    expect(
-      setRosterLocked(
-        { home: false, away: true },
-        "home",
-        true,
-      ),
-    ).toEqual({
+    expect(setRosterLocked({ home: false, away: true }, "home", true)).toEqual({
       home: true,
       away: true,
     });
@@ -78,12 +69,7 @@ describe("Milestone 7.4 roster locking", () => {
   });
 
   it("fails closed for malformed persisted data", () => {
-    expect(
-      readRosterLockState(
-        { getItem: () => "{broken-json" },
-        "game-74",
-      ),
-    ).toEqual({
+    expect(readRosterLockState({ getItem: () => "{broken-json" }, "game-74")).toEqual({
       home: false,
       away: false,
     });

@@ -80,9 +80,7 @@ export function GameEnginePanel() {
       setTelemetry(response);
     } catch (caughtError) {
       setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Could not load game engine telemetry",
+        caughtError instanceof Error ? caughtError.message : "Could not load game engine telemetry",
       );
     } finally {
       setLoading(false);
@@ -108,9 +106,7 @@ export function GameEnginePanel() {
       await load();
     } catch (caughtError) {
       setActionError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Could not update game lifecycle",
+        caughtError instanceof Error ? caughtError.message : "Could not update game lifecycle",
       );
     } finally {
       setActingGameId(null);
@@ -143,9 +139,7 @@ export function GameEnginePanel() {
           <p className="muted">
             Authoritative lifecycle state, automatic transitions, and operator warnings.
           </p>
-          <p className="muted">
-            Operator actions are recorded in the engine transition history.
-          </p>
+          <p className="muted">Operator actions are recorded in the engine transition history.</p>
         </div>
 
         <button className="secondary" disabled={loading} onClick={() => void load()}>
@@ -328,9 +322,7 @@ export function GameEnginePanel() {
 
         <div className="activity">
           {telemetry?.recentTransitions.map((transition, index) => (
-            <div
-              key={`${transition.timestamp}-${transition.gameId}-${transition.action}-${index}`}
-            >
+            <div key={`${transition.timestamp}-${transition.gameId}-${transition.action}-${index}`}>
               <b>
                 Game #{transition.gameId} — {transition.action}
               </b>

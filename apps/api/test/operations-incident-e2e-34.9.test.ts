@@ -8,9 +8,7 @@ import {
   listOperationsIncidents,
   readOperationsIncidentJournal,
 } from "../src/services/operationsIncidentJournal.js";
-import {
-  persistSynthesizedOperationsIncidents,
-} from "../src/services/operationsIncidentSynthesis.js";
+import { persistSynthesizedOperationsIncidents } from "../src/services/operationsIncidentSynthesis.js";
 import {
   OPERATIONS_INCIDENTS_PATH,
   registerOperationsIncidentRoutes,
@@ -86,10 +84,7 @@ describe("Milestone 34.9 controlled incident lifecycle", () => {
 
     expect(matching).toHaveLength(1);
     expect(matching[0]?.occurrences).toBe(2);
-    expect(matching[0]?.events.map((event) => event.type)).toEqual([
-      "opened",
-      "updated",
-    ]);
+    expect(matching[0]?.events.map((event) => event.type)).toEqual(["opened", "updated"]);
   });
 
   it("supports authenticated acknowledge and resolve transitions end to end", async () => {
@@ -140,9 +135,7 @@ describe("Milestone 34.9 controlled incident lifecycle", () => {
     expect(resolve.json().data.incident.status).toBe("resolved");
 
     const persisted = await readOperationsIncidentJournal();
-    const finalIncident = persisted.incidents.find(
-      (item) => item.id === incident!.id,
-    );
+    const finalIncident = persisted.incidents.find((item) => item.id === incident!.id);
 
     expect(finalIncident?.events.map((event) => event.type)).toEqual([
       "opened",
@@ -184,17 +177,11 @@ describe("Milestone 34.9 controlled incident lifecycle", () => {
 
     await persistSynthesizedOperationsIncidents(telemetry);
 
-    const reopened = (await listOperationsIncidents()).find(
-      (item) => item.id === incident!.id,
-    );
+    const reopened = (await listOperationsIncidents()).find((item) => item.id === incident!.id);
 
     expect(reopened?.status).toBe("open");
     expect(reopened?.occurrences).toBe(2);
-    expect(reopened?.events.map((event) => event.type)).toEqual([
-      "opened",
-      "resolved",
-      "reopened",
-    ]);
+    expect(reopened?.events.map((event) => event.type)).toEqual(["opened", "resolved", "reopened"]);
 
     await app.close();
   });

@@ -16,11 +16,7 @@ interface HttpError extends Error {
 }
 
 function statusCodeFor(error: HttpError): number {
-  if (
-    typeof error.statusCode === "number" &&
-    error.statusCode >= 400 &&
-    error.statusCode <= 599
-  ) {
+  if (typeof error.statusCode === "number" && error.statusCode >= 400 && error.statusCode <= 599) {
     return error.statusCode;
   }
 

@@ -1,6 +1,4 @@
-import type {
-  ScoreboardDeviceRuntime,
-} from "./scoreboard-devices";
+import type { ScoreboardDeviceRuntime } from "./scoreboard-devices";
 
 export type ScoreboardAssignment = {
   gameId: string;
@@ -8,11 +6,7 @@ export type ScoreboardAssignment = {
   assignedAt: string;
 };
 
-export type ScoreboardHardwareStage =
-  | "NO_DEVICES"
-  | "DEGRADED"
-  | "READY"
-  | "ACTIVE";
+export type ScoreboardHardwareStage = "NO_DEVICES" | "DEGRADED" | "READY" | "ACTIVE";
 
 export type ScoreboardHardwareOperationsSummary = {
   stage: ScoreboardHardwareStage;
@@ -30,78 +24,49 @@ export function buildScoreboardHardwareOperationsSummary(
 ): ScoreboardHardwareOperationsSummary {
   const discovered = devices.length;
 
-  const online = devices.filter(
-    (device) =>
-      device.presence?.online === true,
-  ).length;
+  const online = devices.filter((device) => device.presence?.online === true).length;
 
   const assigned = assignments.length;
 
-  const activeGames = assignments.filter(
-    (assignment) =>
-      devices.some(
-        (device) =>
-          device.deviceId ===
-            assignment.deviceId &&
-          device.presence?.online === true &&
-          device.state?.gameId ===
-            assignment.gameId,
-      ),
+  const activeGames = assignments.filter((assignment) =>
+    devices.some(
+      (device) =>
+        device.deviceId === assignment.deviceId &&
+        device.presence?.online === true &&
+        device.state?.gameId === assignment.gameId,
+    ),
   ).length;
 
   const alerts: string[] = [];
 
   if (discovered === 0) {
-    alerts.push(
-      "No scoreboard devices have reported through MQTT.",
-    );
+    alerts.push("No scoreboard devices have reported through MQTT.");
   }
 
-  if (
-    discovered > 0 &&
-    online < discovered
-  ) {
-    alerts.push(
-      `${discovered - online} scoreboard device(s) are offline.`,
-    );
+  if (discovered > 0 && online < discovered) {
+    alerts.push(`${discovered - online} scoreboard device(s) are offline.`);
   }
 
   for (const assignment of assignments) {
-    const device = devices.find(
-      (candidate) =>
-        candidate.deviceId ===
-        assignment.deviceId,
-    );
+    const device = devices.find((candidate) => candidate.deviceId === assignment.deviceId);
 
     if (!device) {
-      alerts.push(
-        `Assigned device ${assignment.deviceId} has not been discovered.`,
-      );
+      alerts.push(`Assigned device ${assignment.deviceId} has not been discovered.`);
       continue;
     }
 
     if (!device.presence?.online) {
-      alerts.push(
-        `Assigned device ${assignment.deviceId} is offline.`,
-      );
+      alerts.push(`Assigned device ${assignment.deviceId} is offline.`);
     }
   }
 
-  let stage: ScoreboardHardwareStage =
-    "NO_DEVICES";
+  let stage: ScoreboardHardwareStage = "NO_DEVICES";
 
   if (discovered > 0) {
-    stage =
-      online === discovered
-        ? "READY"
-        : "DEGRADED";
+    stage = online === discovered ? "READY" : "DEGRADED";
   }
 
-  if (
-    assigned > 0 &&
-    activeGames === assigned &&
-    online > 0
-  ) {
+  if (assigned > 0 && activeGames === assigned && online > 0) {
     stage = "ACTIVE";
   }
 
@@ -112,12 +77,7 @@ export function buildScoreboardHardwareOperationsSummary(
     alerts.length === 0,
   ];
 
-  const readinessPercent =
-    Math.round(
-      (checks.filter(Boolean).length /
-        checks.length) *
-        100,
-    );
+  const readinessPercent = Math.round((checks.filter(Boolean).length / checks.length) * 100);
 
   return {
     stage,

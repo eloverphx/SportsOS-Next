@@ -35,45 +35,27 @@ describe("Milestone 9.9 overlay theme consumption / sync", () => {
   });
 
   it("provides a stable same-window synchronization event", () => {
-    expect(BROADCAST_THEME_CHANGED_EVENT).toBe(
-      "sportsos:broadcast-overlay-theme-changed",
-    );
+    expect(BROADCAST_THEME_CHANGED_EVENT).toBe("sportsos:broadcast-overlay-theme-changed");
   });
 
   it("makes the browser overlay consume local theme settings", () => {
     const component = fs.readFileSync(
-      new URL(
-        "../components/broadcast/BroadcastOverlayClient.tsx",
-        import.meta.url,
-      ),
+      new URL("../components/broadcast/BroadcastOverlayClient.tsx", import.meta.url),
       "utf8",
     );
 
-    expect(component).toContain(
-      "readBroadcastOverlayThemeSettings",
-    );
-    expect(component).toContain(
-      'window.addEventListener("storage"',
-    );
-    expect(component).toContain(
-      "BROADCAST_THEME_CHANGED_EVENT",
-    );
+    expect(component).toContain("readBroadcastOverlayThemeSettings");
+    expect(component).toContain('window.addEventListener("storage"');
+    expect(component).toContain("BROADCAST_THEME_CHANGED_EVENT");
   });
 
   it("dispatches theme changes from the operator panel", () => {
     const component = fs.readFileSync(
-      new URL(
-        "../components/tournament/TournamentBroadcastOperatorPanel.tsx",
-        import.meta.url,
-      ),
+      new URL("../components/tournament/TournamentBroadcastOperatorPanel.tsx", import.meta.url),
       "utf8",
     );
 
-    expect(component).toContain(
-      "window.dispatchEvent",
-    );
-    expect(component).toContain(
-      "BROADCAST_THEME_CHANGED_EVENT",
-    );
+    expect(component).toContain("window.dispatchEvent");
+    expect(component).toContain("BROADCAST_THEME_CHANGED_EVENT");
   });
 });

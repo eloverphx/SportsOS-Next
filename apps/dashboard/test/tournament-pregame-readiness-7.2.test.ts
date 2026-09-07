@@ -34,9 +34,7 @@ describe("Milestone 7.2 pregame readiness", () => {
 
     expect(checks.find((check) => check.id === "teams")?.state).toBe("PASS");
     expect(checks.find((check) => check.id === "rink")?.state).toBe("PASS");
-    expect(
-      checks.find((check) => check.id === "scheduledStart")?.state,
-    ).toBe("PASS");
+    expect(checks.find((check) => check.id === "scheduledStart")?.state).toBe("PASS");
   });
 
   it("blocks on missing required current game data", () => {
@@ -57,24 +55,17 @@ describe("Milestone 7.2 pregame readiness", () => {
     const summary = buildPregameReadinessSummary(game(), false);
 
     expect(summary.unknownCount).toBe(4);
-    expect(
-      summary.checks.filter((check) => check.source === "future-integration"),
-    ).toHaveLength(4);
+    expect(summary.checks.filter((check) => check.source === "future-integration")).toHaveLength(4);
     expect(summary.actualReady).toBe(true);
   });
 
   it("testing override changes only effective readiness", () => {
-    const summary = buildPregameReadinessSummary(
-      game({ rinkAssigned: false }),
-      true,
-    );
+    const summary = buildPregameReadinessSummary(game({ rinkAssigned: false }), true);
 
     expect(summary.actualReady).toBe(false);
     expect(summary.effectiveReady).toBe(true);
     expect(summary.testingOverrideApplied).toBe(true);
-    expect(
-      summary.checks.find((check) => check.id === "rink")?.state,
-    ).toBe("BLOCKED");
+    expect(summary.checks.find((check) => check.id === "rink")?.state).toBe("BLOCKED");
   });
 
   it("required UNKNOWN integrations do not block before integration exists", () => {
@@ -97,43 +88,27 @@ describe("Milestone 7.2 pregame readiness", () => {
   });
 });
 
-
 describe("Milestone 7.4 readiness integration", () => {
   it("accepts roster-lock operational readiness", () => {
-    const summary = buildPregameReadinessSummary(
-      game(),
-      false,
-      {
-        teamCheckInReady: true,
-        rosterLockReady: true,
-      },
-    );
+    const summary = buildPregameReadinessSummary(game(), false, {
+      teamCheckInReady: true,
+      rosterLockReady: true,
+    });
 
-    expect(
-      summary.checks.find((check) => check.id === "teamCheckIn")?.state,
-    ).toBe("PASS");
+    expect(summary.checks.find((check) => check.id === "teamCheckIn")?.state).toBe("PASS");
 
-    expect(
-      summary.checks.find((check) => check.id === "rosterLock")?.state,
-    ).toBe("PASS");
+    expect(summary.checks.find((check) => check.id === "rosterLock")?.state).toBe("PASS");
   });
 });
 
-
 describe("Milestone 7.5 readiness integration", () => {
   it("accepts officials operational readiness", () => {
-    const summary = buildPregameReadinessSummary(
-      game(),
-      false,
-      {
-        teamCheckInReady: true,
-        rosterLockReady: true,
-        officialsReady: true,
-      },
-    );
+    const summary = buildPregameReadinessSummary(game(), false, {
+      teamCheckInReady: true,
+      rosterLockReady: true,
+      officialsReady: true,
+    });
 
-    expect(
-      summary.checks.find((check) => check.id === "officials")?.state,
-    ).toBe("PASS");
+    expect(summary.checks.find((check) => check.id === "officials")?.state).toBe("PASS");
   });
 });

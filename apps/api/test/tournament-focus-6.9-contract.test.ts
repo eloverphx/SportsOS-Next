@@ -2,10 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const focus = readFileSync(
-  new URL(
-    "../../dashboard/components/tournament/TournamentFocusPanel.tsx",
-    import.meta.url,
-  ),
+  new URL("../../dashboard/components/tournament/TournamentFocusPanel.tsx", import.meta.url),
   "utf8",
 );
 
@@ -45,9 +42,9 @@ describe("Tournament focus 6.9 contract", () => {
   });
 
   it("links directly to all main operator surfaces", () => {
-    expect(focus).toContain('href={`/games/${game.id}/control`}');
-    expect(focus).toContain('href={`/games/${game.id}/scoreboard`}');
-    expect(focus).toContain('href={`/games/${game.id}/overlay`}');
+    expect(focus).toContain("href={`/games/${game.id}/control`}");
+    expect(focus).toContain("href={`/games/${game.id}/scoreboard`}");
+    expect(focus).toContain("href={`/games/${game.id}/overlay`}");
   });
 
   it("remains read-only", () => {
