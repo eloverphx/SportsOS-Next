@@ -12,7 +12,7 @@ const SECURITY_HEADERS = {
   "X-Frame-Options": "DENY",
 } as const;
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const response = NextResponse.next();
 
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
