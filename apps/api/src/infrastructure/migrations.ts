@@ -2,6 +2,7 @@ import type { RowDataPacket } from "mysql2/promise";
 import { config } from "@sportsos/config";
 import { pool } from "./database.js";
 import { minio } from "./minio.js";
+import { runStreamingFoundationMigrations } from "./streaming-foundation-migrations.js";
 
 export async function runMigrations(): Promise<void> {
   await pool.execute(`CREATE TABLE IF NOT EXISTS organizations (
@@ -423,6 +424,8 @@ export async function runMigrations(): Promise<void> {
   ) ENGINE=InnoDB`);
 
   await pool.execute("ALTER TABLE game_events MODIFY penalty_minutes DECIMAL(4,1) UNSIGNED NULL");
+
+  await runStreamingFoundationMigrations();
 
   if (!(await minio.bucketExists(config.storage.bucket)))
     await minio.makeBucket(config.storage.bucket);
