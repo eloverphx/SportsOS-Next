@@ -17,7 +17,7 @@ interface RecordingRow extends RowDataPacket {
   id: number | string;
   organization_id: number | string;
   game_id: number | string | null;
-  owner_user_id: number | string;
+  owner_user_id: number | string | null;
   media_asset_id: number | string | null;
   source: RecordingSource;
   status: RecordingStatus;
@@ -39,7 +39,7 @@ export interface RecordingRecord {
   readonly id: number;
   readonly organizationId: number;
   readonly gameId: number | null;
-  readonly ownerUserId: number;
+  readonly ownerUserId: number | null;
   readonly mediaAssetId: number | null;
   readonly source: RecordingSource;
   readonly status: RecordingStatus;
@@ -70,7 +70,7 @@ function mapRecording(row: RecordingRow): RecordingRecord {
     id: Number(row.id),
     organizationId: Number(row.organization_id),
     gameId: row.game_id == null ? null : Number(row.game_id),
-    ownerUserId: Number(row.owner_user_id),
+    ownerUserId: row.owner_user_id == null ? null : Number(row.owner_user_id),
     mediaAssetId: row.media_asset_id == null ? null : Number(row.media_asset_id),
     source: row.source,
     status: row.status,

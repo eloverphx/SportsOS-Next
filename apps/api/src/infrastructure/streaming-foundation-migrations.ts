@@ -13,6 +13,20 @@ async function columnNames(tableName: string): Promise<Set<string>> {
   return new Set(rows.map((row) => String(row.COLUMN_NAME)));
 }
 
+async function columnIsNullable(tableName: string, columnName: string): Promise<boolean> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT IS_NULLABLE
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = ?
+       AND TABLE_NAME = ?
+       AND COLUMN_NAME = ?
+     LIMIT 1`,
+    [config.database.name, tableName, columnName],
+  );
+
+  return String(rows[0]?.IS_NULLABLE ?? "").toUpperCase() === "YES";
+}
+
 async function constraintExists(tableName: string, constraintName: string): Promise<boolean> {
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT CONSTRAINT_NAME
@@ -130,6 +144,18 @@ async function ensureUserAccountColumns(): Promise<void> {
   }
 }
 
+async function ensureDurableGoLiveOwnershipColumns(): Promise<void> {
+  if (!(await columnIsNullable("recordings", "owner_user_id"))) {
+    await pool.execute("ALTER TABLE recordings MODIFY COLUMN owner_user_id BIGINT UNSIGNED NULL");
+  }
+
+  if (!(await columnIsNullable("stream_sessions", "created_by_user_id"))) {
+    await pool.execute(
+      "ALTER TABLE stream_sessions MODIFY COLUMN created_by_user_id BIGINT UNSIGNED NULL",
+    );
+  }
+}
+
 export async function runStreamingFoundationMigrations(): Promise<void> {
   await ensureUserAccountColumns();
   await ensureMediaOwnershipColumns();
@@ -155,7 +181,7 @@ export async function runStreamingFoundationMigrations(): Promise<void> {
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     organization_id BIGINT UNSIGNED NOT NULL,
     game_id BIGINT UNSIGNED NULL,
-    owner_user_id BIGINT UNSIGNED NOT NULL,
+    owner_user_id BIGINT UNSIGNED NULL,
     media_asset_id BIGINT UNSIGNED NULL,
     source ENUM('LIVE','UPLOAD','IMPORT') NOT NULL DEFAULT 'LIVE',
     status ENUM('CREATED','RECORDING','PROCESSING','READY','FAILED','ARCHIVED')
@@ -188,7 +214,7 @@ export async function runStreamingFoundationMigrations(): Promise<void> {
     session_uuid CHAR(36) NOT NULL UNIQUE,
     organization_id BIGINT UNSIGNED NOT NULL,
     game_id BIGINT UNSIGNED NOT NULL,
-    created_by_user_id BIGINT UNSIGNED NOT NULL,
+    created_by_user_id BIGINT UNSIGNED NULL,
     recording_id BIGINT UNSIGNED NULL,
     status ENUM(
       'PLANNED','ARMED','STARTING','LIVE','DEGRADED',
@@ -212,6 +238,8 @@ export async function runStreamingFoundationMigrations(): Promise<void> {
     CONSTRAINT fk_stream_sessions_recording
       FOREIGN KEY (recording_id) REFERENCES recordings(id) ON DELETE SET NULL
   ) ENGINE=InnoDB`);
+
+  await ensureDurableGoLiveOwnershipColumns();
 
   await pool.execute(`CREATE TABLE IF NOT EXISTS media_access_grants (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

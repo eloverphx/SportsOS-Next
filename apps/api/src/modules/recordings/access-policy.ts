@@ -3,7 +3,7 @@ import { canViewMedia, type MediaAccessDescriptor } from "../media-library/acces
 
 export interface RecordingAccessDescriptor {
   readonly organizationId: number;
-  readonly ownerUserId: number;
+  readonly ownerUserId: number | null;
   readonly media: MediaAccessDescriptor | null;
 }
 

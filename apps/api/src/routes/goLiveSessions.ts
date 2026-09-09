@@ -1,8 +1,13 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import { listGoLiveAuditEvents, recordGoLiveAuditEvent } from "../services/goLiveAudit.js";
+import {
+  syncDurableGoLiveReset,
+  syncDurableGoLiveSession,
+} from "../services/durableGoLiveBridge.js";
 import { evaluateGameDayGoLivePreflight } from "../services/gameDayGoLivePreflight.js";
 
 import {
+  type GoLiveSession,
   acknowledgeGoLiveIncident,
   armGoLiveSession,
   clearGoLiveIncidentAcknowledgement,
@@ -34,6 +39,43 @@ import {
 } from "../services/encoderRuntime.js";
 
 import { getStreamDestinationProfile } from "../services/streamDestinationProfile.js";
+
+async function persistDurableSession(
+  request: FastifyRequest,
+  gameId: string,
+  session: GoLiveSession,
+): Promise<void> {
+  try {
+    await syncDurableGoLiveSession({
+      gameId,
+      status: session.status,
+      transitionAt: session.lastTransitionAt,
+    });
+  } catch (error) {
+    request.log.error(
+      {
+        error,
+        gameId,
+        status: session.status,
+      },
+      "Durable go-live synchronization failed",
+    );
+  }
+}
+
+async function persistDurableReset(request: FastifyRequest, gameId: string): Promise<void> {
+  try {
+    await syncDurableGoLiveReset(gameId);
+  } catch (error) {
+    request.log.error(
+      {
+        error,
+        gameId,
+      },
+      "Durable go-live reset synchronization failed",
+    );
+  }
+}
 
 export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise<void> {
   app.get("/go-live-sessions/:gameId/game-day-preflight", async (request, reply) => {
@@ -263,6 +305,8 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
       }
     }
 
+    await persistDurableSession(request, gameId, session);
+
     return {
       success: true,
       data: {
@@ -337,11 +381,15 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
     const current = getGoLiveSession(gameId);
     if (countdown.autoArmDue && ["IDLE", "COMPLETE", "ERROR"].includes(current.status)) {
       const preflight = evaluateStreamingReadiness(gameId);
-      if (preflight.ready)
+      if (preflight.ready) {
+        const session = armGoLiveSession(gameId);
+        await persistDurableSession(request, gameId, session);
+
         return {
           success: true,
-          data: { autoArmed: true, session: armGoLiveSession(gameId), countdown, preflight },
+          data: { autoArmed: true, session, countdown, preflight },
         };
+      }
       return reply.code(409).send({
         success: false,
         error: "Auto-arm is due but streaming readiness preflight failed.",
@@ -461,10 +509,13 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
       type: "ARMED",
     });
 
+    const session = armGoLiveSession(gameId);
+    await persistDurableSession(request, gameId, session);
+
     return {
       success: true,
       data: {
-        session: armGoLiveSession(gameId),
+        session,
         preflight,
       },
     };
@@ -541,7 +592,8 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
       type: "START_REQUESTED",
     });
 
-    markGoLiveStarting(gameId);
+    const startingSession = markGoLiveStarting(gameId);
+    await persistDurableSession(request, gameId, startingSession);
 
     recordGoLiveAuditEvent({
       gameId,
@@ -557,6 +609,7 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
       const message = error instanceof Error ? error.message : "Unable to start encoder runtime.";
 
       const session = markGoLiveError(gameId, message);
+      await persistDurableSession(request, gameId, session);
 
       return reply.code(500).send({
         success: false,
@@ -625,10 +678,13 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
       type: "LIVE_CONFIRMED",
     });
 
+    const session = markGoLiveLive(gameId);
+    await persistDurableSession(request, gameId, session);
+
     return {
       success: true,
       data: {
-        session: markGoLiveLive(gameId),
+        session,
         runtime,
       },
     };
@@ -657,6 +713,7 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
     await stopEncoderRuntime(gameId);
 
     const session = markGoLiveEmergencyStopped(gameId, body.reason ?? null);
+    await persistDurableSession(request, gameId, session);
 
     recordGoLiveAuditEvent({
       gameId,
@@ -692,7 +749,8 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
       type: "STOP_REQUESTED",
     });
 
-    markGoLiveStopping(gameId);
+    const stoppingSession = markGoLiveStopping(gameId);
+    await persistDurableSession(request, gameId, stoppingSession);
 
     await stopEncoderRuntime(gameId);
 
@@ -701,10 +759,13 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
       type: "COMPLETE",
     });
 
+    const session = completeGoLiveSession(gameId);
+    await persistDurableSession(request, gameId, session);
+
     return {
       success: true,
       data: {
-        session: completeGoLiveSession(gameId),
+        session,
         runtime: encoderRuntimeSnapshot(gameId),
       },
     };
@@ -724,10 +785,13 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
       });
     }
 
+    const session = resetGoLiveSession(gameId);
+    await persistDurableReset(request, gameId);
+
     return {
       success: true,
       data: {
-        session: resetGoLiveSession(gameId),
+        session,
       },
     };
   });

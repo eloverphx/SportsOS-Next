@@ -116,3 +116,49 @@ existing small request body limit or placing large video payloads into JSON.
 
 The existing go-live coordinator is unchanged in M37.3. Durable go-live
 bridging remains the next increment.
+
+## M37.4 — Durable go-live bridge
+
+M37.4 mirrors the proven file-backed go-live state machine into the durable
+streaming schema without replacing or rewriting the existing coordinator.
+
+For canonical numeric game IDs, critical transitions now synchronize to the
+database:
+
+- arm creates or resumes a durable stream-session lifecycle;
+- starting records durable runtime start metadata;
+- live confirmation creates a `LIVE` recording row and binds it to the stream
+  session;
+- watchdog degradation/recovery mirrors durable status;
+- normal stop transitions the recording from `RECORDING` to `PROCESSING`;
+- encoder/start errors and emergency stops mark an existing live recording
+  `FAILED`;
+- reset closes an unfinished durable lifecycle as `ERROR` while preserving its
+  history.
+
+Legacy/test go-live identifiers that are not positive integer database game IDs
+remain supported by the file-backed coordinator and are deliberately skipped by
+the database bridge.
+
+### Organization-owned live records
+
+The pre-M37 go-live API does not yet require an authenticated user on every
+control route. M37.4 therefore permits `created_by_user_id` on stream sessions
+and `owner_user_id` on live recordings to be null. Null represents a
+system/organization-owned runtime record; it does **not** fabricate a user.
+
+User-created/uploaded recordings remain user-owned. Same-organization stream
+managers continue to administer organization-owned live recordings.
+
+### Failure behavior
+
+The existing live state machine remains authoritative for runtime control in
+this increment. A database synchronization failure is logged as an operational
+error but does not stop or roll back an encoder that has already started.
+
+A later operational increment should add durable reconciliation/health
+telemetry so a temporary database outage can be repaired automatically.
+
+M37.4 still does not implement the large-video ingestion pipeline or attach a
+finished media asset to the processing recording. Those are separate streaming
+transport/storage concerns.
