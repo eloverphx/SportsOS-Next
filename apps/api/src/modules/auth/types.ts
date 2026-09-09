@@ -11,10 +11,12 @@ export interface AuthenticatedIdentity {
   readonly organizationId: number;
   readonly role: Role;
   readonly permissions: readonly Permission[];
+  readonly sessionId?: string;
 }
 
 export interface IdentityTokenPayload {
   readonly sub: string;
   readonly organizationId: number;
   readonly role: Role;
+  readonly sessionId?: string;
 }

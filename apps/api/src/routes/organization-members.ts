@@ -1,6 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { audit } from "../lib/audit.js";
 import {
+  approvePendingAccount,
+  listPendingAccounts,
+  rejectPendingAccount,
+} from "../modules/auth/account-repository.js";
+import {
   PERMISSIONS,
   ROLES,
   assertRoleAssignmentAllowed,
@@ -39,6 +44,99 @@ export async function organizationMemberRoutes(app: FastifyInstance): Promise<vo
 
     return {
       members,
+    };
+  });
+
+  app.get("/organizations/:organizationId/members/pending", async (request, reply) => {
+    const parsed = organizationIdParamsSchema.safeParse(request.params);
+
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "Invalid organization id",
+      });
+    }
+
+    await requirePermission(request, {
+      permission: PERMISSIONS.ORGANIZATION_MEMBERS_MANAGE,
+      organizationId: parsed.data.organizationId,
+    });
+
+    return {
+      members: await listPendingAccounts(parsed.data.organizationId),
+    };
+  });
+
+  app.post("/organizations/:organizationId/members/:userId/approve", async (request, reply) => {
+    const params = organizationMemberParamsSchema.safeParse(request.params);
+
+    if (!params.success) {
+      return reply.code(400).send({
+        error: "Invalid organization member",
+      });
+    }
+
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.ORGANIZATION_MEMBERS_MANAGE,
+      organizationId: params.data.organizationId,
+    });
+
+    const approved = await approvePendingAccount({
+      organizationId: params.data.organizationId,
+      userId: params.data.userId,
+      approvedByUserId: identity.userId,
+    });
+
+    if (!approved) {
+      return reply.code(409).send({
+        error: "Account is not awaiting approval",
+      });
+    }
+
+    await audit(identity.sub, "organization.member.approved", {
+      organizationId: params.data.organizationId,
+      userId: params.data.userId,
+    });
+
+    return {
+      success: true,
+      status: "ACTIVE",
+    };
+  });
+
+  app.post("/organizations/:organizationId/members/:userId/reject", async (request, reply) => {
+    const params = organizationMemberParamsSchema.safeParse(request.params);
+
+    if (!params.success) {
+      return reply.code(400).send({
+        error: "Invalid organization member",
+      });
+    }
+
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.ORGANIZATION_MEMBERS_MANAGE,
+      organizationId: params.data.organizationId,
+    });
+
+    const rejected = await rejectPendingAccount({
+      organizationId: params.data.organizationId,
+      userId: params.data.userId,
+      rejectedByUserId: identity.userId,
+    });
+
+    if (!rejected) {
+      return reply.code(409).send({
+        error: "Account is not awaiting approval",
+      });
+    }
+
+    await audit(identity.sub, "organization.member.rejected", {
+      organizationId: params.data.organizationId,
+      userId: params.data.userId,
+    });
+
+    return {
+      success: true,
+      status: "REJECTED",
     };
   });
 

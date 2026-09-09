@@ -86,7 +86,43 @@ async function ensureMediaOwnershipColumns(): Promise<void> {
   }
 }
 
+async function ensureUserAccountColumns(): Promise<void> {
+  const present = await columnNames("users");
+
+  const additions: Array<[string, string]> = [
+    [
+      "account_status",
+      "ENUM('PENDING','ACTIVE','SUSPENDED','REJECTED') NOT NULL DEFAULT 'ACTIVE' AFTER role",
+    ],
+    ["approved_at", "DATETIME(3) NULL AFTER account_status"],
+    ["approved_by_user_id", "BIGINT UNSIGNED NULL AFTER approved_at"],
+  ];
+
+  for (const [name, sql] of additions) {
+    if (!present.has(name)) {
+      await pool.execute(`ALTER TABLE users ADD COLUMN ${name} ${sql}`);
+    }
+  }
+
+  if (!(await indexExists("users", "idx_users_account_status"))) {
+    await pool.execute(
+      "ALTER TABLE users ADD INDEX idx_users_account_status (organization_id, account_status, created_at)",
+    );
+  }
+
+  if (!(await constraintExists("users", "fk_users_approved_by"))) {
+    await pool.execute(
+      `ALTER TABLE users
+       ADD CONSTRAINT fk_users_approved_by
+       FOREIGN KEY (approved_by_user_id)
+       REFERENCES users(id)
+       ON DELETE SET NULL`,
+    );
+  }
+}
+
 export async function runStreamingFoundationMigrations(): Promise<void> {
+  await ensureUserAccountColumns();
   await ensureMediaOwnershipColumns();
 
   await pool.execute(`CREATE TABLE IF NOT EXISTS auth_sessions (

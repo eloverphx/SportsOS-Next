@@ -1,5 +1,6 @@
 import type { FastifyRequest } from "fastify";
 import { AuthorizationError } from "./authorization-error.js";
+import { assertActiveAccount } from "./account-status.js";
 import { authenticatedIdentity } from "./identity.js";
 import { roleHasPermission, type Permission } from "./permissions.js";
 import { ROLES } from "./roles.js";
@@ -35,6 +36,7 @@ export async function requirePermission(
 
   const identity = authenticatedIdentity(request);
 
+  await assertActiveAccount(identity);
   assertPermission(identity, requirement);
 
   return identity;

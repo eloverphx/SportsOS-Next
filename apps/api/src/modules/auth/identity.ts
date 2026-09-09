@@ -21,6 +21,9 @@ export function identityFromToken(payload: IdentityTokenPayload): AuthenticatedI
     organizationId: payload.organizationId,
     role,
     permissions: permissionsForRole(role),
+    ...(typeof payload.sessionId === "string" && payload.sessionId.length > 0
+      ? { sessionId: payload.sessionId }
+      : {}),
   };
 }
 

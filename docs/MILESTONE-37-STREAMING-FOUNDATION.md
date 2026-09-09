@@ -54,3 +54,26 @@ stream-session and recording records.
 
 M37.5 should establish authoritative event-to-video synchronization for clip
 generation.
+
+## M37.2 — Signup, approval, and durable sessions
+
+M37.2 adds the account lifecycle required before public streaming/media access:
+
+- self-signup into an existing active organization;
+- new self-signups default to the `viewer` role and `PENDING` account status;
+- organization member managers can list, approve, or reject pending accounts;
+- existing accounts remain `ACTIVE` by default for backward compatibility;
+- pending, suspended, rejected, or missing accounts are blocked from
+  authenticated API access;
+- login continues returning the existing access-token field while also issuing
+  a durable refresh session;
+- refresh tokens are random opaque values and only their SHA-256 hashes are
+  persisted;
+- refresh rotates the stored refresh token and extends its 30-day session
+  lifetime;
+- logout revokes the durable session.
+
+The existing 8-hour access-token lifetime is retained in this increment to
+avoid an unrelated compatibility change. A later security-specific increment
+may shorten access-token lifetime after dashboard/mobile clients are proven to
+rotate refresh sessions reliably.

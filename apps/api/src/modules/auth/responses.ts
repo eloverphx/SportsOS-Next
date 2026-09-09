@@ -15,6 +15,11 @@ export interface AuthenticatedUserResponse {
 
 export interface LoginResponse {
   readonly token: string;
+  readonly refreshToken: string;
+  readonly session: {
+    readonly id: string;
+    readonly expiresAt: string;
+  };
   readonly user: AuthenticatedUserResponse;
 }
 
