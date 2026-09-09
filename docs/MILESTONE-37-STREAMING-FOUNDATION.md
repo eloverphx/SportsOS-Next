@@ -77,3 +77,42 @@ The existing 8-hour access-token lifetime is retained in this increment to
 avoid an unrelated compatibility change. A later security-specific increment
 may shorten access-token lifetime after dashboard/mobile clients are proven to
 rotate refresh sessions reliably.
+
+## M37.3 — Media and recording ownership APIs
+
+M37.3 enforces the persistence model introduced in M37.1.
+
+Media object access now follows an explicit visibility policy:
+
+- `PUBLIC`: anonymous object delivery is allowed;
+- `ORGANIZATION`: an active user in the same organization with stream-read
+  permission may view the object;
+- `PRIVATE`: access is limited to the owner, an explicit grantee, or a
+  same-organization stream manager;
+- stream-management authority does not implicitly cross organization
+  boundaries.
+
+Existing and future `logos/` objects are intentionally `PUBLIC` because
+scoreboard and overlay clients render those assets without an authenticated API
+session.
+
+Media owners and same-organization stream managers can change visibility and
+manage per-user grants. Grants can only target active users in the same
+organization.
+
+Recording APIs now provide:
+
+- same-organization recording listing with visibility filtering;
+- recording metadata reads;
+- recording creation by stream managers;
+- recording ownership;
+- optional binding to a game in the same organization;
+- optional binding to a manageable `VIDEO` media asset in the same
+  organization.
+
+M37.3 does not add large video upload transport. Video ingestion needs a
+streaming/chunked or object-storage-oriented path rather than expanding the
+existing small request body limit or placing large video payloads into JSON.
+
+The existing go-live coordinator is unchanged in M37.3. Durable go-live
+bridging remains the next increment.

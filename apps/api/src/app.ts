@@ -9,6 +9,7 @@ import { rosterRoutes } from "./modules/rosters/routes.js";
 import { seasonRoutes } from "./modules/seasons/routes.js";
 import { authRoutes } from "./routes/auth.js";
 import { mediaRoutes } from "./routes/media.js";
+import { recordingRoutes } from "./routes/recordings.js";
 import { organizationRoutes } from "./routes/organizations.js";
 import { platformRoutes } from "./routes/platform.js";
 import { setupRoutes } from "./routes/setup.js";
@@ -184,6 +185,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     await app.register(scoreboardDeviceRoutes);
     await app.register(rosterRoutes);
     await app.register(mediaRoutes);
+    await app.register(recordingRoutes);
     await app.register(systemRoutes);
     await app.register(gameEngineTelemetryRoutes);
     await app.register(simulationRoutes);

@@ -86,6 +86,15 @@ async function ensureMediaOwnershipColumns(): Promise<void> {
   }
 }
 
+// Logo URLs are intentionally public because scoreboard/overlay clients
+// render them without an authenticated API session.
+await pool.execute(
+  `UPDATE media_assets
+     SET media_kind = 'IMAGE',
+         visibility = 'PUBLIC'
+     WHERE object_key LIKE 'logos/%'`,
+);
+
 async function ensureUserAccountColumns(): Promise<void> {
   const present = await columnNames("users");
 
