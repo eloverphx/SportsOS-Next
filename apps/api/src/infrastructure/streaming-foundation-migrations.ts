@@ -274,4 +274,66 @@ export async function runStreamingFoundationMigrations(): Promise<void> {
     CONSTRAINT fk_recording_event_anchor_event
       FOREIGN KEY (game_event_id) REFERENCES game_events(id) ON DELETE CASCADE
   ) ENGINE=InnoDB`);
+
+  await pool.execute(`CREATE TABLE IF NOT EXISTS recording_clip_jobs (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    organization_id BIGINT UNSIGNED NOT NULL,
+    recording_id BIGINT UNSIGNED NOT NULL,
+    game_event_id BIGINT UNSIGNED NOT NULL,
+    requested_by_user_id BIGINT UNSIGNED NOT NULL,
+    selection_source ENUM('SCOREKEEPER_EVENT','AI_SELECTION')
+      NOT NULL DEFAULT 'SCOREKEEPER_EVENT',
+    start_ms BIGINT UNSIGNED NOT NULL,
+    end_ms BIGINT UNSIGNED NOT NULL,
+    status ENUM('PENDING','PROCESSING','READY','FAILED','CANCELLED')
+      NOT NULL DEFAULT 'PENDING',
+    output_media_asset_id BIGINT UNSIGNED NULL,
+    error_message VARCHAR(1000) NULL,
+    attempt_count INT UNSIGNED NOT NULL DEFAULT 0,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+      ON UPDATE CURRENT_TIMESTAMP(3),
+    UNIQUE KEY uq_recording_clip_job_window (
+      recording_id,
+      game_event_id,
+      requested_by_user_id,
+      start_ms,
+      end_ms,
+      selection_source
+    ),
+    INDEX idx_recording_clip_jobs_org_status (
+      organization_id,
+      status,
+      created_at
+    ),
+    INDEX idx_recording_clip_jobs_recording (
+      recording_id,
+      status,
+      created_at
+    ),
+    INDEX idx_recording_clip_jobs_requester (
+      requested_by_user_id,
+      created_at
+    ),
+    CONSTRAINT fk_recording_clip_jobs_org
+      FOREIGN KEY (organization_id)
+      REFERENCES organizations(id)
+      ON DELETE CASCADE,
+    CONSTRAINT fk_recording_clip_jobs_recording
+      FOREIGN KEY (recording_id)
+      REFERENCES recordings(id)
+      ON DELETE CASCADE,
+    CONSTRAINT fk_recording_clip_jobs_event
+      FOREIGN KEY (game_event_id)
+      REFERENCES game_events(id)
+      ON DELETE CASCADE,
+    CONSTRAINT fk_recording_clip_jobs_requester
+      FOREIGN KEY (requested_by_user_id)
+      REFERENCES users(id)
+      ON DELETE RESTRICT,
+    CONSTRAINT fk_recording_clip_jobs_output_media
+      FOREIGN KEY (output_media_asset_id)
+      REFERENCES media_assets(id)
+      ON DELETE SET NULL
+  ) ENGINE=InnoDB`);
 }

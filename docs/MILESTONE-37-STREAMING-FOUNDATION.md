@@ -212,3 +212,56 @@ authoritative event.
 Future AI may rank, select, combine, caption, or summarize these candidate
 clips. AI must never create a goal/penalty event, assign a player to an event,
 or invent/change the authoritative event timestamp or recording offset.
+
+## M37.6 — Durable authoritative clip-job queue
+
+M37.6 adds a durable queue between authoritative event anchors and the future
+video-processing worker.
+
+Authorized stream managers can request:
+
+`POST /recordings/:id/event-anchors/:eventId/clip-jobs`
+
+The request accepts no body timing fields. SportsOS loads the existing
+authoritative recording/event anchor and derives the candidate clip window
+server-side using the M37.5 deterministic clip-window rules.
+
+Voided events are rejected for new clip jobs.
+
+Duplicate requests from the same user for the same recording, game event,
+clip window, and selection source resolve to the same durable job rather than
+creating duplicate work.
+
+Authorized recording viewers can inspect:
+
+`GET /recordings/:id/clip-jobs`
+
+Clip jobs track:
+
+- organization, recording, and authoritative game-event identity;
+- requesting user;
+- selection source;
+- derived start/end offsets;
+- processing state (`PENDING`, `PROCESSING`, `READY`, `FAILED`, `CANCELLED`);
+- retry attempt count;
+- error text;
+- eventual output `media_assets` linkage.
+
+### AI boundary
+
+The durable schema reserves `AI_SELECTION` for a future internal highlight
+selector. That means AI may eventually select an **existing authoritative
+event anchor** for clip generation.
+
+There is intentionally no public API in M37.6 that accepts `AI_SELECTION`,
+arbitrary event IDs without a recording anchor, or client-supplied start/end
+times. AI still cannot create or alter scorekeeper events, timestamps, players,
+or recording offsets.
+
+### Processing boundary
+
+M37.6 does not execute FFmpeg and does not mutate clip jobs to `READY`.
+The repository currently has no FFmpeg dependency or background clip worker.
+The next processing increment can claim `PENDING` jobs, render from the
+recording media, create a derived `VIDEO` media asset, and atomically attach
+that asset to the clip job while preserving the media visibility rules.

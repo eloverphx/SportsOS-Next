@@ -197,3 +197,12 @@ export async function listRecordingEventAnchors(
 
   return rows.map(mapAnchor);
 }
+
+export async function findRecordingEventAnchor(
+  recordingId: number,
+  gameEventId: number,
+): Promise<RecordingEventAnchor | null> {
+  const anchors = await listRecordingEventAnchors(recordingId);
+
+  return anchors.find((anchor) => anchor.gameEventId === gameEventId) ?? null;
+}

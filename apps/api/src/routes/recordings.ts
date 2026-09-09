@@ -5,8 +5,16 @@ import { authUser, requireAuth } from "../lib/auth.js";
 import { PERMISSIONS, requirePermission } from "../modules/auth/index.js";
 import { canManageMedia } from "../modules/media-library/access-policy.js";
 import { findMediaAsset } from "../modules/media-library/repository.js";
+import { recordingCanQueueClipJobs } from "../modules/recording-clip-jobs/policy.js";
+import {
+  createRecordingClipJob,
+  listRecordingClipJobs,
+} from "../modules/recording-clip-jobs/repository.js";
 import { deriveEventClipWindow } from "../modules/recording-event-anchors/clip-window.js";
-import { listRecordingEventAnchors } from "../modules/recording-event-anchors/repository.js";
+import {
+  findRecordingEventAnchor,
+  listRecordingEventAnchors,
+} from "../modules/recording-event-anchors/repository.js";
 import { canManageRecording, canViewRecording } from "../modules/recordings/access-policy.js";
 import {
   createRecording,
@@ -22,6 +30,11 @@ const idSchema = z.object({
 
 const listSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+
+const clipAnchorParamsSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  eventId: z.coerce.number().int().positive(),
 });
 
 const createSchema = z.object({
@@ -159,6 +172,33 @@ export async function recordingRoutes(app: FastifyInstance): Promise<void> {
     };
   });
 
+  app.get("/recordings/:id/clip-jobs", async (request, reply) => {
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.STREAM_READ,
+    });
+
+    const parsed = idSchema.safeParse(request.params);
+
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "Invalid recording id",
+      });
+    }
+
+    const recording = await findRecording(parsed.data.id, identity.userId);
+
+    if (!recording || !canViewRecording(identity, recording)) {
+      return reply.code(404).send({
+        error: "Recording not found",
+      });
+    }
+
+    return {
+      recordingId: recording.id,
+      clipJobs: await listRecordingClipJobs(recording.id),
+    };
+  });
+
   app.get("/recordings/:id/event-anchors", async (request, reply) => {
     const identity = await requirePermission(request, {
       permission: PERMISSIONS.STREAM_READ,
@@ -193,6 +233,75 @@ export async function recordingRoutes(app: FastifyInstance): Promise<void> {
         }),
       })),
     };
+  });
+
+  app.post("/recordings/:id/event-anchors/:eventId/clip-jobs", async (request, reply) => {
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.STREAM_MANAGE,
+    });
+
+    const parsed = clipAnchorParamsSchema.safeParse(request.params);
+
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "Invalid recording clip request",
+      });
+    }
+
+    const recording = await findRecording(parsed.data.id, identity.userId);
+
+    if (!recording || !canManageRecording(identity, recording)) {
+      return reply.code(404).send({
+        error: "Recording not found",
+      });
+    }
+
+    if (!recordingCanQueueClipJobs(recording.status)) {
+      return reply.code(409).send({
+        error: "Recording is not available for clip generation",
+      });
+    }
+
+    const anchor = await findRecordingEventAnchor(recording.id, parsed.data.eventId);
+
+    if (!anchor) {
+      return reply.code(404).send({
+        error: "Recording event anchor not found",
+      });
+    }
+
+    if (anchor.voidedAt !== null) {
+      return reply.code(409).send({
+        error: "Voided game events cannot create highlight clips",
+      });
+    }
+
+    const clipWindow = deriveEventClipWindow({
+      recordingOffsetMs: anchor.recordingOffsetMs,
+      recordingDurationMs: recording.durationMs,
+    });
+
+    const clipJob = await createRecordingClipJob({
+      organizationId: recording.organizationId,
+      recordingId: recording.id,
+      gameEventId: anchor.gameEventId,
+      requestedByUserId: identity.userId,
+      selectionSource: "SCOREKEEPER_EVENT",
+      startMs: clipWindow.startMs,
+      endMs: clipWindow.endMs,
+    });
+
+    await audit(identity.sub, "recording.clip-job.queued", {
+      clipJobId: clipJob.id,
+      recordingId: recording.id,
+      gameEventId: anchor.gameEventId,
+      startMs: clipJob.startMs,
+      endMs: clipJob.endMs,
+    });
+
+    return reply.code(201).send({
+      clipJob,
+    });
   });
 
   app.patch("/recordings/:id", { preHandler: requireAuth }, async (request, reply) => {
