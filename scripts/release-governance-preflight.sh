@@ -145,7 +145,9 @@ for expected in \
   "npm run typecheck" \
   "npm run test" \
   "npm run build" \
-  "npm run test:e2e"
+  "npm run test:e2e" \
+  "uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4" \
+  "uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4"
 do
   if grep -Fq "$expected" "$CI"; then
     pass "CI contains: $expected"
@@ -215,24 +217,60 @@ if [[ "${SPORTSOS_RUN_NPM_AUDIT:-0}" == "1" ]]; then
   echo "Running opt-in npm audit (network required)..."
   AUDIT_TMP="$(mktemp)"
   trap 'rm -f "$AUDIT_TMP"' EXIT
-  if npm audit --json >"$AUDIT_TMP" 2>/dev/null; then
-    pass "npm audit reports no vulnerability threshold failure"
-  else
-    audit_rc=$?
-    node - "$AUDIT_TMP" <<'NODE' || true
+
+  audit_rc=0
+  npm audit --json >"$AUDIT_TMP" 2>/dev/null || audit_rc=$?
+
+  if node - "$AUDIT_TMP" <<'AUDIT_NODE'
 const fs = require("fs");
 const file = process.argv[2];
+const allowedResidual = new Set([
+  "decode-uri-component",
+  "minio",
+  "query-string",
+  "stream-json",
+]);
+
+let audit;
 try {
-  const audit = JSON.parse(fs.readFileSync(file, "utf8"));
-  const v = audit.metadata?.vulnerabilities || {};
-  console.log(
-    `INFO  npm audit vulnerabilities: critical=${v.critical || 0} high=${v.high || 0} moderate=${v.moderate || 0} low=${v.low || 0}`,
-  );
+  audit = JSON.parse(fs.readFileSync(file, "utf8"));
 } catch {
-  console.log("INFO  npm audit output was not parseable JSON");
+  console.error("FAIL  npm audit output was not parseable JSON");
+  process.exit(2);
 }
-NODE
-    fail "npm audit returned exit code $audit_rc"
+
+const counts = audit.metadata?.vulnerabilities || {};
+const names = Object.keys(audit.vulnerabilities || {}).sort();
+const unexpected = names.filter((name) => !allowedResidual.has(name));
+
+console.log(
+  `INFO  npm audit vulnerabilities: critical=${counts.critical || 0} high=${counts.high || 0} moderate=${counts.moderate || 0} low=${counts.low || 0}`,
+);
+console.log(`INFO  npm audit packages: ${names.join(", ") || "none"}`);
+
+if ((counts.critical || 0) > 0 || (counts.high || 0) > 0) {
+  console.error("FAIL  npm audit contains high or critical vulnerabilities");
+  process.exit(3);
+}
+
+if (unexpected.length > 0) {
+  console.error(
+    `FAIL  npm audit contains unexpected dependency findings: ${unexpected.join(", ")}`,
+  );
+  process.exit(4);
+}
+
+console.log(
+  "PASS  npm audit is limited to the documented MinIO residual dependency set",
+);
+AUDIT_NODE
+  then
+    pass "npm audit contains no high/critical or unexpected dependency residual"
+    if [[ "$audit_rc" -ne 0 ]]; then
+      warn "npm audit exits nonzero because documented moderate residual findings remain"
+    fi
+  else
+    fail "npm audit exceeds the accepted Milestone 36 residual policy"
   fi
 else
   warn "npm audit not run; set SPORTSOS_RUN_NPM_AUDIT=1 for the network-backed audit"
