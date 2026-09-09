@@ -3,6 +3,7 @@ import { pool } from "../../infrastructure/database.js";
 import { enqueueRealtimeEvent } from "../../infrastructure/realtime-outbox.js";
 import type { GameEventInput } from "./schemas.js";
 import type { GameEvent, GameEventPlayerOption } from "./types.js";
+import { createAuthoritativeRecordingAnchor } from "../recording-event-anchors/repository.js";
 
 export class GameEventIdempotencyConflictError extends Error {
   constructor(message: string) {
@@ -296,6 +297,13 @@ export async function createGameEvent(
       }
 
       const createdEvent = mapEvent(createdRows[0]);
+
+      await createAuthoritativeRecordingAnchor(connection, {
+        gameId,
+        eventId: createdEvent.id,
+        eventCreatedAt: createdEvent.createdAt,
+      });
+
       const room = `game:${gameId}`;
       const organizationId = Number(game.organization_id);
 

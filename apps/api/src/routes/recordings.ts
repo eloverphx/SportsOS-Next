@@ -5,6 +5,8 @@ import { authUser, requireAuth } from "../lib/auth.js";
 import { PERMISSIONS, requirePermission } from "../modules/auth/index.js";
 import { canManageMedia } from "../modules/media-library/access-policy.js";
 import { findMediaAsset } from "../modules/media-library/repository.js";
+import { deriveEventClipWindow } from "../modules/recording-event-anchors/clip-window.js";
+import { listRecordingEventAnchors } from "../modules/recording-event-anchors/repository.js";
 import { canManageRecording, canViewRecording } from "../modules/recordings/access-policy.js";
 import {
   createRecording,
@@ -154,6 +156,42 @@ export async function recordingRoutes(app: FastifyInstance): Promise<void> {
 
     return {
       recording: response(recording),
+    };
+  });
+
+  app.get("/recordings/:id/event-anchors", async (request, reply) => {
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.STREAM_READ,
+    });
+
+    const parsed = idSchema.safeParse(request.params);
+
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "Invalid recording id",
+      });
+    }
+
+    const recording = await findRecording(parsed.data.id, identity.userId);
+
+    if (!recording || !canViewRecording(identity, recording)) {
+      return reply.code(404).send({
+        error: "Recording not found",
+      });
+    }
+
+    const anchors = await listRecordingEventAnchors(recording.id);
+
+    return {
+      recordingId: recording.id,
+      anchors: anchors.map((anchor) => ({
+        ...anchor,
+        eligibleForHighlights: anchor.voidedAt === null,
+        suggestedClipWindow: deriveEventClipWindow({
+          recordingOffsetMs: anchor.recordingOffsetMs,
+          recordingDurationMs: recording.durationMs,
+        }),
+      })),
     };
   });
 

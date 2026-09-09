@@ -162,3 +162,53 @@ telemetry so a temporary database outage can be repaired automatically.
 M37.4 still does not implement the large-video ingestion pipeline or attach a
 finished media asset to the processing recording. Those are separate streaming
 transport/storage concerns.
+
+## M37.5 — Authoritative event-to-recording anchors
+
+M37.5 connects the scorekeeper event engine to the durable recording timeline.
+
+When a non-replayed game event is created while that game's durable recording
+is actively `RECORDING`, SportsOS creates a `recording_event_anchors` row in the
+**same database transaction** as the authoritative `game_events` mutation.
+
+The recording offset is derived only from:
+
+1. the authoritative game event's database `created_at` timestamp; and
+2. the durable recording's `started_at` timestamp.
+
+No client, AI process, or highlight selector is allowed to submit or modify that
+offset. The anchor source is `SCOREKEEPER`.
+
+If no active recording exists, no anchor is fabricated. If an event timestamp
+predates the recording start, no anchor is created.
+
+### Read model
+
+Authorized recording viewers can read:
+
+`GET /recordings/:id/event-anchors`
+
+Each anchor includes:
+
+- authoritative game-event ID;
+- event type and team side;
+- period and authoritative game clock remaining;
+- primary player ID/name/jersey number when present;
+- assist player IDs when present;
+- recording offset;
+- event and void timestamps;
+- whether the event remains eligible for highlights;
+- a deterministic suggested clip window.
+
+Voiding a game event does not erase its recording anchor. The historical
+relationship remains auditable, while `eligibleForHighlights` becomes false.
+
+### Highlight boundary
+
+M37.5 introduces deterministic clip-window math with a default 8-second
+pre-roll and 5-second post-roll. This is only a candidate window around an
+authoritative event.
+
+Future AI may rank, select, combine, caption, or summarize these candidate
+clips. AI must never create a goal/penalty event, assign a player to an event,
+or invent/change the authoritative event timestamp or recording offset.
