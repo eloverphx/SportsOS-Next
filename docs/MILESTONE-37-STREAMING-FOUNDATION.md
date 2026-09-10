@@ -344,3 +344,13 @@ M37.8 connects the existing live broadcast lifecycle to an actual durable source
 - Failed finalization marks the PROCESSING recording FAILED and leaves local work files available for operator recovery.
 - Emergency stop terminates capture without publishing the partial file as a READY archive.
 - Scorekeeper game events and recording event anchors remain authoritative and are not modified.
+
+## M37.9 — Authenticated streaming dashboard
+
+M37.9 exposes the durable recording lifecycle in the existing SportsOS dashboard.
+
+- The sidebar Streaming placeholder now routes to `/streaming` and remains permission-gated by `STREAM_READ`.
+- The page is protected by the existing `AuthGate` and loads `GET /recordings?limit=100` through the existing authenticated `api()` client.
+- Operators can see live capture, processing, ready archive, failed, and archived counts plus per-recording game linkage, duration, timestamps, source, and attached media asset state.
+- The page refreshes every 30 seconds and supports manual refresh.
+- Large recording playback is intentionally not implemented by embedding protected `/media/:id` directly in a `<video>` element because the current authorization model requires a bearer header. A dedicated authenticated range-streaming path will be implemented separately rather than leaking bearer credentials through URLs.

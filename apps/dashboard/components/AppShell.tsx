@@ -31,7 +31,7 @@ const links: readonly NavigationLink[] = [
     href: "/tournament-director",
     permission: PERMISSIONS.GAME_READ,
   },
-  { label: "Streaming", href: "#", permission: PERMISSIONS.STREAM_READ },
+  { label: "Streaming", href: "/streaming", permission: PERMISSIONS.STREAM_READ },
   { label: "Scoreboards", href: "/scoreboards", permission: PERMISSIONS.SCOREBOARD_READ },
   { label: "Users", href: "/users", permission: PERMISSIONS.ORGANIZATION_MEMBERS_MANAGE },
   { label: "System Health", href: "/system-health", permission: PERMISSIONS.SYSTEM_READ },
