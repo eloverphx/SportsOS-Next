@@ -21,6 +21,9 @@ import {
   stopEncoderRuntime,
 } from "./encoderRuntime.js";
 
+import { syncDurableGoLiveSession } from "./durableGoLiveBridge.js";
+import { stopAndFinalizeRecordingCapture } from "./recordingCaptureRuntime.js";
+
 export type BroadcastCoordinatorIntent = "IDLE" | "PREPARE" | "GO_LIVE" | "STOP";
 
 export type BroadcastCoordinatorRecord = {
@@ -245,7 +248,14 @@ export async function startCoordinatedBroadcast(
     lastError: null,
   });
 
-  markGoLiveStarting(gameId);
+  const starting = markGoLiveStarting(gameId);
+
+  await syncDurableGoLiveSession({
+    gameId,
+    status: starting.status,
+    transitionAt: starting.lastTransitionAt,
+    createdByUserId: null,
+  });
 
   await startEncoderRuntime({
     gameId,
@@ -276,11 +286,40 @@ export async function stopCoordinatedBroadcast(
     lastError: null,
   });
 
-  markGoLiveStopping(gameId);
+  const stopping = markGoLiveStopping(gameId);
+
+  await syncDurableGoLiveSession({
+    gameId,
+    status: stopping.status,
+    transitionAt: stopping.lastTransitionAt,
+    createdByUserId: null,
+  });
 
   await stopEncoderRuntime(gameId);
 
-  completeGoLiveSession(gameId);
+  const completed = completeGoLiveSession(gameId);
+
+  await syncDurableGoLiveSession({
+    gameId,
+    status: completed.status,
+    transitionAt: completed.lastTransitionAt,
+    createdByUserId: null,
+  });
+
+  const recordingFinalization = await stopAndFinalizeRecordingCapture(gameId);
+
+  if (!recordingFinalization.finalized && recordingFinalization.recordingId !== null) {
+    recordBroadcastCoordinatorAudit({
+      gameId,
+      type: "STOP_COMPLETED",
+      correlationId: getBroadcastCoordinatorRecord(gameId).correlationId,
+      detail:
+        "Recording finalization failed for recording " +
+        recordingFinalization.recordingId +
+        ": " +
+        recordingFinalization.reason,
+    });
+  }
 
   setBroadcastCoordinatorIntent({
     gameId,

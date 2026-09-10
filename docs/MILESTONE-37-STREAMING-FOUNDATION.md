@@ -366,3 +366,14 @@ M37.10 adds browser-native playback for finalized video assets without placing t
 - Partial reads use MinIO `getPartialObject`, avoiding full-object downloads for browser seeking.
 - The streaming dashboard requests the playback session with credentials enabled and renders a native `<video controls>` player only for `READY` recordings with an attached media asset.
 - The standard bearer token remains in the existing authenticated API client and is never copied into playback URLs or query strings.
+
+## M37.11 — Broadcast coordinator durable recording parity
+
+M37.11 closes a lifecycle bypass between the mature broadcast coordinator and the M37 durable recording pipeline.
+
+- `startCoordinatedBroadcast()` now mirrors the coordinator's `STARTING` transition through the existing `syncDurableGoLiveSession()` bridge before launching the encoder runtime.
+- The existing `/go-live/:gameId/confirm-live` path remains authoritative for the `LIVE` transition and starts the M37.8 source recording capture only after durable LIVE persistence.
+- `stopCoordinatedBroadcast()` now mirrors `STOPPING`, stops the encoder, mirrors `COMPLETE`, and only then invokes the existing M37.8 `stopAndFinalizeRecordingCapture()` finalizer.
+- No second recording table, capture process, FFmpeg path, or MinIO finalization implementation is introduced.
+- If a durable LIVE recording exists but capture finalization fails, the existing finalizer owns the FAILED transition and the coordinator records an audit detail. If the session never reached LIVE, no recording is fabricated.
+- Contract tests enforce ordering so future coordinator refactors cannot silently bypass durable recording persistence or finalization.
