@@ -265,3 +265,66 @@ The repository currently has no FFmpeg dependency or background clip worker.
 The next processing increment can claim `PENDING` jobs, render from the
 recording media, create a derived `VIDEO` media asset, and atomically attach
 that asset to the clip job while preserving the media visibility rules.
+
+## M37.7 — Durable clip worker and FFmpeg rendering
+
+M37.7 adds the first background video-processing worker.
+
+The worker is a separate Compose process built from the API image. The runtime
+image includes system FFmpeg, while the normal API process remains responsible
+for HTTP and realtime work.
+
+### Claim and recovery model
+
+Workers claim eligible `PENDING` clip jobs transactionally with
+`FOR UPDATE SKIP LOCKED`.
+
+A claimed job becomes `PROCESSING`, records `claimed_at`, and increments its
+attempt count. A `PROCESSING` lease older than 15 minutes may be reclaimed so a
+container crash does not permanently strand the job.
+
+Jobs are not claimed until the recording has an attached same-organization
+`VIDEO` media asset. This allows highlight requests to be queued while a live
+recording is still in progress and processed only after the source media exists.
+
+Failed processing attempts return to `PENDING` until three attempts have been
+made. The third failed attempt becomes `FAILED`.
+
+### Rendering
+
+The worker:
+
+1. downloads the recording's source video from MinIO to an isolated temporary
+   directory;
+2. uses the server-derived `start_ms` / `end_ms` already persisted on the clip
+   job;
+3. invokes FFmpeg with a fixed argument array and no shell;
+4. re-encodes H.264/AAC MP4 with `+faststart`;
+5. computes SHA-256 and output size;
+6. uploads to a deterministic `clips/<year>/job-<id>.mp4` MinIO key;
+7. creates a derived `VIDEO` `media_assets` row;
+8. inherits the source media asset's owner, visibility, and explicit access grants;
+9. atomically links the new media asset and marks the clip job `READY`.
+
+The deterministic object key makes retry behavior safer: a retry replaces the
+same job output rather than creating a new uncontrolled object name.
+
+### Failure boundary
+
+If MinIO upload succeeds but database finalization fails during the same worker
+attempt, the worker tries to remove that output object before returning the job
+to its retry state.
+
+A hard process/container failure can still leave a temporary object in MinIO;
+the deterministic job key prevents unbounded duplicates and a later retry
+reuses the same destination. A future storage-reconciliation increment may
+sweep orphaned derived objects.
+
+### Authoritative-data boundary
+
+The worker never updates `game_events` or `recording_event_anchors`. It consumes
+only the durable clip window produced from the authoritative M37.5/M37.6 chain.
+
+AI remains downstream: it may eventually select existing authoritative anchors,
+but it cannot manufacture game events, players, timestamps, recording offsets,
+or arbitrary render windows.

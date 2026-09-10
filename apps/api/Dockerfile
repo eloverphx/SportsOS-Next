@@ -26,6 +26,10 @@ ENV NODE_ENV=production
 
 WORKDIR /app
 
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/package.json
 COPY apps/dashboard/package.json ./apps/dashboard/package.json

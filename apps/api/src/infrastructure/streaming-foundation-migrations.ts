@@ -98,16 +98,17 @@ async function ensureMediaOwnershipColumns(): Promise<void> {
        FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE SET NULL`,
     );
   }
-}
 
-// Logo URLs are intentionally public because scoreboard/overlay clients
-// render them without an authenticated API session.
-await pool.execute(
-  `UPDATE media_assets
-     SET media_kind = 'IMAGE',
-         visibility = 'PUBLIC'
-     WHERE object_key LIKE 'logos/%'`,
-);
+  // Logo URLs are intentionally public because scoreboard/overlay clients
+  // render them without an authenticated API session.
+  // This must run only after media_kind and visibility are guaranteed to exist.
+  await pool.execute(
+    `UPDATE media_assets
+       SET media_kind = 'IMAGE',
+           visibility = 'PUBLIC'
+       WHERE object_key LIKE 'logos/%'`,
+  );
+}
 
 async function ensureUserAccountColumns(): Promise<void> {
   const present = await columnNames("users");
@@ -152,6 +153,22 @@ async function ensureDurableGoLiveOwnershipColumns(): Promise<void> {
   if (!(await columnIsNullable("stream_sessions", "created_by_user_id"))) {
     await pool.execute(
       "ALTER TABLE stream_sessions MODIFY COLUMN created_by_user_id BIGINT UNSIGNED NULL",
+    );
+  }
+}
+
+async function ensureClipJobWorkerColumns(): Promise<void> {
+  const present = await columnNames("recording_clip_jobs");
+
+  if (!present.has("claimed_at")) {
+    await pool.execute(
+      "ALTER TABLE recording_clip_jobs ADD COLUMN claimed_at DATETIME(3) NULL AFTER attempt_count",
+    );
+  }
+
+  if (!(await indexExists("recording_clip_jobs", "idx_recording_clip_jobs_claim"))) {
+    await pool.execute(
+      "ALTER TABLE recording_clip_jobs ADD INDEX idx_recording_clip_jobs_claim (status, claimed_at, created_at)",
     );
   }
 }
@@ -336,4 +353,6 @@ export async function runStreamingFoundationMigrations(): Promise<void> {
       REFERENCES media_assets(id)
       ON DELETE SET NULL
   ) ENGINE=InnoDB`);
+
+  await ensureClipJobWorkerColumns();
 }

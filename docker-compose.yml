@@ -114,6 +114,28 @@ services:
       timeout: 10s
       retries: 10
 
+  clip-worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: sportsos_clip_worker
+    restart: unless-stopped
+    command: ["node", "apps/api/dist/workers/recordingClipWorker.js"]
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    depends_on:
+      api: { condition: service_healthy }
+      minio: { condition: service_healthy }
+
   dashboard:
     build:
       context: .
