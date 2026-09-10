@@ -39,6 +39,11 @@ import {
 } from "../services/encoderRuntime.js";
 
 import { getStreamDestinationProfile } from "../services/streamDestinationProfile.js";
+import {
+  startRecordingCapture,
+  stopAndFinalizeRecordingCapture,
+  stopRecordingCaptureWithoutFinalize,
+} from "../services/recordingCaptureRuntime.js";
 
 async function persistDurableSession(
   request: FastifyRequest,
@@ -681,6 +686,12 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
     const session = markGoLiveLive(gameId);
     await persistDurableSession(request, gameId, session);
 
+    try {
+      await startRecordingCapture(gameId);
+    } catch (error) {
+      request.log.error({ error, gameId }, "Live recording capture failed to start");
+    }
+
     return {
       success: true,
       data: {
@@ -711,6 +722,7 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
     suppressEncoderRecovery(gameId);
 
     await stopEncoderRuntime(gameId);
+    await stopRecordingCaptureWithoutFinalize(gameId);
 
     const session = markGoLiveEmergencyStopped(gameId, body.reason ?? null);
     await persistDurableSession(request, gameId, session);
@@ -761,6 +773,14 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
 
     const session = completeGoLiveSession(gameId);
     await persistDurableSession(request, gameId, session);
+
+    const recordingFinalization = await stopAndFinalizeRecordingCapture(gameId);
+    if (!recordingFinalization.finalized) {
+      request.log.error(
+        { gameId, recordingFinalization },
+        "Live recording capture did not finalize",
+      );
+    }
 
     return {
       success: true,

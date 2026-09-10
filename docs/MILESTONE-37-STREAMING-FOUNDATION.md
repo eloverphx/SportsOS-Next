@@ -328,3 +328,19 @@ only the durable clip window produced from the authoritative M37.5/M37.6 chain.
 AI remains downstream: it may eventually select existing authoritative anchors,
 but it cannot manufacture game events, players, timestamps, recording offsets,
 or arbitrary render windows.
+
+## M37.8 — Source recording capture and finalization
+
+M37.8 connects the existing live broadcast lifecycle to an actual durable source VIDEO asset.
+
+- The existing outbound RTMP/SRT encoder remains unchanged.
+- Archive capture starts only after the go-live session is confirmed LIVE and the durable LIVE recording row has been persisted.
+- Capture runs as a separate FFmpeg process and writes a Matroska work file beneath `SPORTSOS_DATA_DIR/recordings/in-progress`.
+- Normal stop first persists COMPLETE/PROCESSING, then stops and finalizes the capture.
+- Finalization first attempts a stream-copy MP4 remux with `+faststart`; incompatible source codecs fall back to H.264/AAC.
+- The finalized MP4 is uploaded to MinIO with SHA-256, duration, VIDEO kind, and ORGANIZATION visibility.
+- `media_assets` creation and `recordings.media_asset_id`/READY linkage occur in one database transaction.
+- An object uploaded before a failed database transaction is removed from MinIO.
+- Failed finalization marks the PROCESSING recording FAILED and leaves local work files available for operator recovery.
+- Emergency stop terminates capture without publishing the partial file as a READY archive.
+- Scorekeeper game events and recording event anchors remain authoritative and are not modified.
