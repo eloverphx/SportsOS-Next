@@ -377,3 +377,15 @@ M37.11 closes a lifecycle bypass between the mature broadcast coordinator and th
 - No second recording table, capture process, FFmpeg path, or MinIO finalization implementation is introduced.
 - If a durable LIVE recording exists but capture finalization fails, the existing finalizer owns the FAILED transition and the coordinator records an audit detail. If the session never reached LIVE, no recording is fabricated.
 - Contract tests enforce ordering so future coordinator refactors cannot silently bypass durable recording persistence or finalization.
+
+## M37.12 — Event clips and highlight operations UI
+
+M37.12 exposes authoritative recording-event anchors and durable clip jobs in the authenticated streaming dashboard.
+
+- STREAM_READ users can inspect scorekeeper/system anchors and clip-job state.
+- STREAM_MANAGE gates the Generate clip action; the API remains authoritative for access control.
+- Clip creation uses only `POST /recordings/:id/event-anchors/:eventId/clip-jobs`; the dashboard never submits custom start/end timing.
+- Voided events are excluded from generation.
+- Clip jobs refresh every five seconds and expose durable worker status, attempts, errors, and output media assets.
+- READY clips reuse the M37.10 HttpOnly playback-session and HTTP Range path.
+- AI_SELECTION remains display-only future metadata; this UI cannot create or alter authoritative game events or timestamps.

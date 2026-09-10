@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AuthGate } from "../../components/AuthGate";
 import { AppShell } from "../../components/AppShell";
 import { API, api } from "../../lib/api";
+import { getStoredUser, PERMISSIONS, userHasPermission } from "../../lib/auth";
 
 type RecordingStatus = "CREATED" | "RECORDING" | "PROCESSING" | "READY" | "FAILED" | "ARCHIVED";
 
@@ -27,8 +28,68 @@ interface Recording {
   readonly mediaUrl: string | null;
 }
 
+interface EventAnchor {
+  readonly id: number;
+  readonly recordingId: number;
+  readonly gameEventId: number;
+  readonly recordingOffsetMs: number;
+  readonly anchorSource: "SCOREKEEPER" | "SYSTEM";
+  readonly eventType: "GOAL" | "PENALTY";
+  readonly side: "home" | "away";
+  readonly period: number;
+  readonly clockRemainingMs: number;
+  readonly playerId: number | null;
+  readonly playerName: string | null;
+  readonly playerJerseyNumber: number | null;
+  readonly assist1PlayerId: number | null;
+  readonly assist2PlayerId: number | null;
+  readonly voidedAt: string | null;
+  readonly eventCreatedAt: string;
+  readonly eligibleForHighlights: boolean;
+  readonly suggestedClipWindow: {
+    readonly startMs: number;
+    readonly endMs: number;
+    readonly durationMs: number;
+  };
+}
+
+type ClipJobStatus = "PENDING" | "PROCESSING" | "READY" | "FAILED" | "CANCELLED";
+
+interface ClipJob {
+  readonly id: number;
+  readonly organizationId: number;
+  readonly recordingId: number;
+  readonly gameEventId: number;
+  readonly requestedByUserId: number;
+  readonly selectionSource: "SCOREKEEPER_EVENT" | "AI_SELECTION";
+  readonly startMs: number;
+  readonly endMs: number;
+  readonly durationMs: number;
+  readonly status: ClipJobStatus;
+  readonly outputMediaAssetId: number | null;
+  readonly errorMessage: string | null;
+  readonly attemptCount: number;
+  readonly claimedAt: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
 interface RecordingsResponse {
   readonly recordings: Recording[];
+}
+
+interface AnchorsResponse {
+  readonly recordingId: number;
+  readonly anchors: EventAnchor[];
+}
+
+interface ClipJobsResponse {
+  readonly recordingId: number;
+  readonly clipJobs: ClipJob[];
+}
+
+interface CreateClipJobResponse {
+  readonly clipJob: ClipJob;
 }
 
 interface PlaybackSessionResponse {
@@ -58,6 +119,13 @@ function formatDuration(durationMs: number | null): string {
   return hours > 0
     ? `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
     : `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function formatClock(clockRemainingMs: number): string {
+  const totalSeconds = Math.max(0, Math.floor(clockRemainingMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function formatDate(value: string | null): string {
@@ -91,6 +159,14 @@ export default function StreamingPage() {
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
   const [playingRecordingId, setPlayingRecordingId] = useState<number | null>(null);
   const [playbackBusyId, setPlaybackBusyId] = useState<number | null>(null);
+  const [operationsRecordingId, setOperationsRecordingId] = useState<number | null>(null);
+  const [anchors, setAnchors] = useState<EventAnchor[]>([]);
+  const [clipJobs, setClipJobs] = useState<ClipJob[]>([]);
+  const [operationsLoading, setOperationsLoading] = useState(false);
+  const [clipBusyEventId, setClipBusyEventId] = useState<number | null>(null);
+  const [clipPlaybackBusyId, setClipPlaybackBusyId] = useState<number | null>(null);
+
+  const canManageStreaming = userHasPermission(getStoredUser(), PERMISSIONS.STREAM_MANAGE);
 
   const loadRecordings = useCallback(async (background = false) => {
     if (background) {
@@ -113,6 +189,26 @@ export default function StreamingPage() {
     }
   }, []);
 
+  const loadOperations = useCallback(async (recordingId: number, quiet = false) => {
+    if (!quiet) setOperationsLoading(true);
+
+    try {
+      const [anchorResult, jobsResult] = await Promise.all([
+        api<AnchorsResponse>(`/recordings/${recordingId}/event-anchors`),
+        api<ClipJobsResponse>(`/recordings/${recordingId}/clip-jobs`),
+      ]);
+      setAnchors(anchorResult.anchors);
+      setClipJobs(jobsResult.clipJobs);
+      setError("");
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error ? caughtError.message : "Unable to load highlight operations.",
+      );
+    } finally {
+      if (!quiet) setOperationsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadRecordings();
 
@@ -122,6 +218,14 @@ export default function StreamingPage() {
 
     return () => window.clearInterval(timer);
   }, [loadRecordings]);
+
+  useEffect(() => {
+    if (operationsRecordingId == null) return;
+    const timer = window.setInterval(() => {
+      void loadOperations(operationsRecordingId, true);
+    }, 5_000);
+    return () => window.clearInterval(timer);
+  }, [loadOperations, operationsRecordingId]);
 
   async function openPlayback(recording: Recording): Promise<void> {
     if (recording.status !== "READY" || recording.mediaAssetId == null) return;
@@ -146,6 +250,63 @@ export default function StreamingPage() {
       );
     } finally {
       setPlaybackBusyId(null);
+    }
+  }
+
+  async function openHighlightOperations(recordingId: number): Promise<void> {
+    if (operationsRecordingId === recordingId) {
+      setOperationsRecordingId(null);
+      setAnchors([]);
+      setClipJobs([]);
+      return;
+    }
+
+    setOperationsRecordingId(recordingId);
+    setAnchors([]);
+    setClipJobs([]);
+    await loadOperations(recordingId);
+  }
+
+  async function queueClip(anchor: EventAnchor): Promise<void> {
+    if (operationsRecordingId == null || !anchor.eligibleForHighlights) return;
+
+    setClipBusyEventId(anchor.gameEventId);
+    setError("");
+
+    try {
+      const result = await api<CreateClipJobResponse>(
+        `/recordings/${operationsRecordingId}/event-anchors/${anchor.gameEventId}/clip-jobs`,
+        { method: "POST" },
+      );
+      setClipJobs((current) => [
+        result.clipJob,
+        ...current.filter((job) => job.id !== result.clipJob.id),
+      ]);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unable to queue clip job.");
+    } finally {
+      setClipBusyEventId(null);
+    }
+  }
+
+  async function openClipPlayback(job: ClipJob): Promise<void> {
+    if (job.outputMediaAssetId == null) return;
+    setClipPlaybackBusyId(job.id);
+    setError("");
+
+    try {
+      const session = await api<PlaybackSessionResponse>(
+        `/media/assets/${job.outputMediaAssetId}/playback-session`,
+        { method: "POST", credentials: "include" },
+      );
+      setPlayingRecordingId(job.recordingId);
+      setPlaybackUrl(`${API}${session.playbackUrl}`);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error ? caughtError.message : "Unable to start clip playback.",
+      );
+    } finally {
+      setClipPlaybackBusyId(null);
     }
   }
 
@@ -175,7 +336,8 @@ export default function StreamingPage() {
               </div>
               <h1 className="mt-2 text-3xl font-bold text-slate-100">Recordings</h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-                Monitor live recording capture, processing, failures, and finalized game archives.
+                Monitor recording lifecycle, securely play archives, and turn authoritative
+                scorekeeper events into durable highlight clips.
               </p>
             </div>
 
@@ -300,14 +462,25 @@ export default function StreamingPage() {
                     <div className="flex shrink-0 flex-col items-end gap-2">
                       <div className="text-xs text-slate-500">Recording #{recording.id}</div>
                       {recording.status === "READY" && recording.mediaAssetId != null && (
-                        <button
-                          type="button"
-                          className="secondary"
-                          disabled={playbackBusyId === recording.id}
-                          onClick={() => void openPlayback(recording)}
-                        >
-                          {playbackBusyId === recording.id ? "Opening…" : "Play recording"}
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="secondary"
+                            disabled={playbackBusyId === recording.id}
+                            onClick={() => void openPlayback(recording)}
+                          >
+                            {playbackBusyId === recording.id ? "Opening…" : "Play recording"}
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary"
+                            onClick={() => void openHighlightOperations(recording.id)}
+                          >
+                            {operationsRecordingId === recording.id
+                              ? "Close highlights"
+                              : "Highlights"}
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -315,6 +488,122 @@ export default function StreamingPage() {
               ))
             )}
           </section>
+
+          {operationsRecordingId != null && (
+            <section className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Authoritative event clips
+                  </div>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-100">
+                    Recording #{operationsRecordingId}
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-400">
+                    Scorekeeper/system anchors define clip timing. Voided events are excluded.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={operationsLoading}
+                  onClick={() => void loadOperations(operationsRecordingId)}
+                >
+                  {operationsLoading ? "Refreshing…" : "Refresh clips"}
+                </button>
+              </div>
+
+              {operationsLoading ? (
+                <div className="mt-5 text-sm text-slate-400">Loading event anchors and jobs…</div>
+              ) : anchors.length === 0 ? (
+                <div className="mt-5 rounded-lg border border-slate-800 p-4 text-sm text-slate-400">
+                  No authoritative recording event anchors are available.
+                </div>
+              ) : (
+                <div className="mt-5 space-y-3">
+                  {anchors.map((anchor) => {
+                    const eventJobs = clipJobs.filter(
+                      (job) => job.gameEventId === anchor.gameEventId,
+                    );
+
+                    return (
+                      <article
+                        key={anchor.id}
+                        className="rounded-lg border border-slate-800 bg-slate-950/60 p-4"
+                      >
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                          <div>
+                            <div className="font-medium text-slate-100">
+                              {anchor.eventType} · {anchor.side.toUpperCase()} · P{anchor.period}{" "}
+                              {formatClock(anchor.clockRemainingMs)}
+                              {anchor.playerName ? ` · ${anchor.playerName}` : ""}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">
+                              Event #{anchor.gameEventId} · {anchor.anchorSource} · offset{" "}
+                              {formatDuration(anchor.recordingOffsetMs)} · suggested clip{" "}
+                              {formatDuration(anchor.suggestedClipWindow.durationMs)}
+                            </div>
+                            {anchor.voidedAt && (
+                              <div className="mt-2 text-sm text-rose-300">
+                                Voided event — excluded from highlight generation.
+                              </div>
+                            )}
+                          </div>
+
+                          {canManageStreaming && anchor.eligibleForHighlights && (
+                            <button
+                              type="button"
+                              disabled={clipBusyEventId === anchor.gameEventId}
+                              onClick={() => void queueClip(anchor)}
+                            >
+                              {clipBusyEventId === anchor.gameEventId
+                                ? "Queuing…"
+                                : eventJobs.length > 0
+                                  ? "Ensure clip"
+                                  : "Generate clip"}
+                            </button>
+                          )}
+                        </div>
+
+                        {eventJobs.length > 0 && (
+                          <div className="mt-4 space-y-2 border-t border-slate-800 pt-3">
+                            {eventJobs.map((job) => (
+                              <div
+                                key={job.id}
+                                className="flex flex-col gap-2 rounded-lg bg-slate-900/60 p-3 sm:flex-row sm:items-center sm:justify-between"
+                              >
+                                <div>
+                                  <div className="text-sm font-medium text-slate-200">
+                                    Clip job #{job.id} · {job.status}
+                                  </div>
+                                  <div className="mt-1 text-xs text-slate-500">
+                                    {formatDuration(job.durationMs)} · {job.selectionSource} ·
+                                    attempt {job.attemptCount}
+                                    {job.errorMessage ? ` · ${job.errorMessage}` : ""}
+                                  </div>
+                                </div>
+
+                                {job.status === "READY" && job.outputMediaAssetId != null && (
+                                  <button
+                                    type="button"
+                                    className="secondary"
+                                    disabled={clipPlaybackBusyId === job.id}
+                                    onClick={() => void openClipPlayback(job)}
+                                  >
+                                    {clipPlaybackBusyId === job.id ? "Opening…" : "Play clip"}
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
 
           {playbackUrl && playingRecordingId != null && (
             <section className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
