@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AuthGate } from "../../components/AuthGate";
 import { AppShell } from "../../components/AppShell";
-import { api } from "../../lib/api";
+import { API, api } from "../../lib/api";
 
 type RecordingStatus = "CREATED" | "RECORDING" | "PROCESSING" | "READY" | "FAILED" | "ARCHIVED";
 
@@ -29,6 +29,11 @@ interface Recording {
 
 interface RecordingsResponse {
   readonly recordings: Recording[];
+}
+
+interface PlaybackSessionResponse {
+  readonly playbackUrl: string;
+  readonly expiresAt: string;
 }
 
 type StatusFilter = "ALL" | RecordingStatus;
@@ -83,6 +88,9 @@ export default function StreamingPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
+  const [playingRecordingId, setPlayingRecordingId] = useState<number | null>(null);
+  const [playbackBusyId, setPlaybackBusyId] = useState<number | null>(null);
 
   const loadRecordings = useCallback(async (background = false) => {
     if (background) {
@@ -114,6 +122,32 @@ export default function StreamingPage() {
 
     return () => window.clearInterval(timer);
   }, [loadRecordings]);
+
+  async function openPlayback(recording: Recording): Promise<void> {
+    if (recording.status !== "READY" || recording.mediaAssetId == null) return;
+
+    setPlaybackBusyId(recording.id);
+    setError("");
+
+    try {
+      const session = await api<PlaybackSessionResponse>(
+        `/media/assets/${recording.mediaAssetId}/playback-session`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
+
+      setPlayingRecordingId(recording.id);
+      setPlaybackUrl(`${API}${session.playbackUrl}`);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error ? caughtError.message : "Unable to start recording playback.",
+      );
+    } finally {
+      setPlaybackBusyId(null);
+    }
+  }
 
   const filteredRecordings = useMemo(
     () => recordings.filter((recording) => filter === "ALL" || recording.status === filter),
@@ -263,17 +297,57 @@ export default function StreamingPage() {
                       </div>
                     </div>
 
-                    <div className="shrink-0 text-xs text-slate-500">Recording #{recording.id}</div>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <div className="text-xs text-slate-500">Recording #{recording.id}</div>
+                      {recording.status === "READY" && recording.mediaAssetId != null && (
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={playbackBusyId === recording.id}
+                          onClick={() => void openPlayback(recording)}
+                        >
+                          {playbackBusyId === recording.id ? "Opening…" : "Play recording"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </article>
               ))
             )}
           </section>
 
+          {playbackUrl && playingRecordingId != null && (
+            <section className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-lg font-semibold text-slate-100">
+                  Recording #{playingRecordingId}
+                </h2>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => {
+                    setPlaybackUrl(null);
+                    setPlayingRecordingId(null);
+                  }}
+                >
+                  Close player
+                </button>
+              </div>
+
+              <video
+                key={playbackUrl}
+                className="w-full rounded-lg bg-black"
+                controls
+                playsInline
+                preload="metadata"
+                src={playbackUrl}
+              />
+            </section>
+          )}
+
           <p className="mt-6 text-xs leading-5 text-slate-500">
-            Finalized media remains protected by SportsOS streaming permissions. Browser playback
-            will use a dedicated authenticated streaming-access path rather than exposing bearer
-            credentials in media URLs.
+            Playback uses a short-lived HttpOnly media session and byte-range streaming. The normal
+            SportsOS bearer token is never placed in the media URL.
           </p>
         </main>
       </AppShell>

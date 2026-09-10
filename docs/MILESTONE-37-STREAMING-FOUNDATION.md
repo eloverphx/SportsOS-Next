@@ -354,3 +354,15 @@ M37.9 exposes the durable recording lifecycle in the existing SportsOS dashboard
 - Operators can see live capture, processing, ready archive, failed, and archived counts plus per-recording game linkage, duration, timestamps, source, and attached media asset state.
 - The page refreshes every 30 seconds and supports manual refresh.
 - Large recording playback is intentionally not implemented by embedding protected `/media/:id` directly in a `<video>` element because the current authorization model requires a bearer header. A dedicated authenticated range-streaming path will be implemented separately rather than leaking bearer credentials through URLs.
+
+## M37.10 — Authenticated recording playback and HTTP Range streaming
+
+M37.10 adds browser-native playback for finalized video assets without placing the normal SportsOS bearer token in a media URL.
+
+- An authenticated `POST /media/assets/:id/playback-session` requires `STREAM_READ`, reuses the existing media visibility/ownership/grant policy, only accepts `VIDEO` assets, and issues a five-minute HMAC-signed playback ticket.
+- The ticket is stored as an `HttpOnly`, `SameSite=Lax` cookie scoped to `/media/playback/:id`; `Secure` is added when the request is HTTPS.
+- `GET /media/playback/:id` accepts only a valid unexpired ticket for that exact asset and organization.
+- Playback supports normal full-object responses and single HTTP byte ranges. Valid ranges return `206 Partial Content` with `Accept-Ranges`, `Content-Range`, and exact `Content-Length`; malformed or unsatisfiable ranges return `416` with `Content-Range: bytes */<size>`.
+- Partial reads use MinIO `getPartialObject`, avoiding full-object downloads for browser seeking.
+- The streaming dashboard requests the playback session with credentials enabled and renders a native `<video controls>` player only for `READY` recordings with an attached media asset.
+- The standard bearer token remains in the existing authenticated API client and is never copied into playback URLs or query strings.

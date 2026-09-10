@@ -26,6 +26,12 @@ import {
   userBelongsToOrganization,
 } from "../modules/media-library/repository.js";
 import { logoUrl } from "../lib/media.js";
+import { parseByteRange } from "../modules/media-playback/range.js";
+import {
+  createMediaPlaybackTicket,
+  parseCookie,
+  verifyMediaPlaybackTicket,
+} from "../modules/media-playback/ticket.js";
 
 const uploadSchema = z.object({
   organizationId: z.number().int().positive().nullable().optional(),
@@ -54,6 +60,31 @@ const grantSchema = z.object({
 const listSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
+
+const PLAYBACK_COOKIE = "sportsos_media_playback";
+const PLAYBACK_TTL_MS = 5 * 60 * 1000;
+
+function playbackCookiePath(assetId: number): string {
+  return `/media/playback/${assetId}`;
+}
+
+function playbackCookie(
+  assetId: number,
+  value: string,
+  maxAgeSeconds: number,
+  secure: boolean,
+): string {
+  return [
+    `${PLAYBACK_COOKIE}=${encodeURIComponent(value)}`,
+    `Path=${playbackCookiePath(assetId)}`,
+    `Max-Age=${maxAgeSeconds}`,
+    "HttpOnly",
+    "SameSite=Lax",
+    secure ? "Secure" : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
+}
 
 function publicMetadata(
   asset: Awaited<ReturnType<typeof findMediaAsset>> extends infer T ? NonNullable<T> : never,
@@ -359,6 +390,117 @@ export async function mediaRoutes(app: FastifyInstance): Promise<void> {
       id: result.insertId,
       url: logoUrl(result.insertId),
     });
+  });
+
+  app.post("/media/assets/:id/playback-session", async (request, reply) => {
+    const identity = await requirePermission(request, {
+      permission: PERMISSIONS.STREAM_READ,
+    });
+
+    const parsed = assetIdSchema.safeParse(request.params);
+
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: "Invalid media id",
+      });
+    }
+
+    const asset = await findMediaAsset(parsed.data.id, identity.userId);
+
+    if (!asset || asset.mediaKind !== "VIDEO" || !canViewMedia(identity, asset)) {
+      return reply.code(404).send({
+        error: "Media not found",
+      });
+    }
+
+    const expiresAt = Date.now() + PLAYBACK_TTL_MS;
+    const ticket = createMediaPlaybackTicket(
+      {
+        assetId: asset.id,
+        userId: identity.userId,
+        organizationId: identity.organizationId,
+        expiresAt,
+      },
+      config.auth.jwtSecret,
+    );
+
+    const forwardedProto = request.headers["x-forwarded-proto"];
+    const secure =
+      request.protocol === "https" ||
+      forwardedProto === "https" ||
+      (Array.isArray(forwardedProto) && forwardedProto.includes("https"));
+
+    reply.header(
+      "Set-Cookie",
+      playbackCookie(asset.id, ticket, Math.floor(PLAYBACK_TTL_MS / 1000), secure),
+    );
+
+    reply.header("Cache-Control", "private, no-store");
+
+    return {
+      playbackUrl: `/media/playback/${asset.id}`,
+      expiresAt: new Date(expiresAt).toISOString(),
+    };
+  });
+
+  app.get("/media/playback/:id", async (request, reply) => {
+    const parsed = assetIdSchema.safeParse(request.params);
+
+    if (!parsed.success) {
+      return reply.code(404).send({
+        error: "Media not found",
+      });
+    }
+
+    const ticketValue = parseCookie(request.headers.cookie, PLAYBACK_COOKIE);
+
+    if (!ticketValue) {
+      return reply.code(404).send({
+        error: "Media not found",
+      });
+    }
+
+    const ticket = verifyMediaPlaybackTicket(ticketValue, config.auth.jwtSecret);
+
+    if (!ticket || ticket.assetId !== parsed.data.id) {
+      return reply.code(404).send({
+        error: "Media not found",
+      });
+    }
+
+    const asset = await findMediaAsset(ticket.assetId, ticket.userId);
+
+    if (!asset || asset.mediaKind !== "VIDEO" || asset.organizationId !== ticket.organizationId) {
+      return reply.code(404).send({
+        error: "Media not found",
+      });
+    }
+
+    const parsedRange = parseByteRange(request.headers.range, asset.sizeBytes);
+
+    reply.header("Accept-Ranges", "bytes");
+    reply.header("Content-Type", asset.mimeType);
+    reply.header("Cache-Control", "private, no-store");
+
+    if (parsedRange.kind === "invalid") {
+      reply.header("Content-Range", `bytes */${asset.sizeBytes}`);
+      return reply.code(416).send();
+    }
+
+    if (parsedRange.kind === "full") {
+      reply.header("Content-Length", String(asset.sizeBytes));
+      const stream = await minio.getObject(asset.bucket, asset.objectKey);
+      return reply.send(stream);
+    }
+
+    const { start, end, length } = parsedRange.range;
+    const stream = await minio.getPartialObject(asset.bucket, asset.objectKey, start, length);
+
+    reply.code(206);
+    reply.header("Content-Length", String(length));
+    reply.header("Content-Range", `bytes ${start}-${end}/${asset.sizeBytes}`);
+
+    return reply.send(stream);
   });
 
   app.get("/media/:id", async (request, reply) => {
