@@ -58,7 +58,10 @@ async function request(path: string, init: RequestInit, accessToken: string): Pr
   });
 }
 
-export async function authenticatedFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function authenticatedRequest(
+  path: string,
+  init: RequestInit = {},
+): Promise<Response> {
   const initialToken = getStoredToken();
 
   if (!initialToken) {
@@ -84,6 +87,12 @@ export async function authenticatedFetch<T>(path: string, init: RequestInit = {}
       0,
     );
   }
+
+  return response;
+}
+
+export async function authenticatedFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await authenticatedRequest(path, init);
 
   if (!response.ok) {
     let body: ApiErrorBody = {};

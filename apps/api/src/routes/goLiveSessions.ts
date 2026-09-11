@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import { PERMISSIONS, requirePermission } from "../modules/auth/index.js";
 import { listGoLiveAuditEvents, recordGoLiveAuditEvent } from "../services/goLiveAudit.js";
 import {
   syncDurableGoLiveReset,
@@ -83,6 +84,12 @@ async function persistDurableReset(request: FastifyRequest, gameId: string): Pro
 }
 
 export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise<void> {
+  app.addHook("preHandler", async (request) => {
+    await requirePermission(request, {
+      permission: PERMISSIONS.STREAM_MANAGE,
+    });
+  });
+
   app.get("/go-live-sessions/:gameId/game-day-preflight", async (request, reply) => {
     const gameId = (
       request.params as {

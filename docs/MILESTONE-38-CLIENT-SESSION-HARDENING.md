@@ -39,3 +39,15 @@ M38.3 makes the M37 account-approval backend usable end to end through the dashb
 - Pending accounts can be approved or rejected using the existing M37.2 server routes.
 - Approval refreshes the member lists so the newly active account appears in normal organization membership.
 - The backend remains authoritative for organization activity, duplicate identity checks, pending status, and approval authorization.
+
+## M38.4 — Broadcast operator authentication
+
+M38.4 brings the broadcast operator surface into the same authenticated session boundary as the rest of SportsOS.
+
+- The broadcast coordinator route plugin requires `stream.manage` for every coordinator endpoint.
+- The go-live session route plugin requires `stream.manage` for every go-live endpoint.
+- Route guards are installed inside Fastify's encapsulated route plugins, so unrelated APIs are unaffected.
+- The dashboard authenticated client now exposes a raw-response helper that preserves the existing operator pages' response parsing while still providing bearer authentication and M38.1 single-flight refresh.
+- Broadcast Operations and per-game Focus Mode no longer use unauthenticated raw `fetch` calls or a hard-coded LAN API fallback.
+- Both operator pages run inside `AuthGate` and `AppShell`.
+- Broadcast Operations appears in navigation only for users with `stream.manage`.

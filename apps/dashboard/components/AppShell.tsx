@@ -34,6 +34,11 @@ const links: readonly NavigationLink[] = [
     permission: PERMISSIONS.GAME_READ,
   },
   { label: "Streaming", href: "/streaming", permission: PERMISSIONS.STREAM_READ },
+  {
+    label: "Broadcast Operations",
+    href: "/broadcast/operations",
+    permission: PERMISSIONS.STREAM_MANAGE,
+  },
   { label: "Scoreboards", href: "/scoreboards", permission: PERMISSIONS.SCOREBOARD_READ },
   { label: "Users", href: "/users", permission: PERMISSIONS.ORGANIZATION_MEMBERS_MANAGE },
   { label: "System Health", href: "/system-health", permission: PERMISSIONS.SYSTEM_READ },

@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { PERMISSIONS, requirePermission } from "../modules/auth/index.js";
 import { listBroadcastCoordinatorAudit } from "../services/broadcastCoordinatorAudit.js";
 import { listGoLiveAuditEvents } from "../services/goLiveAudit.js";
 import {
@@ -47,6 +48,12 @@ import {
 export async function registerBroadcastSessionCoordinatorRoutes(
   app: FastifyInstance,
 ): Promise<void> {
+  app.addHook("preHandler", async (request) => {
+    await requirePermission(request, {
+      permission: PERMISSIONS.STREAM_MANAGE,
+    });
+  });
+
   app.post("/broadcast-coordinator/:gameId/supervisor/tick", async (request, reply) => {
     const gameId = (request.params as { gameId?: string }).gameId?.trim();
     if (!gameId) {
