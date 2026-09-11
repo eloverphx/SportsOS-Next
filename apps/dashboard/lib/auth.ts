@@ -1,5 +1,6 @@
 export const AUTH_TOKEN_KEY = "sportsos_token";
 export const AUTH_USER_KEY = "sportsos_user";
+export const AUTH_REFRESH_TOKEN_KEY = "sportsos_refresh_token";
 
 export const PERMISSIONS = {
   ORGANIZATION_READ: "organization.read",
@@ -61,6 +62,11 @@ export interface AuthenticatedUser {
 
 export interface LoginResponse {
   readonly token: string;
+  readonly refreshToken: string;
+  readonly session: {
+    readonly id: string;
+    readonly expiresAt: string;
+  };
   readonly user: AuthenticatedUser;
 }
 
@@ -74,6 +80,14 @@ export function getStoredToken(): string | null {
   }
 
   return window.localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+export function getStoredRefreshToken(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage.getItem(AUTH_REFRESH_TOKEN_KEY);
 }
 
 export function getStoredUser(): AuthenticatedUser | null {
@@ -95,8 +109,13 @@ export function getStoredUser(): AuthenticatedUser | null {
   }
 }
 
-export function storeAuthentication(token: string, user: AuthenticatedUser): void {
+export function storeAuthentication(
+  token: string,
+  refreshToken: string,
+  user: AuthenticatedUser,
+): void {
   window.localStorage.setItem(AUTH_TOKEN_KEY, token);
+  window.localStorage.setItem(AUTH_REFRESH_TOKEN_KEY, refreshToken);
   window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
 }
 
@@ -106,6 +125,7 @@ export function clearAuthentication(): void {
   }
 
   window.localStorage.removeItem(AUTH_TOKEN_KEY);
+  window.localStorage.removeItem(AUTH_REFRESH_TOKEN_KEY);
   window.localStorage.removeItem(AUTH_USER_KEY);
 }
 

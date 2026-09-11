@@ -43,11 +43,11 @@ export default function LoginPage() {
 
       const login = body as LoginResponse;
 
-      if (!login.token || !login.user) {
+      if (!login.token || !login.refreshToken || !login.user) {
         throw new Error("The login response was incomplete");
       }
 
-      storeAuthentication(login.token, login.user);
+      storeAuthentication(login.token, login.refreshToken, login.user);
 
       router.push("/dashboard");
       router.refresh();

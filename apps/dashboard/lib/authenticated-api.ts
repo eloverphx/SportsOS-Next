@@ -1,5 +1,6 @@
-import { clearAuthentication, getStoredToken } from "./auth";
+import { getStoredToken } from "./auth";
 import { getApiUrl } from "./api-url";
+import { refreshAuthentication } from "./session-refresh";
 
 export class ApiError extends Error {
   public readonly status: number;
@@ -38,27 +39,50 @@ function readError(body: ApiErrorBody): {
   };
 }
 
-export async function authenticatedFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = getStoredToken();
-
-  if (!token) {
-    throw new ApiError("Authentication is required", 401);
-  }
-
+function requestHeaders(init: RequestInit, accessToken: string): Headers {
   const headers = new Headers(init.headers);
-  headers.set("Authorization", `Bearer ${token}`);
+
+  headers.set("Authorization", `Bearer ${accessToken}`);
 
   if (init.body !== undefined && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`${getApiUrl()}${path}`, {
-    ...init,
-    headers,
-  });
+  return headers;
+}
 
-  if (response.status === 401) {
-    clearAuthentication();
+async function request(path: string, init: RequestInit, accessToken: string): Promise<Response> {
+  return await fetch(`${getApiUrl()}${path}`, {
+    ...init,
+    headers: requestHeaders(init, accessToken),
+  });
+}
+
+export async function authenticatedFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const initialToken = getStoredToken();
+
+  if (!initialToken) {
+    throw new ApiError("Authentication is required", 401);
+  }
+
+  let response: Response;
+
+  try {
+    response = await request(path, init, initialToken);
+
+    if (response.status === 401) {
+      const refreshedToken = await refreshAuthentication();
+      response = await request(path, init, refreshedToken);
+    }
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    throw new ApiError(
+      error instanceof Error ? error.message : "Could not connect to the SportsOS API",
+      0,
+    );
   }
 
   if (!response.ok) {
