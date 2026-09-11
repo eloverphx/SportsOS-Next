@@ -8,6 +8,7 @@ import { authUser, requireAuth } from "../lib/auth.js";
 import { normalizeRole, permissionsForRole, ROLES } from "../modules/auth/index.js";
 import {
   createPendingSignup,
+  listSignupOrganizations,
   organizationAcceptsSignup,
 } from "../modules/auth/account-repository.js";
 import {
@@ -90,6 +91,12 @@ function userPayload(user: SessionUser) {
 }
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
+  app.get("/auth/signup-organizations", async () => {
+    return {
+      organizations: await listSignupOrganizations(),
+    };
+  });
+
   app.post("/auth/signup", async (request, reply) => {
     const parsed = signupSchema.safeParse(request.body);
 

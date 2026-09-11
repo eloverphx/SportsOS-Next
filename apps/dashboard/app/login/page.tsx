@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { getApiUrl } from "../../lib/api-url";
@@ -92,6 +93,10 @@ export default function LoginPage() {
         <button disabled={busy} type="submit">
           {busy ? "Signing in…" : "Sign in"}
         </button>
+
+        <p className="muted">
+          Need an account? <Link href="/signup">Request access</Link>
+        </p>
       </form>
     </main>
   );

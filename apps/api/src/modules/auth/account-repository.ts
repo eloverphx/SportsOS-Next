@@ -2,6 +2,25 @@ import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { pool } from "../../infrastructure/database.js";
 import { normalizeRole } from "./roles.js";
 
+export interface SignupOrganization {
+  readonly id: number;
+  readonly name: string;
+}
+
+export async function listSignupOrganizations(): Promise<SignupOrganization[]> {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT id, name
+     FROM organizations
+     WHERE active = TRUE
+     ORDER BY name, id`,
+  );
+
+  return rows.map((row) => ({
+    id: Number(row.id),
+    name: String(row.name),
+  }));
+}
+
 export interface PendingSignupInput {
   readonly organizationId: number;
   readonly firstName: string;

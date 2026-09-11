@@ -26,3 +26,16 @@ M38.2 makes dashboard sign-out revoke the durable server session rather than onl
 - Local authentication is cleared in `finally`, so the user can always leave the session even if the API is unreachable or the server session was already invalid.
 - The browser then returns to `/login` and refreshes the route state.
 - No new backend logout protocol is introduced; M38.2 uses the M37.2 revocation contract.
+
+## M38.3 — Account onboarding workflow
+
+M38.3 makes the M37 account-approval backend usable end to end through the dashboard.
+
+- A public `GET /auth/signup-organizations` endpoint exposes only active organization ids and names for the signup picker.
+- `/signup` lets a prospective user choose an active organization and submit first name, last name, email, username, and password to the existing `POST /auth/signup` route.
+- Successful signup remains `PENDING_APPROVAL`; the client does not create a session or grant permissions early.
+- The login page links to the signup workflow.
+- Organization administrators with `organization.members.manage` now load pending accounts in the existing Users page.
+- Pending accounts can be approved or rejected using the existing M37.2 server routes.
+- Approval refreshes the member lists so the newly active account appears in normal organization membership.
+- The backend remains authoritative for organization activity, duplicate identity checks, pending status, and approval authorization.

@@ -26,6 +26,19 @@ interface MembersResponse {
   readonly members: OrganizationMember[];
 }
 
+interface PendingMember extends OrganizationMember {
+  readonly createdAt: string;
+}
+
+interface PendingMembersResponse {
+  readonly members: PendingMember[];
+}
+
+interface PendingDecisionResponse {
+  readonly success: boolean;
+  readonly status: "ACTIVE" | "REJECTED";
+}
+
 interface UpdateMemberResponse {
   readonly success: boolean;
   readonly member: OrganizationMember;
@@ -101,11 +114,13 @@ export default function UsersPage() {
   const [currentUser, setCurrentUser] = useState<AuthenticatedUser | null>(null);
 
   const [members, setMembers] = useState<OrganizationMember[]>([]);
+  const [pendingMembers, setPendingMembers] = useState<PendingMember[]>([]);
 
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
+  const [decidingPendingUserId, setDecidingPendingUserId] = useState<number | null>(null);
   const [createForm, setCreateForm] = useState<CreateMemberForm>(blankMemberForm);
 
   const [creating, setCreating] = useState(false);
@@ -115,11 +130,15 @@ export default function UsersPage() {
     currentUser?.role === "system_admin" ? SYSTEM_ROLE_OPTIONS : STANDARD_ROLE_OPTIONS;
 
   const loadMembers = useCallback(async (user: AuthenticatedUser): Promise<void> => {
-    const response = await authenticatedFetch<MembersResponse>(
-      `/organizations/${user.organizationId}/members`,
-    );
+    const [response, pendingResponse] = await Promise.all([
+      authenticatedFetch<MembersResponse>(`/organizations/${user.organizationId}/members`),
+      authenticatedFetch<PendingMembersResponse>(
+        `/organizations/${user.organizationId}/members/pending`,
+      ),
+    ]);
 
     setMembers(response.members);
+    setPendingMembers(pendingResponse.members);
   }, []);
 
   useEffect(() => {
@@ -221,6 +240,43 @@ export default function UsersPage() {
     }
   }
 
+  async function decidePendingMember(
+    member: PendingMember,
+    decision: "approve" | "reject",
+  ): Promise<void> {
+    if (!currentUser) {
+      return;
+    }
+
+    setDecidingPendingUserId(member.id);
+    setError("");
+
+    try {
+      await authenticatedFetch<PendingDecisionResponse>(
+        `/organizations/${currentUser.organizationId}/members/${member.id}/${decision}`,
+        {
+          method: "POST",
+        },
+      );
+
+      setPendingMembers((existing) =>
+        existing.filter((pendingMember) => pendingMember.id !== member.id),
+      );
+
+      if (decision === "approve") {
+        await loadMembers(currentUser);
+      }
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : `Could not ${decision} the pending account`,
+      );
+    } finally {
+      setDecidingPendingUserId(null);
+    }
+  }
+
   async function createMember(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
@@ -283,6 +339,61 @@ export default function UsersPage() {
             <p className="muted">
               Your account does not have permission to manage organization members.
             </p>
+          </section>
+        )}
+
+        {!loading && canManageMembers && (
+          <section className="panel">
+            <h2>Pending approvals</h2>
+
+            {pendingMembers.length === 0 ? (
+              <p className="muted">No accounts are awaiting approval.</p>
+            ) : (
+              <div className="entityGrid">
+                {pendingMembers.map((member) => {
+                  const deciding = decidingPendingUserId === member.id;
+
+                  return (
+                    <article className="entityCard" key={member.id}>
+                      <div className="entityTop">
+                        <div className="logo fallback">
+                          {member.firstName.slice(0, 1).toUpperCase()}
+                          {member.lastName.slice(0, 1).toUpperCase()}
+                        </div>
+
+                        <div>
+                          <h3>
+                            {member.firstName} {member.lastName}
+                          </h3>
+                          <p>@{member.username}</p>
+                        </div>
+                      </div>
+
+                      <p>{member.email}</p>
+                      <p className="muted">
+                        Requested {new Date(member.createdAt).toLocaleString()}
+                      </p>
+
+                      <div className="formActions">
+                        <button
+                          disabled={deciding}
+                          onClick={() => void decidePendingMember(member, "approve")}
+                        >
+                          {deciding ? "Working…" : "Approve"}
+                        </button>
+                        <button
+                          className="secondary"
+                          disabled={deciding}
+                          onClick={() => void decidePendingMember(member, "reject")}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </section>
         )}
 
