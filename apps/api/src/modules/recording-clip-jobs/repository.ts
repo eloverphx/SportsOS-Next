@@ -284,14 +284,16 @@ export async function markRecordingClipJobAttemptFailed(
          error_message = ?,
          claimed_at = NULL
      WHERE id = ?
-       AND status = 'PROCESSING'`,
-    [nextStatus, errorMessage.slice(0, 1000), jobId],
+       AND status = 'PROCESSING'
+       AND attempt_count = ?`,
+    [nextStatus, errorMessage.slice(0, 1000), jobId, attemptCount],
   );
 }
 
 interface CompletionRow extends RowDataPacket {
   id: number | string;
   organization_id: number | string;
+  attempt_count: number | string;
   game_event_id: number | string;
   start_ms: number | string;
   end_ms: number | string;
@@ -303,6 +305,7 @@ interface CompletionRow extends RowDataPacket {
 
 export async function completeRecordingClipJob(input: {
   readonly jobId: number;
+  readonly attemptCount: number;
   readonly bucket: string;
   readonly objectKey: string;
   readonly sizeBytes: number;
@@ -317,6 +320,7 @@ export async function completeRecordingClipJob(input: {
       `SELECT
            j.id,
            j.organization_id,
+           j.attempt_count,
            j.game_event_id,
            j.start_ms,
            j.end_ms,
@@ -340,6 +344,7 @@ export async function completeRecordingClipJob(input: {
     if (
       !row ||
       row.status !== "PROCESSING" ||
+      Number(row.attempt_count) !== input.attemptCount ||
       row.source_media_asset_id == null ||
       row.source_visibility == null
     ) {
@@ -404,8 +409,9 @@ export async function completeRecordingClipJob(input: {
            error_message = NULL,
            claimed_at = NULL
        WHERE id = ?
-         AND status = 'PROCESSING'`,
-      [outputMediaAssetId, input.jobId],
+         AND status = 'PROCESSING'
+         AND attempt_count = ?`,
+      [outputMediaAssetId, input.jobId, input.attemptCount],
     );
 
     await connection.commit();

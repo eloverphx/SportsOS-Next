@@ -426,3 +426,15 @@ M37.15 salvages source recordings when the API/container exits after capture has
 - Unrecognized files, non-finalizable captures, and failed recovery files are retained for operator evidence.
 - Recovery is archival-only: it never restarts the encoder, changes the go-live session back to LIVE, or resumes publishing.
 - Legacy capture filenames without a durable recording id are intentionally not auto-attached to avoid associating media with the wrong game/archive.
+
+## M37.16 — Clip-worker lease fencing
+
+M37.16 hardens stale clip-job recovery so an old worker cannot overwrite a newer reclaimed attempt.
+
+- `attempt_count` is the durable claim generation for a clip job.
+- Every successful claim increments the generation.
+- Worker completion now supplies the generation it claimed, and the repository verifies the row is still `PROCESSING` at that same generation before creating/linking the derived media asset.
+- The final READY update is also fenced by `attempt_count`.
+- Failure/requeue updates are fenced by the same generation, so a late failure from an older worker cannot move a newer in-flight attempt back to `PENDING` or `FAILED`.
+- Existing 15-minute stale `PROCESSING` reclamation remains unchanged.
+- If a stale worker uploads its deterministic output after losing the lease, completion fails and the existing worker cleanup removes that object rather than committing stale database state.

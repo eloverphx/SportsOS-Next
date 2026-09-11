@@ -79,6 +79,7 @@ export async function processNextRecordingClipJob(): Promise<boolean> {
     try {
       const outputMediaAssetId = await completeRecordingClipJob({
         jobId: job.id,
+        attemptCount: job.attemptCount,
         bucket: config.storage.bucket,
         objectKey,
         sizeBytes: outputStat.size,
