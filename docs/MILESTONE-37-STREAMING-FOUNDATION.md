@@ -438,3 +438,13 @@ M37.16 hardens stale clip-job recovery so an old worker cannot overwrite a newer
 - Failure/requeue updates are fenced by the same generation, so a late failure from an older worker cannot move a newer in-flight attempt back to `PENDING` or `FAILED`.
 - Existing 15-minute stale `PROCESSING` reclamation remains unchanged.
 - If a stale worker uploads its deterministic output after losing the lease, completion fails and the existing worker cleanup removes that object rather than committing stale database state.
+
+## M37.17 — Clip object generation isolation
+
+M37.17 extends M37.16 lease fencing into object storage.
+
+- Clip output keys now include both the durable job id and claimed `attempt_count`.
+- A reclaimed worker attempt therefore uploads to a different MinIO object than every earlier or later generation of the same job.
+- If an old worker loses its database lease, its completion fails under the M37.16 fence and cleanup removes only that old generation's object.
+- A stale worker can no longer overwrite or delete the object committed by a newer successful attempt.
+- The READY clip job continues to point at the media asset created from the successful generation-scoped object.

@@ -44,7 +44,7 @@ export async function processNextRecordingClipJob(): Promise<boolean> {
   const outputPath = join(workDir, "clip.mp4");
 
   const year = new Date().getUTCFullYear();
-  const objectKey = `clips/${year}/job-${job.id}.mp4`;
+  const objectKey = `clips/${year}/job-${job.id}-attempt-${job.attemptCount}.mp4`;
 
   try {
     const source = await minio.getObject(job.sourceBucket, job.sourceObjectKey);
