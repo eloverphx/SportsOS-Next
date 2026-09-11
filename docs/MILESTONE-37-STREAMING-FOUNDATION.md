@@ -401,3 +401,13 @@ M37.13 removes the temporary authorization window that previously remained after
 - Authorization failures continue to return the same not-found response so protected media existence is not disclosed.
 - Credentialed CORS remains restricted to `config.dashboard.origin`; the implementation does not use wildcard credentialed CORS.
 - Existing HttpOnly, scoped, SameSite=Lax playback cookies and HTTP Range behavior remain unchanged.
+
+## M37.14 — Supervisor stop parity
+
+M37.14 closes the remaining normal-stop gap between operator-driven coordinator stops and supervisor reconciliation.
+
+- `INTENT_STOP_RUNTIME_ACTIVE` now reuses `stopCoordinatedBroadcast()`.
+- Supervisor reconciliation therefore preserves STOPPING durable sync, encoder shutdown, COMPLETE durable sync, and source-recording finalization.
+- `EMERGENCY_STOP_RUNTIME_ACTIVE` remains intentionally non-finalizing and continues to stop only the unexpected active encoder runtime before resetting coordinator intent.
+- The reconciliation action remains `STOP_RUNTIME` for compatibility.
+- API-restart recovery of orphaned `.capture.mkv` files remains a separate M37.15 checkpoint.

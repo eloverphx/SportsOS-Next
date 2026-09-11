@@ -453,7 +453,31 @@ export async function reconcileBroadcastCoordinator(
 
   const ids = new Set(before.issues.map((issue) => issue.id));
 
-  if (ids.has("EMERGENCY_STOP_RUNTIME_ACTIVE") || ids.has("INTENT_STOP_RUNTIME_ACTIVE")) {
+  if (ids.has("INTENT_STOP_RUNTIME_ACTIVE")) {
+    await stopCoordinatedBroadcast(gameId);
+
+    const health = evaluateBroadcastCoordinatorHealth(gameId);
+
+    recordBroadcastCoordinatorAudit({
+      gameId,
+      type: "RECONCILE_COMPLETED",
+      correlationId: getBroadcastCoordinatorRecord(gameId).correlationId,
+      detail: "STOP_RUNTIME",
+    });
+
+    return {
+      gameId,
+      action: "STOP_RUNTIME",
+      repaired: health.healthy,
+      message: health.healthy
+        ? "STOP intent was reconciled through the coordinated durable stop and recording finalization path."
+        : "Coordinated stop was attempted, but coordinator health still reports drift.",
+      health,
+      snapshot: getBroadcastCoordinatorSnapshot(gameId),
+    };
+  }
+
+  if (ids.has("EMERGENCY_STOP_RUNTIME_ACTIVE")) {
     await stopEncoderRuntime(gameId);
 
     setBroadcastCoordinatorIntent({
@@ -476,8 +500,8 @@ export async function reconcileBroadcastCoordinator(
       action: "STOP_RUNTIME",
       repaired: health.healthy,
       message: health.healthy
-        ? "Unexpected active runtime was stopped and coordinator intent reset."
-        : "Runtime stop was attempted, but coordinator health still reports drift.",
+        ? "Emergency-stopped session runtime was stopped without normal recording finalization."
+        : "Emergency runtime stop was attempted, but coordinator health still reports drift.",
       health,
       snapshot: getBroadcastCoordinatorSnapshot(gameId),
     };
