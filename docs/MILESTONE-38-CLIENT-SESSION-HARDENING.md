@@ -14,3 +14,15 @@ M37.2 introduced durable refresh sessions with rotation, but the dashboard still
 - Failed or expired refresh sessions clear local authentication and require a fresh sign-in.
 - Ordinary non-authentication API failures are not retried through refresh.
 - The backend remains authoritative for account status and session validity; the browser does not extend or fabricate session expiry.
+
+## M38.2 — Server-backed logout
+
+M38.2 makes dashboard sign-out revoke the durable server session rather than only deleting browser state.
+
+- Sign out calls the authenticated `POST /auth/logout` route before clearing local credentials.
+- The current refresh token is included so the backend can revoke both the authenticated session id and the refresh credential.
+- If the access token has expired, the M38.1 authenticated client may rotate once and then perform logout with the new access token.
+- Duplicate Sign out clicks are suppressed while revocation is in progress.
+- Local authentication is cleared in `finally`, so the user can always leave the session even if the API is unreachable or the server session was already invalid.
+- The browser then returns to `/login` and refreshes the route state.
+- No new backend logout protocol is introduced; M38.2 uses the M37.2 revocation contract.

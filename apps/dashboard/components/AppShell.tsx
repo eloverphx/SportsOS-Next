@@ -6,11 +6,13 @@ import { useEffect, useState, type ReactNode } from "react";
 import {
   PERMISSIONS,
   clearAuthentication,
+  getStoredRefreshToken,
   getStoredUser,
   userHasPermission,
   type AuthenticatedUser,
   type Permission,
 } from "../lib/auth";
+import { authenticatedFetch } from "../lib/authenticated-api";
 
 interface NavigationLink {
   readonly label: string;
@@ -42,6 +44,7 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
   const pathname = usePathname();
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => setUser(getStoredUser()), []);
   useEffect(() => setMenuOpen(false), [pathname]);
@@ -63,9 +66,29 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
     (link) => !link.permission || userHasPermission(user, link.permission),
   );
 
-  function logout(): void {
-    clearAuthentication();
-    router.replace("/login");
+  async function logout(): Promise<void> {
+    if (signingOut) {
+      return;
+    }
+
+    setSigningOut(true);
+
+    try {
+      const refreshToken = getStoredRefreshToken();
+
+      await authenticatedFetch<{ readonly success: boolean }>("/auth/logout", {
+        method: "POST",
+        body: JSON.stringify(refreshToken ? { refreshToken } : {}),
+      });
+    } catch {
+      // Local sign-out must still succeed if the API is unavailable or the
+      // server-side session was already invalidated.
+    } finally {
+      clearAuthentication();
+      setUser(null);
+      router.replace("/login");
+      router.refresh();
+    }
   }
 
   function isActive(href: string): boolean {
@@ -126,8 +149,8 @@ export function AppShell({ children }: { readonly children: ReactNode }) {
             </span>
           </div>
 
-          <button className="secondary" onClick={logout}>
-            Sign out
+          <button className="secondary" disabled={signingOut} onClick={() => void logout()}>
+            {signingOut ? "Signing out…" : "Sign out"}
           </button>
         </header>
 
