@@ -225,16 +225,19 @@ export async function startRecordingCapture(gameId: string): Promise<void> {
   await mkdir(directory, { recursive: true });
 
   const durableRecording = await latestDurableRecording(gameId);
-  const recordingId =
-    durableRecording &&
-    durableRecording.media_asset_id == null &&
-    durableRecording.status === "RECORDING"
-      ? Number(durableRecording.id)
-      : null;
-  const fileName =
-    recordingId === null
-      ? `game-${safeGameId(gameId)}-${Date.now()}.capture.mkv`
-      : `recording-${recordingId}-game-${safeGameId(gameId)}-${Date.now()}.capture.mkv`;
+
+  if (
+    !durableRecording ||
+    durableRecording.media_asset_id != null ||
+    durableRecording.status !== "RECORDING"
+  ) {
+    throw new Error(
+      "Live recording capture requires an unfinalized durable RECORDING row for this game.",
+    );
+  }
+
+  const recordingId = Number(durableRecording.id);
+  const fileName = `recording-${recordingId}-game-${safeGameId(gameId)}-${Date.now()}.capture.mkv`;
   const capturePath = path.join(directory, fileName);
 
   const child = spawn(ffmpegPath(), buildRecordingCaptureArgs(sourceUrl, capturePath), {

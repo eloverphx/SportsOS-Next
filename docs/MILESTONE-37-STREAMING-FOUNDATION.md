@@ -448,3 +448,14 @@ M37.17 extends M37.16 lease fencing into object storage.
 - If an old worker loses its database lease, its completion fails under the M37.16 fence and cleanup removes only that old generation's object.
 - A stale worker can no longer overwrite or delete the object committed by a newer successful attempt.
 - The READY clip job continues to point at the media asset created from the successful generation-scoped object.
+
+## M37.18 — Require durable recording binding
+
+M37.18 makes the M37 source-capture ownership rule fail closed.
+
+- Archive capture may start only when the game has an existing durable LIVE-source recording in `RECORDING` with no attached media asset.
+- The capture filename always includes that exact durable recording id and game id.
+- The legacy unbound `game-<id>-<timestamp>.capture.mkv` fallback is removed.
+- If durable recording synchronization is unavailable or inconsistent, source capture refuses to start rather than creating media that cannot be safely attributed or recovered.
+- Live broadcast availability remains independent: the existing confirm-live route logs capture-start failure without taking an otherwise healthy outbound stream offline.
+- Startup recovery continues to recognize only exact recording-bound capture filenames.

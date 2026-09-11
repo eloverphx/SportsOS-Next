@@ -11,12 +11,13 @@ const runtime = readFileSync(
 const app = readFileSync(path.resolve(__dirname, "../src/app.ts"), "utf8");
 
 describe("M37.15 API-restart recording recovery", () => {
-  it("names new durable captures with the exact recording id", () => {
+  it("names durable captures with the exact recording id and requires a finalizable row", () => {
     expect(runtime).toContain(
       "`recording-${recordingId}-game-${safeGameId(gameId)}-${Date.now()}.capture.mkv`",
     );
-    expect(runtime).toContain('durableRecording.status === "RECORDING"');
-    expect(runtime).toContain("durableRecording.media_asset_id == null");
+    expect(runtime).toContain("!durableRecording");
+    expect(runtime).toContain("durableRecording.media_asset_id != null");
+    expect(runtime).toContain('durableRecording.status !== "RECORDING"');
   });
 
   it("only recovers precisely attributable orphaned capture files", () => {
