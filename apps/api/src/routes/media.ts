@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import mysql from "mysql2/promise";
+import mysql, { type RowDataPacket } from "mysql2/promise";
 import { z } from "zod";
 import { config } from "@sportsos/config";
 import { pool } from "../infrastructure/database.js";
@@ -9,6 +9,7 @@ import { realtime } from "../infrastructure/realtime.js";
 import { audit } from "../lib/audit.js";
 import { authUser, requireAuth } from "../lib/auth.js";
 import { assertActiveAccount } from "../modules/auth/account-status.js";
+import { normalizeRole } from "../modules/auth/roles.js";
 import {
   authenticatedIdentity,
   PERMISSIONS,
@@ -103,6 +104,44 @@ function publicMetadata(
     checksumSha256: asset.checksumSha256,
     createdAt: asset.createdAt,
     url: `/media/${asset.id}`,
+  };
+}
+
+interface PlaybackAccountRow extends RowDataPacket {
+  id: number | string;
+  organization_id: number | string;
+  role: string;
+  account_status: string;
+}
+
+async function currentPlaybackIdentity(
+  userId: number,
+  organizationId: number,
+): Promise<AuthenticatedIdentity | null> {
+  const [rows] = await pool.execute<PlaybackAccountRow[]>(
+    `SELECT id, organization_id, role, account_status
+       FROM users
+       WHERE id = ?
+       LIMIT 1`,
+    [userId],
+  );
+
+  const account = rows[0];
+
+  if (
+    !account ||
+    String(account.account_status) !== "ACTIVE" ||
+    Number(account.organization_id) !== organizationId
+  ) {
+    return null;
+  }
+
+  return {
+    sub: String(account.id),
+    userId: Number(account.id),
+    organizationId: Number(account.organization_id),
+    role: normalizeRole(account.role),
+    permissions: [],
   };
 }
 
@@ -468,9 +507,22 @@ export async function mediaRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    const asset = await findMediaAsset(ticket.assetId, ticket.userId);
+    const identity = await currentPlaybackIdentity(ticket.userId, ticket.organizationId);
 
-    if (!asset || asset.mediaKind !== "VIDEO" || asset.organizationId !== ticket.organizationId) {
+    if (!identity) {
+      return reply.code(404).send({
+        error: "Media not found",
+      });
+    }
+
+    const asset = await findMediaAsset(ticket.assetId, identity.userId);
+
+    if (
+      !asset ||
+      asset.mediaKind !== "VIDEO" ||
+      asset.organizationId !== ticket.organizationId ||
+      !canViewMedia(identity, asset)
+    ) {
       return reply.code(404).send({
         error: "Media not found",
       });

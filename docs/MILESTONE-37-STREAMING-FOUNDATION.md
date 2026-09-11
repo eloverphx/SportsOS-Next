@@ -389,3 +389,15 @@ M37.12 exposes authoritative recording-event anchors and durable clip jobs in th
 - Clip jobs refresh every five seconds and expose durable worker status, attempts, errors, and output media assets.
 - READY clips reuse the M37.10 HttpOnly playback-session and HTTP Range path.
 - AI_SELECTION remains display-only future metadata; this UI cannot create or alter authoritative game events or timestamps.
+
+## M37.13 — Playback revocation hardening
+
+M37.13 removes the temporary authorization window that previously remained after a playback ticket was issued.
+
+- The five-minute HMAC playback ticket remains a short-lived browser capability, but it is no longer sufficient by itself to authorize media bytes.
+- Every `/media/playback/:id` full or Range request reloads the ticket subject from `users`, requires the account to still be `ACTIVE`, verifies that the current organization still matches the ticket organization, and normalizes the current database role.
+- The requested media asset is then reloaded for the current user so current grants are reflected, and the existing `canViewMedia()` policy is evaluated again before MinIO is accessed.
+- Suspending/rejecting a user, removing the account, changing organization membership, revoking a private-media grant, or changing media visibility therefore takes effect on the next playback HTTP request instead of waiting for ticket expiration.
+- Authorization failures continue to return the same not-found response so protected media existence is not disclosed.
+- Credentialed CORS remains restricted to `config.dashboard.origin`; the implementation does not use wildcard credentialed CORS.
+- Existing HttpOnly, scoped, SameSite=Lax playback cookies and HTTP Range behavior remain unchanged.
