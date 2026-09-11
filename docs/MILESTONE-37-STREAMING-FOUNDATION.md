@@ -411,3 +411,18 @@ M37.14 closes the remaining normal-stop gap between operator-driven coordinator 
 - `EMERGENCY_STOP_RUNTIME_ACTIVE` remains intentionally non-finalizing and continues to stop only the unexpected active encoder runtime before resetting coordinator intent.
 - The reconciliation action remains `STOP_RUNTIME` for compatibility.
 - API-restart recovery of orphaned `.capture.mkv` files remains a separate M37.15 checkpoint.
+
+## M37.15 — API-restart recording recovery
+
+M37.15 salvages source recordings when the API/container exits after capture has started but before normal recording finalization.
+
+- New durable live-capture files include both the durable recording id and numeric game id in the filename so recovery maps to one exact recording.
+- API startup scans the persistent in-progress recording directory before the broadcast coordinator supervisor starts.
+- Only the exact new recovery filename contract is auto-recovered.
+- The matching durable row must still exist for that game, be a LIVE-source recording, have no linked media asset, and remain `RECORDING` or `PROCESSING`.
+- Recovery reuses the existing remux/transcode, duration probe, SHA-256, MinIO upload, and transactional `persistFinalizedRecording()` path.
+- Successful recovery produces the same READY recording/media relationship as a normal stop.
+- If the recording already has a media asset or is READY/ARCHIVED, redundant orphan files are cleaned up.
+- Unrecognized files, non-finalizable captures, and failed recovery files are retained for operator evidence.
+- Recovery is archival-only: it never restarts the encoder, changes the go-live session back to LIVE, or resumes publishing.
+- Legacy capture filenames without a durable recording id are intentionally not auto-attached to avoid associating media with the wrong game/archive.

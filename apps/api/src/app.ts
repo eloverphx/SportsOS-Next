@@ -44,6 +44,7 @@ import { registerStreamDestinationProfileRoutes } from "./routes/streamDestinati
 import { registerEncoderSessionRoutes } from "./routes/encoderSessions.js";
 import { registerGoLiveSessionRoutes } from "./routes/goLiveSessions.js";
 import { startBroadcastCoordinatorSupervisor } from "./services/broadcastSessionCoordinatorSupervisor.js";
+import { recoverRecordingCapturesOnStartup } from "./services/recordingCaptureRuntime.js";
 import { listActiveBroadcastGameIds } from "./services/broadcastSessionCoordinator.js";
 import { registerBroadcastSessionCoordinatorRoutes } from "./routes/broadcastSessionCoordinator.js";
 import { securityHeadersPlugin } from "./plugins/securityHeaders.js";
@@ -133,6 +134,15 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
       const recovered = await recoverGameClocksOnStartup();
       if (recovered > 0) {
         app.log.info({ recovered }, "Recovered expired game clocks on startup");
+      }
+
+      const recordingRecovery = await recoverRecordingCapturesOnStartup();
+      if (
+        recordingRecovery.recovered > 0 ||
+        recordingRecovery.cleaned > 0 ||
+        recordingRecovery.failed > 0
+      ) {
+        app.log.info(recordingRecovery, "Processed orphaned recording captures on startup");
       }
 
       stopRealtimeOutboxDispatcher = startRealtimeOutboxDispatcher({

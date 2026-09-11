@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createReadStream } from "node:fs";
-import { mkdir, rm, stat } from "node:fs/promises";
+import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { config } from "@sportsos/config";
@@ -165,6 +165,27 @@ async function latestDurableRecording(gameId: string): Promise<RecordingRow | nu
   return rows[0] ?? null;
 }
 
+async function durableRecordingById(
+  recordingId: number,
+  gameId: string,
+): Promise<RecordingRow | null> {
+  if (!/^[1-9]\d*$/.test(gameId)) {
+    return null;
+  }
+
+  const [rows] = await pool.execute<RecordingRow[]>(
+    `SELECT id, organization_id, owner_user_id, started_at, media_asset_id, status
+       FROM recordings
+       WHERE id = ?
+         AND game_id = ?
+         AND source = 'LIVE'
+       LIMIT 1`,
+    [recordingId, Number(gameId)],
+  );
+
+  return rows[0] ?? null;
+}
+
 async function markLatestRecordingFailed(gameId: string, reason: string): Promise<void> {
   if (!/^[1-9]\d*$/.test(gameId)) {
     return;
@@ -203,7 +224,18 @@ export async function startRecordingCapture(gameId: string): Promise<void> {
 
   await mkdir(directory, { recursive: true });
 
-  const capturePath = path.join(directory, `game-${safeGameId(gameId)}-${Date.now()}.capture.mkv`);
+  const durableRecording = await latestDurableRecording(gameId);
+  const recordingId =
+    durableRecording &&
+    durableRecording.media_asset_id == null &&
+    durableRecording.status === "RECORDING"
+      ? Number(durableRecording.id)
+      : null;
+  const fileName =
+    recordingId === null
+      ? `game-${safeGameId(gameId)}-${Date.now()}.capture.mkv`
+      : `recording-${recordingId}-game-${safeGameId(gameId)}-${Date.now()}.capture.mkv`;
+  const capturePath = path.join(directory, fileName);
 
   const child = spawn(ffmpegPath(), buildRecordingCaptureArgs(sourceUrl, capturePath), {
     shell: false,
@@ -505,4 +537,121 @@ export async function stopAndFinalizeRecordingCapture(
       reason,
     };
   }
+}
+
+export type RecordingCaptureRecoverySummary = {
+  recovered: number;
+  cleaned: number;
+  failed: number;
+  skipped: number;
+};
+
+export async function recoverRecordingCapturesOnStartup(): Promise<RecordingCaptureRecoverySummary> {
+  const summary: RecordingCaptureRecoverySummary = {
+    recovered: 0,
+    cleaned: 0,
+    failed: 0,
+    skipped: 0,
+  };
+
+  const directory = captureDirectory();
+  let names: string[];
+
+  try {
+    names = await readdir(directory);
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
+    if (code === "ENOENT") {
+      return summary;
+    }
+    throw error;
+  }
+
+  const orphanPattern = /^recording-(\d+)-game-(\d+)-(\d+)\.capture\.mkv$/;
+
+  for (const name of names.sort()) {
+    const match = orphanPattern.exec(name);
+
+    if (!match) {
+      continue;
+    }
+
+    const recordingId = Number(match[1]);
+    const gameId = match[2] ?? "";
+    const capturePath = path.join(directory, name);
+    const recording = await durableRecordingById(recordingId, gameId);
+
+    if (!recording) {
+      summary.skipped += 1;
+      continue;
+    }
+
+    if (recording.media_asset_id != null || ["READY", "ARCHIVED"].includes(recording.status)) {
+      await rm(capturePath, { force: true }).catch(() => undefined);
+      await rm(`${capturePath}.mp4`, { force: true }).catch(() => undefined);
+      summary.cleaned += 1;
+      continue;
+    }
+
+    if (!["RECORDING", "PROCESSING"].includes(recording.status)) {
+      summary.skipped += 1;
+      continue;
+    }
+
+    let outputPath: string | null = null;
+
+    try {
+      const source = await stat(capturePath);
+
+      if (source.size <= 0) {
+        throw new Error("Orphaned recording capture is empty.");
+      }
+
+      outputPath = await finalizeCaptureFile(capturePath);
+
+      const output = await stat(outputPath);
+      const [durationMs, checksumSha256] = await Promise.all([
+        probeDurationMs(outputPath),
+        sha256File(outputPath),
+      ]);
+
+      const persisted = await persistFinalizedRecording({
+        recording,
+        outputPath,
+        durationMs,
+        checksumSha256,
+        sizeBytes: output.size,
+      });
+
+      await rm(capturePath, { force: true });
+      await rm(outputPath, { force: true });
+
+      summary.recovered += 1;
+
+      console.info(
+        JSON.stringify({
+          message: "Recovered orphaned live recording capture after startup",
+          gameId,
+          recordingId,
+          mediaAssetId: persisted.mediaAssetId,
+          objectKey: persisted.objectKey,
+          durationMs,
+        }),
+      );
+    } catch (error) {
+      summary.failed += 1;
+
+      console.error(
+        JSON.stringify({
+          message: "Unable to recover orphaned live recording capture after startup",
+          gameId,
+          recordingId,
+          capturePath,
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    }
+  }
+
+  return summary;
 }
