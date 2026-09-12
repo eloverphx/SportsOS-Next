@@ -264,9 +264,6 @@ test("M39.2 account acceptance: signup, approve, login, and revoke session", asy
 
   await memberPage.getByPlaceholder("Password").fill("SportsOS-Test-Password-39");
 
-  await memberPage.getByRole("button", { name: "Sign in" }).click();
-  await memberPage.getByPlaceholder("Username or email").fill(pendingMember.username);
-  await memberPage.getByPlaceholder("Password").fill("SportsOS-Test-Password-39");
   await Promise.all([
     memberPage.waitForURL(/\/dashboard$/),
     memberPage.getByPlaceholder("Password").press("Enter"),
