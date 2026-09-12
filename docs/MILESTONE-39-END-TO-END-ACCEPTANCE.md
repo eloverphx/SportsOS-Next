@@ -58,3 +58,11 @@ The test isolates the UI contract by mocking API boundaries in Playwright rather
 Run only this acceptance slice with:
 
 `npm run test:e2e:accounts`
+
+## M39.3 — Browser streaming workflow acceptance
+
+M39.3 validates the operator-facing streaming workflow through the real dashboard routes: create a scheduled game, open the scorekeeper console, start game operation, prepare the same game for broadcast, enter the game-specific Broadcast Operations workspace, start and stop the broadcast coordinator, confirm recording finalization to READY, open the Streaming archive, request a secure playback session, and confirm the archived recording loads into the browser video player.
+
+The browser acceptance uses deterministic mocked backend state transitions so CI can exercise the complete dashboard workflow without requiring physical capture hardware, a live encoder, MySQL, MinIO, or FFmpeg runtime services.
+
+M39.3 intentionally does not test event-driven clip generation. Authoritative scorekeeper event anchors, clip jobs, and highlight playback are covered by M39.4.
