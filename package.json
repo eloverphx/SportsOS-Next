@@ -40,7 +40,7 @@
     "test:e2e:accounts": "playwright test e2e/account-lifecycle-m39.2.spec.ts --project=chromium"
   },
   "devDependencies": {
-    "@playwright/test": "1.62.1",
-    "prettier": "3.6.2"
+    "@playwright/test": "1.63.0",
+    "prettier": "3.9.6"
   }
 }
