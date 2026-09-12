@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { AuthGate } from "../../../../components/AuthGate";
@@ -123,6 +123,7 @@ function playerLabel(player: PlayerOption): string {
 
 export default function ScorekeeperConsolePage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const gameId = Number(params.id);
 
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
@@ -140,6 +141,7 @@ export default function ScorekeeperConsolePage() {
   const [assist1Id, setAssist1Id] = useState("");
   const [assist2Id, setAssist2Id] = useState("");
   const [busy, setBusy] = useState(false);
+  const [broadcastBusy, setBroadcastBusy] = useState(false);
   const [error, setError] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const [socketConnected, setSocketConnected] = useState(false);
@@ -147,6 +149,7 @@ export default function ScorekeeperConsolePage() {
   const pendingActions = useRef(0);
 
   const canScore = userHasPermission(user, PERMISSIONS.GAME_SCORE);
+  const canManageStreaming = userHasPermission(user, PERMISSIONS.STREAM_MANAGE);
 
   const displayedClockMs = useMemo(() => {
     if (!game) return 0;
@@ -479,6 +482,29 @@ export default function ScorekeeperConsolePage() {
     }
   }
 
+  async function prepareBroadcast(): Promise<void> {
+    if (!game || !canManageStreaming || broadcastBusy) return;
+
+    setBroadcastBusy(true);
+    setError("");
+
+    try {
+      await api(`/broadcast-coordinator/${game.id}/prepare`, {
+        method: "POST",
+      });
+
+      router.push(`/broadcast/operations/${game.id}`);
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Could not prepare broadcast operations for this game.",
+      );
+    } finally {
+      setBroadcastBusy(false);
+    }
+  }
+
   async function horn(): Promise<void> {
     if (!game || !canScore) return;
 
@@ -681,6 +707,16 @@ export default function ScorekeeperConsolePage() {
           </div>
 
           <div className={styles.topActions}>
+            {canManageStreaming ? (
+              <button
+                type="button"
+                className={styles.broadcastButton}
+                disabled={broadcastBusy}
+                onClick={() => void prepareBroadcast()}
+              >
+                {broadcastBusy ? "Preparing broadcast…" : "Prepare broadcast"}
+              </button>
+            ) : null}
             <Link href={`/games/${game.id}/scoreboard`}>Public scoreboard</Link>
             <Link href={`/games/${game.id}/overlay`}>Overlay</Link>
             <Link href="/games">Exit console</Link>
