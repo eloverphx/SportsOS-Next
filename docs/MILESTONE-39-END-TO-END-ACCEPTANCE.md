@@ -66,3 +66,15 @@ M39.3 validates the operator-facing streaming workflow through the real dashboar
 The browser acceptance uses deterministic mocked backend state transitions so CI can exercise the complete dashboard workflow without requiring physical capture hardware, a live encoder, MySQL, MinIO, or FFmpeg runtime services.
 
 M39.3 intentionally does not test event-driven clip generation. Authoritative scorekeeper event anchors, clip jobs, and highlight playback are covered by M39.4.
+
+## M39.4 — Authoritative highlight workflow acceptance
+
+M39.4 validates the browser workflow from an authoritative scorekeeper event anchor to a durable highlight clip and secure clip playback.
+
+The acceptance test verifies that a READY recording exposes its authoritative SCOREKEEPER event anchor, the operator queues a clip by event identity rather than supplying arbitrary clip timestamps, the durable clip job reaches READY with selection source SCOREKEEPER_EVENT, and the resulting media asset is opened through the authenticated short-lived playback-session flow.
+
+This preserves the SportsOS highlight boundary: scorekeeper/game-event timing remains authoritative while downstream clip processing may render and select media without inventing game events or timestamps.
+
+Run only this acceptance slice with:
+
+`npm run test:e2e:highlights`
