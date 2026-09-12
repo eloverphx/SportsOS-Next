@@ -25,7 +25,7 @@ export default defineConfig({
   ],
   webServer: {
     command: process.env.CI
-      ? `npm exec --workspace=@sportsos/dashboard next -- start -p ${dashboardPort}`
+      ? `cd apps/dashboard && rm -rf .next/standalone/apps/dashboard/.next/static .next/standalone/apps/dashboard/public && mkdir -p .next/standalone/apps/dashboard/.next && cp -R .next/static .next/standalone/apps/dashboard/.next/static && if [ -d public ]; then cp -R public .next/standalone/apps/dashboard/public; fi && PORT=${dashboardPort} HOSTNAME=127.0.0.1 node .next/standalone/apps/dashboard/server.js`
       : `npm exec --workspace=@sportsos/dashboard next -- dev -p ${dashboardPort}`,
     url: dashboardUrl,
     reuseExistingServer: !process.env.CI,

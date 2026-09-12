@@ -37,3 +37,24 @@ This establishes the UI handoff:
 `Game -> Scorekeeper -> Prepare broadcast -> Broadcast Focus`
 
 Later M39 steps will turn the complete acceptance target into executable end-to-end coverage and close any remaining operator-path gaps discovered by that coverage.
+
+## M39.2 — Browser-level account lifecycle acceptance
+
+M39.2 adds executable Chromium coverage for the complete account entry lifecycle using the actual dashboard pages.
+
+The acceptance test drives:
+
+1. `/signup` organization selection and access request submission;
+2. `PENDING_APPROVAL` confirmation;
+3. an authenticated organization administrator opening `/users`;
+4. the pending account being visibly presented and approved;
+5. the newly approved member signing in through `/login`;
+6. access and refresh credentials being persisted by the client;
+7. the authenticated dashboard loading; and
+8. **Sign out** sending the durable refresh token to `/auth/logout` and clearing all browser credentials.
+
+The test isolates the UI contract by mocking API boundaries in Playwright rather than depending on production or Unraid database state. This keeps the acceptance run repeatable while exercising the real Next.js forms, routing, permission-gated Users page, browser storage, and logout behavior.
+
+Run only this acceptance slice with:
+
+`npm run test:e2e:accounts`
