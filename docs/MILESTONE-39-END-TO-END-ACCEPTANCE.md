@@ -78,3 +78,15 @@ This preserves the SportsOS highlight boundary: scorekeeper/game-event timing re
 Run only this acceptance slice with:
 
 `npm run test:e2e:highlights`
+
+## M39.5 — Restart and failure acceptance
+
+M39.5 validates the operational boundary around API restart and recording failures.
+
+The acceptance contract verifies that startup recording recovery runs before broadcast supervision, interrupted capture media is finalized into its exact durable recording rather than automatically resuming a LIVE encoder, failed or unattributable captures remain available for operator investigation, already-finalized capture remnants are cleaned, and failure to start archive capture does not take down an otherwise live broadcast.
+
+This intentionally preserves the SportsOS restart safety model: archive recovery is automatic when attribution is safe, while restarting a live broadcast remains an explicit operator decision.
+
+Focused validation:
+
+`npm exec --workspace=@sportsos/api vitest -- run test/restart-failure-acceptance-m39.5.test.ts`
