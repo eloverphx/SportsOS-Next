@@ -90,3 +90,49 @@ This intentionally preserves the SportsOS restart safety model: archive recovery
 Focused validation:
 
 `npm exec --workspace=@sportsos/api vitest -- run test/restart-failure-acceptance-m39.5.test.ts`
+
+## Milestone 39 closeout
+
+Milestone 39 is complete when the acceptance slices below are present on `main` and their corresponding CI runs have succeeded.
+
+### Completed acceptance slices
+
+- **M39.1 — Game-to-broadcast operator handoff**
+  - Commit: `14ffdbaeabef605b332fcf2800c26b94dbe02750`
+  - CI: #79, run `34662849700`
+- **M39.2 — Browser-level account lifecycle acceptance**
+  - Final commit: `693e50fab9494af9a486237ee0638e02429d7cc3`
+  - CI: #84, run `34712712646`
+- **M39.3 — Browser streaming workflow acceptance**
+  - Commit: `07ceb9675558d0bfca47bba58492e4c257b491f4`
+  - CI: #85, run `34720584170`
+- **M39.4 — Authoritative highlight workflow acceptance**
+  - Commit: `ff75a283b10fcb8a0eb1b4ae134db7876f17c322`
+  - CI: #86, run `34721776893`
+- **M39.5 — Restart and failure acceptance**
+  - Commit: `b3bdf40f9019aa2102487ec48b0bf9d0fdeefa1e`
+  - CI: #87, run `34736066426`
+
+### Accepted end-to-end boundary
+
+The completed acceptance coverage establishes the following SportsOS operator path:
+
+1. request an account;
+2. receive administrator approval;
+3. sign in;
+4. create a game;
+5. open and operate the scorekeeper;
+6. record authoritative scorekeeper events;
+7. prepare and operate the broadcast for that same game;
+8. stop the broadcast and finalize its recording;
+9. play the archived recording;
+10. create and play a highlight clip anchored to an authoritative scorekeeper event; and
+11. preserve safe recording recovery across restart and capture-start failure without automatically resuming LIVE broadcasting.
+
+Scorekeeper/game-event data remains authoritative for highlight timing. Browser clients do not supply arbitrary authoritative clip timing.
+
+Automatic recovery is limited to recording/archive state that can be safely attributed to an exact durable recording and game. Interrupted LIVE broadcasting is never automatically resumed after API restart.
+
+Tournament and ESP work remain frozen and outside Milestone 39.
+
+The next phase is real Unraid deployment and operational acceptance using actual SportsOS services, storage, database, FFmpeg, recording media, playback, restart behavior, and operator workflows.
