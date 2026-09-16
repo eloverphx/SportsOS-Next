@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { audit } from "../lib/audit.js";
 import { authUser, requireAuth } from "../lib/auth.js";
-import { PERMISSIONS, requirePermission } from "../modules/auth/index.js";
+import { PERMISSIONS, ROLES, requirePermission } from "../modules/auth/index.js";
 import { canManageMedia } from "../modules/media-library/access-policy.js";
 import { findMediaAsset } from "../modules/media-library/repository.js";
 import { recordingCanQueueClipJobs } from "../modules/recording-clip-jobs/policy.js";
@@ -87,7 +87,7 @@ export async function recordingRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const recordings = await listRecordings(
-      identity.organizationId,
+      identity.role === ROLES.SYSTEM_ADMIN ? null : identity.organizationId,
       identity.userId,
       parsed.data.limit,
     );

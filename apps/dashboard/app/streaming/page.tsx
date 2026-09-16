@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AuthGate } from "../../components/AuthGate";
 import { AppShell } from "../../components/AppShell";
 import { API, api } from "../../lib/api";
@@ -159,6 +159,9 @@ export default function StreamingPage() {
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
   const [playingRecordingId, setPlayingRecordingId] = useState<number | null>(null);
   const [playbackBusyId, setPlaybackBusyId] = useState<number | null>(null);
+  const [playbackNeedsGesture, setPlaybackNeedsGesture] = useState(false);
+  const playbackVideoRef = useRef<HTMLVideoElement | null>(null);
+  const playbackSectionRef = useRef<HTMLElement | null>(null);
   const [operationsRecordingId, setOperationsRecordingId] = useState<number | null>(null);
   const [anchors, setAnchors] = useState<EventAnchor[]>([]);
   const [clipJobs, setClipJobs] = useState<ClipJob[]>([]);
@@ -226,6 +229,28 @@ export default function StreamingPage() {
     }, 5_000);
     return () => window.clearInterval(timer);
   }, [loadOperations, operationsRecordingId]);
+
+  useEffect(() => {
+    if (!playbackUrl) {
+      setPlaybackNeedsGesture(false);
+      return;
+    }
+
+    const video = playbackVideoRef.current;
+
+    if (!video) return;
+
+    playbackSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    setPlaybackNeedsGesture(false);
+
+    void video.play().catch(() => {
+      setPlaybackNeedsGesture(true);
+    });
+  }, [playbackUrl]);
 
   async function openPlayback(recording: Recording): Promise<void> {
     if (recording.status !== "READY" || recording.mediaAssetId == null) return;
@@ -606,31 +631,70 @@ export default function StreamingPage() {
           )}
 
           {playbackUrl && playingRecordingId != null && (
-            <section className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+            <section
+              ref={playbackSectionRef}
+              className="mt-6 rounded-xl border border-slate-800 bg-slate-950/40 p-4"
+            >
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h2 className="text-lg font-semibold text-slate-100">
                   Recording #{playingRecordingId}
                 </h2>
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() => {
-                    setPlaybackUrl(null);
-                    setPlayingRecordingId(null);
-                  }}
-                >
-                  Close player
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => {
+                      const video = playbackVideoRef.current;
+                      if (!video) return;
+
+                      if (video.requestFullscreen) {
+                        void video.requestFullscreen();
+                        return;
+                      }
+
+                      const safariVideo = video as HTMLVideoElement & {
+                        webkitEnterFullscreen?: () => void;
+                      };
+
+                      safariVideo.webkitEnterFullscreen?.();
+                    }}
+                  >
+                    Fullscreen
+                  </button>
+
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => {
+                      playbackVideoRef.current?.pause();
+                      setPlaybackUrl(null);
+                      setPlayingRecordingId(null);
+                      setPlaybackNeedsGesture(false);
+                    }}
+                  >
+                    Close player
+                  </button>
+                </div>
               </div>
 
-              <video
-                key={playbackUrl}
-                className="w-full rounded-lg bg-black"
-                controls
-                playsInline
-                preload="metadata"
-                src={playbackUrl}
-              />
+              <div className="mx-auto flex w-full max-w-[900px] justify-center px-1 sm:px-2">
+                <video
+                  ref={playbackVideoRef}
+                  key={playbackUrl}
+                  className="block max-h-[68dvh] w-full rounded-lg bg-black object-contain"
+                  controls
+                  playsInline
+                  preload="metadata"
+                  src={playbackUrl}
+                  onPlay={() => setPlaybackNeedsGesture(false)}
+                />
+              </div>
+
+              {playbackNeedsGesture && (
+                <p className="mt-3 text-sm text-slate-400">
+                  Playback is ready. Tap the play control on the video to begin.
+                </p>
+              )}
             </section>
           )}
 

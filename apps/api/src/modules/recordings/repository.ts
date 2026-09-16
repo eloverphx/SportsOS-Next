@@ -137,16 +137,25 @@ export async function findRecording(
 }
 
 export async function listRecordings(
-  organizationId: number,
+  organizationId: number | null,
   granteeUserId: number,
   limit: number,
 ): Promise<RecordingRecord[]> {
+  const safeLimit = Math.max(1, Math.min(100, Math.trunc(limit)));
+  const organizationFilter = organizationId == null ? "" : "WHERE r.organization_id = ?";
+
+  const parameters: number[] = [granteeUserId];
+
+  if (organizationId != null) {
+    parameters.push(organizationId);
+  }
+
   const [rows] = await pool.execute<RecordingRow[]>(
     `${RECORDING_SELECT}
-       WHERE r.organization_id = ?
+       ${organizationFilter}
        ORDER BY r.created_at DESC, r.id DESC
-       LIMIT ?`,
-    [granteeUserId, organizationId, limit],
+       LIMIT ${safeLimit}`,
+    parameters,
   );
 
   return rows.map(mapRecording);

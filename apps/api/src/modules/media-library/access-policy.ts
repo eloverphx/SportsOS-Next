@@ -1,4 +1,9 @@
-import { PERMISSIONS, roleHasPermission, type AuthenticatedIdentity } from "../auth/index.js";
+import {
+  PERMISSIONS,
+  ROLES,
+  roleHasPermission,
+  type AuthenticatedIdentity,
+} from "../auth/index.js";
 
 export type MediaVisibility = "PRIVATE" | "ORGANIZATION" | "PUBLIC";
 
@@ -27,6 +32,10 @@ export function canViewMedia(
     return false;
   }
 
+  if (identity.role === ROLES.SYSTEM_ADMIN) {
+    return true;
+  }
+
   if (asset.ownerUserId === identity.userId) {
     return true;
   }
@@ -52,6 +61,10 @@ export function canEditMedia(
   identity: AuthenticatedIdentity,
   asset: MediaAccessDescriptor,
 ): boolean {
+  if (identity.role === ROLES.SYSTEM_ADMIN) {
+    return true;
+  }
+
   if (asset.ownerUserId === identity.userId) {
     return true;
   }
@@ -71,6 +84,10 @@ export function canManageMedia(
   identity: AuthenticatedIdentity,
   asset: MediaAccessDescriptor,
 ): boolean {
+  if (identity.role === ROLES.SYSTEM_ADMIN) {
+    return true;
+  }
+
   if (asset.ownerUserId === identity.userId) {
     return true;
   }

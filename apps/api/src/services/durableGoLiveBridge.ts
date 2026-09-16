@@ -269,7 +269,9 @@ export async function syncDurableGoLiveSession(input: {
                  THEN COALESCE(ended_at, ?)
                ELSE ended_at
              END
-         WHERE id = ?`,
+         WHERE id = ?
+           AND media_asset_id IS NULL
+           AND status NOT IN ('READY', 'ARCHIVED')`,
         [recordingStatus, recordingStatus, transitionAt, recordingId],
       );
     }

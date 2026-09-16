@@ -26,6 +26,7 @@ async function fetchApi(
 ): Promise<Response> {
   return await fetch(`${API}${path}`, {
     ...options,
+    credentials: "include",
     headers: headersFor(options, accessToken),
   });
 }

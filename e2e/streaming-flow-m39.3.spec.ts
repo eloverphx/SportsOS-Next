@@ -80,6 +80,8 @@ test("M39.3 game to broadcast recording and archive playback", async ({ page }) 
   const lifecycleCommands: string[] = [];
   const coordinatorActions: string[] = [];
   let recordingReady = false;
+  let recordingActive = false;
+  let confirmLiveCalls = 0;
   let coordinatorIntent = "IDLE";
   let goLiveStatus = "IDLE";
   let runtimeStatus = "IDLE";
@@ -223,10 +225,45 @@ test("M39.3 game to broadcast recording and archive playback", async ({ page }) 
 
   await page.route("**/broadcast-coordinator/42/start", async (route) => {
     coordinatorActions.push("start");
-    coordinatorIntent = "LIVE";
-    goLiveStatus = "LIVE";
-    runtimeStatus = "RUNNING";
+    coordinatorIntent = "GO_LIVE";
+    goLiveStatus = "STARTING";
+    runtimeStatus = "LIVE";
     return json(route, { data: { gameId: "42", intent: coordinatorIntent } });
+  });
+
+  await page.route("**/go-live-sessions/42/health-hold", (route) =>
+    json(route, {
+      success: true,
+      data: {
+        healthHold: {
+          readyToConfirm: runtimeStatus === "LIVE",
+          remainingMs: runtimeStatus === "LIVE" ? 0 : 10000,
+        },
+      },
+    }),
+  );
+
+  await page.route("**/go-live-sessions/42/confirm-live", async (route) => {
+    confirmLiveCalls += 1;
+    goLiveStatus = "LIVE";
+    recordingActive = true;
+
+    return json(route, {
+      success: true,
+      data: {
+        session: {
+          status: "LIVE",
+        },
+        runtime: {
+          session: { status: "LIVE" },
+          telemetry: { health: "HEALTHY" },
+        },
+        recordingCapture: {
+          started: true,
+          error: null,
+        },
+      },
+    });
   });
 
   await page.route("**/broadcast-coordinator/42/stop", async (route) => {
@@ -234,6 +271,7 @@ test("M39.3 game to broadcast recording and archive playback", async ({ page }) 
     coordinatorIntent = "STOPPED";
     goLiveStatus = "STOPPED";
     runtimeStatus = "STOPPED";
+    recordingActive = false;
     recordingReady = true;
     return json(route, { data: { gameId: "42", intent: coordinatorIntent } });
   });
@@ -262,27 +300,28 @@ test("M39.3 game to broadcast recording and archive playback", async ({ page }) 
 
   await page.route("**/recordings?limit=100", (route) =>
     json(route, {
-      recordings: recordingReady
-        ? [
-            {
-              id: 501,
-              organizationId: 9,
-              gameId: 42,
-              ownerUserId: 77,
-              mediaAssetId: 9001,
-              source: "LIVE",
-              status: "READY",
-              title: "Prior Lake Lakers vs Edina Hornets",
-              startedAt: "2026-09-12T19:00:00.000Z",
-              endedAt: "2026-09-12T20:30:00.000Z",
-              durationMs: 5_400_000,
-              publishedAt: "2026-09-12T20:31:00.000Z",
-              createdAt: "2026-09-12T18:59:00.000Z",
-              updatedAt: "2026-09-12T20:31:00.000Z",
-              mediaUrl: null,
-            },
-          ]
-        : [],
+      recordings:
+        recordingActive || recordingReady
+          ? [
+              {
+                id: 501,
+                organizationId: 9,
+                gameId: 42,
+                ownerUserId: 77,
+                mediaAssetId: recordingReady ? 9001 : null,
+                source: "LIVE",
+                status: recordingReady ? "READY" : "RECORDING",
+                title: "Prior Lake Lakers vs Edina Hornets",
+                startedAt: "2026-09-12T19:00:00.000Z",
+                endedAt: recordingReady ? "2026-09-12T20:30:00.000Z" : null,
+                durationMs: recordingReady ? 5_400_000 : null,
+                publishedAt: recordingReady ? "2026-09-12T20:31:00.000Z" : null,
+                createdAt: "2026-09-12T18:59:00.000Z",
+                updatedAt: "2026-09-12T20:31:00.000Z",
+                mediaUrl: null,
+              },
+            ]
+          : [],
     }),
   );
 
@@ -342,14 +381,22 @@ test("M39.3 game to broadcast recording and archive playback", async ({ page }) 
   await expect(page.getByRole("heading", { name: "Broadcast Focus — Game 42" })).toBeVisible();
   await expect.poll(() => coordinatorActions).toContain("prepare");
 
-  const startButton = page.getByRole("button", { name: "Start", exact: true });
+  const startButton = page.getByRole("button", { name: "Start Broadcast", exact: true });
   await expect(startButton).toBeEnabled();
   await startButton.click();
   await expect.poll(() => coordinatorActions).toContain("start");
   await expect(page.getByText("LIVE", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("RUNNING", { exact: true }).first()).toBeVisible();
 
-  await page.getByRole("button", { name: "Stop", exact: true }).click();
+  const recordButton = page.getByRole("button", { name: "Start Recording", exact: true });
+  await expect(recordButton).toBeEnabled();
+  await recordButton.click();
+
+  await expect.poll(() => confirmLiveCalls).toBe(1);
+  await expect(page.getByText("RECORDING", { exact: true }).first()).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "Stop Broadcast & Finalize Recording", exact: true })
+    .click();
   await expect.poll(() => coordinatorActions).toEqual(["prepare", "start", "stop"]);
   await expect(page.getByText("stop completed.")).toBeVisible();
   expect(recordingReady).toBe(true);

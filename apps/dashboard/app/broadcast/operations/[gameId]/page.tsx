@@ -45,6 +45,21 @@ type CoordinatorRetry = {
   lastError: string | null;
 };
 
+type GoLiveHealthHold = {
+  readyToConfirm: boolean;
+  remainingMs?: number;
+};
+
+type RecordingSummary = {
+  id: number;
+  gameId: number | null;
+  mediaAssetId: number | null;
+  status: string;
+  title: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+};
+
 type ResilienceStatus = {
   heartbeat: {
     state: string;
@@ -137,6 +152,10 @@ export default function BroadcastFocusPage() {
 
   const [resilienceStatus, setResilienceStatus] = useState<ResilienceStatus | null>(null);
 
+  const [healthHold, setHealthHold] = useState<GoLiveHealthHold | null>(null);
+
+  const [recording, setRecording] = useState<RecordingSummary | null>(null);
+
   const load = useCallback(async () => {
     const [
       snapshotResponse,
@@ -145,6 +164,8 @@ export default function BroadcastFocusPage() {
       timelineResponse,
       notesResponse,
       resilienceResponse,
+      healthHoldResponse,
+      recordingsResponse,
     ] = await Promise.all([
       authenticatedRequest(`/broadcast-coordinator/${encodeURIComponent(gameId)}`, {
         cache: "no-store",
@@ -170,6 +191,12 @@ export default function BroadcastFocusPage() {
           cache: "no-store",
         },
       ),
+      authenticatedRequest(`/go-live-sessions/${encodeURIComponent(gameId)}/health-hold`, {
+        cache: "no-store",
+      }),
+      authenticatedRequest("/recordings?limit=100", {
+        cache: "no-store",
+      }),
     ]);
 
     const snapshotJson = await snapshotResponse.json();
@@ -183,6 +210,10 @@ export default function BroadcastFocusPage() {
     const notesJson = await notesResponse.json();
 
     const resilienceJson = await resilienceResponse.json();
+
+    const healthHoldJson = await healthHoldResponse.json();
+
+    const recordingsJson = await recordingsResponse.json();
 
     if (!snapshotResponse.ok) {
       throw new Error(snapshotJson?.error ?? "Unable to load broadcast.");
@@ -199,6 +230,20 @@ export default function BroadcastFocusPage() {
     setOperatorNotes(notesJson?.data?.notes ?? []);
 
     setResilienceStatus(resilienceJson?.data ?? null);
+
+    setHealthHold(healthHoldJson?.data?.healthHold ?? null);
+
+    const gameNumber = Number(gameId);
+
+    const gameRecordings: RecordingSummary[] = Array.isArray(recordingsJson?.recordings)
+      ? recordingsJson.recordings
+          .filter(
+            (item: RecordingSummary) => Number.isFinite(gameNumber) && item.gameId === gameNumber,
+          )
+          .sort((left: RecordingSummary, right: RecordingSummary) => right.id - left.id)
+      : [];
+
+    setRecording(gameRecordings[0] ?? null);
   }, [gameId]);
 
   const runCoordinatorAction = useCallback(
@@ -267,6 +312,43 @@ export default function BroadcastFocusPage() {
     },
     [gameId, load],
   );
+
+  const startRecording = useCallback(async () => {
+    setBusy(true);
+
+    try {
+      const response = await authenticatedRequest(
+        `/go-live-sessions/${encodeURIComponent(gameId)}/confirm-live`,
+        {
+          method: "POST",
+        },
+      );
+
+      const json = await response.json();
+
+      if (!response.ok) {
+        throw new Error(json?.error ?? "Unable to start live recording.");
+      }
+
+      const capture = json?.data?.recordingCapture;
+
+      if (capture?.started === false) {
+        setMessage(
+          capture.error
+            ? `Broadcast is live, but recording capture failed: ${capture.error}`
+            : "Broadcast is live, but recording capture did not start.",
+        );
+      } else {
+        setMessage("Broadcast confirmed LIVE and recording capture started.");
+      }
+
+      await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to start live recording.");
+    } finally {
+      setBusy(false);
+    }
+  }, [gameId, load]);
 
   const executeRecovery = useCallback(async () => {
     if (!recoveryOperator.trim()) {
@@ -390,7 +472,7 @@ export default function BroadcastFocusPage() {
   return (
     <AuthGate>
       <AppShell>
-        <main className="mx-auto max-w-6xl p-6">
+        <main className="mx-auto max-w-6xl p-4 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <a href="/broadcast/operations" className="text-xs text-slate-500">
@@ -422,7 +504,7 @@ export default function BroadcastFocusPage() {
             </div>
           ) : (
             <>
-              <section className="mt-6 grid gap-3 md:grid-cols-5">
+              <section className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
                 <div className="rounded-xl border border-slate-800 p-4">
                   <div className="text-xs text-slate-500">Coordinator</div>
                   <div className="mt-1 font-semibold">{snapshot.coordinator.intent}</div>
@@ -447,12 +529,20 @@ export default function BroadcastFocusPage() {
                   <div className="text-xs text-slate-500">Retry</div>
                   <div className="mt-1 font-semibold">{retry?.state ?? "UNKNOWN"}</div>
                 </div>
+
+                <div className="rounded-xl border border-slate-800 p-4">
+                  <div className="text-xs text-slate-500">Recording</div>
+                  <div className="mt-1 font-semibold">{recording?.status ?? "NOT STARTED"}</div>
+                  {recording && (
+                    <div className="mt-1 text-xs text-slate-500">Recording #{recording.id}</div>
+                  )}
+                </div>
               </section>
 
               <section className="mt-4 rounded-xl border border-slate-800 p-5">
                 <div className="text-sm font-semibold">Safe Operator Actions</div>
 
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   <button
                     type="button"
                     disabled={busy}
@@ -466,9 +556,23 @@ export default function BroadcastFocusPage() {
                     type="button"
                     disabled={busy || !health?.healthy || snapshot.coordinator.intent !== "PREPARE"}
                     onClick={() => void runCoordinatorAction("start")}
-                    className="rounded-lg border border-emerald-800 px-3 py-2 text-xs disabled:opacity-50"
+                    className="w-full rounded-lg border border-emerald-800 px-3 py-3 text-sm font-semibold disabled:opacity-50"
                   >
-                    Start
+                    Start Broadcast
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={
+                      busy ||
+                      healthHold?.readyToConfirm !== true ||
+                      recording?.status === "RECORDING" ||
+                      snapshot.goLive.status === "LIVE"
+                    }
+                    onClick={() => void startRecording()}
+                    className="w-full rounded-lg border border-red-700 px-3 py-3 text-sm font-semibold disabled:opacity-50"
+                  >
+                    Start Recording
                   </button>
 
                   <button
@@ -493,11 +597,30 @@ export default function BroadcastFocusPage() {
                     type="button"
                     disabled={busy}
                     onClick={() => void runCoordinatorAction("stop")}
-                    className="rounded-lg border border-slate-800 px-3 py-2 text-xs disabled:opacity-50"
+                    className="w-full rounded-lg border border-slate-800 px-3 py-3 text-sm font-semibold disabled:opacity-50"
                   >
-                    Stop
+                    Stop Broadcast & Finalize Recording
                   </button>
                 </div>
+
+                <div className="mt-4 rounded-lg border border-slate-800 p-3 text-xs text-slate-400">
+                  {recording?.status === "RECORDING"
+                    ? "Recording is active. Stopping the broadcast will finalize it into the archive."
+                    : healthHold?.readyToConfirm
+                      ? "Publish health is confirmed. Recording can now be started."
+                      : snapshot.runtime.session.status === "LIVE"
+                        ? "Stream is connected. Waiting for the publish-health confirmation hold before recording can start."
+                        : "Start the broadcast first. Recording becomes available after the stream is healthy."}
+                </div>
+
+                {recording?.status === "READY" && (
+                  <a
+                    href="/streaming"
+                    className="mt-3 inline-flex rounded-lg border border-slate-700 px-4 py-2 text-sm"
+                  >
+                    Open Recording Archive
+                  </a>
+                )}
               </section>
 
               {health && !health.healthy && (

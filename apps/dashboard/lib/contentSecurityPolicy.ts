@@ -57,7 +57,7 @@ export function buildDashboardContentSecurityPolicy(
     "style-src 'self' 'unsafe-inline'",
     `script-src ${scriptSources.join(" ")}`,
     `connect-src ${Array.from(connectSources).join(" ")}`,
-    "media-src 'self' blob:",
+    "media-src 'self' blob: https://api.crashthenet.online",
     "worker-src 'self' blob:",
     "manifest-src 'self'",
   ];

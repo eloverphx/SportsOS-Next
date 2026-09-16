@@ -147,6 +147,63 @@ async function probeDurationMs(filePath: string): Promise<number> {
   return Math.max(1, Math.round(seconds * 1000));
 }
 
+async function validateFinalizedRecording(filePath: string): Promise<void> {
+  const stdout = await runProcess(
+    ffprobePath(),
+    [
+      "-v",
+      "error",
+      "-select_streams",
+      "v:0",
+      "-show_entries",
+      "stream=codec_name,profile,pix_fmt,level",
+      "-of",
+      "json",
+      filePath,
+    ],
+    true,
+  );
+
+  let parsed: {
+    streams?: Array<{
+      codec_name?: string;
+      profile?: string;
+      pix_fmt?: string;
+      level?: number;
+    }>;
+  };
+
+  try {
+    parsed = JSON.parse(stdout);
+  } catch {
+    throw new Error("Finalized recording video metadata is unreadable.");
+  }
+
+  const video = parsed.streams?.[0];
+
+  if (!video) {
+    throw new Error("Finalized recording does not contain a video stream.");
+  }
+
+  if (video.codec_name !== "h264") {
+    throw new Error(
+      `Finalized recording video codec is not H.264: ${video.codec_name ?? "unknown"}.`,
+    );
+  }
+
+  if (!video.profile || video.profile.toLowerCase() === "unknown") {
+    throw new Error("Finalized recording has an unknown H.264 profile.");
+  }
+
+  if (!video.pix_fmt || video.pix_fmt.toLowerCase() === "unknown") {
+    throw new Error("Finalized recording has an unknown pixel format.");
+  }
+
+  if (!Number.isFinite(video.level) || Number(video.level) <= 0) {
+    throw new Error("Finalized recording has an invalid H.264 level.");
+  }
+}
+
 async function latestDurableRecording(gameId: string): Promise<RecordingRow | null> {
   if (!/^[1-9]\d*$/.test(gameId)) {
     return null;
@@ -313,8 +370,12 @@ async function finalizeCaptureFile(capturePath: string): Promise<string> {
 
   try {
     await runProcess(ffmpegPath(), buildRecordingRemuxArgs(capturePath, outputPath));
+    await validateFinalizedRecording(outputPath);
   } catch {
+    await rm(outputPath, { force: true }).catch(() => undefined);
+
     await runProcess(ffmpegPath(), buildRecordingTranscodeArgs(capturePath, outputPath));
+    await validateFinalizedRecording(outputPath);
   }
 
   const output = await stat(outputPath);

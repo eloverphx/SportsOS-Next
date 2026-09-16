@@ -517,12 +517,7 @@ export async function mediaRoutes(app: FastifyInstance): Promise<void> {
 
     const asset = await findMediaAsset(ticket.assetId, identity.userId);
 
-    if (
-      !asset ||
-      asset.mediaKind !== "VIDEO" ||
-      asset.organizationId !== ticket.organizationId ||
-      !canViewMedia(identity, asset)
-    ) {
+    if (!asset || asset.mediaKind !== "VIDEO" || !canViewMedia(identity, asset)) {
       return reply.code(404).send({
         error: "Media not found",
       });
@@ -533,6 +528,7 @@ export async function mediaRoutes(app: FastifyInstance): Promise<void> {
     reply.header("Accept-Ranges", "bytes");
     reply.header("Content-Type", asset.mimeType);
     reply.header("Cache-Control", "private, no-store");
+    reply.header("Cross-Origin-Resource-Policy", "cross-origin");
 
     if (parsedRange.kind === "invalid") {
       reply.header("Content-Range", `bytes */${asset.sizeBytes}`);

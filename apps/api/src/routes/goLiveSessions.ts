@@ -693,10 +693,31 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
     const session = markGoLiveLive(gameId);
     await persistDurableSession(request, gameId, session);
 
+    let recordingCapture: {
+      started: boolean;
+      error: string | null;
+    } = {
+      started: false,
+      error: null,
+    };
+
     try {
       await startRecordingCapture(gameId);
+
+      recordingCapture = {
+        started: true,
+        error: null,
+      };
     } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Live recording capture failed to start.";
+
       request.log.error({ error, gameId }, "Live recording capture failed to start");
+
+      recordingCapture = {
+        started: false,
+        error: message,
+      };
     }
 
     return {
@@ -704,6 +725,7 @@ export async function registerGoLiveSessionRoutes(app: FastifyInstance): Promise
       data: {
         session,
         runtime,
+        recordingCapture,
       },
     };
   });

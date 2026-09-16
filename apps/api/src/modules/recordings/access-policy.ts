@@ -1,4 +1,9 @@
-import { PERMISSIONS, roleHasPermission, type AuthenticatedIdentity } from "../auth/index.js";
+import {
+  PERMISSIONS,
+  ROLES,
+  roleHasPermission,
+  type AuthenticatedIdentity,
+} from "../auth/index.js";
 import { canViewMedia, type MediaAccessDescriptor } from "../media-library/access-policy.js";
 
 export interface RecordingAccessDescriptor {
@@ -11,6 +16,10 @@ export function canViewRecording(
   identity: AuthenticatedIdentity,
   recording: RecordingAccessDescriptor,
 ): boolean {
+  if (identity.role === ROLES.SYSTEM_ADMIN) {
+    return true;
+  }
+
   if (recording.ownerUserId === identity.userId) {
     return true;
   }
@@ -30,6 +39,10 @@ export function canManageRecording(
   identity: AuthenticatedIdentity,
   recording: RecordingAccessDescriptor,
 ): boolean {
+  if (identity.role === ROLES.SYSTEM_ADMIN) {
+    return true;
+  }
+
   if (recording.ownerUserId === identity.userId) {
     return true;
   }
