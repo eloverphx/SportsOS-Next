@@ -695,6 +695,31 @@ export default function ScorekeeperConsolePage() {
   return (
     <AuthGate>
       <main className={styles.page}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-start",
+            marginBottom: "12px",
+          }}
+        >
+          <Link
+            href="/games"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              border: "1px solid rgba(148, 163, 184, 0.35)",
+              borderRadius: "10px",
+              padding: "10px 14px",
+              fontSize: "14px",
+              fontWeight: 700,
+              textDecoration: "none",
+            }}
+          >
+            ← Back to Games
+          </Link>
+        </div>
+
         <header className={styles.topbar}>
           <div>
             <span className={styles.eyebrow}>Live scorekeeper</span>
@@ -714,12 +739,11 @@ export default function ScorekeeperConsolePage() {
                 disabled={broadcastBusy}
                 onClick={() => void prepareBroadcast()}
               >
-                {broadcastBusy ? "Preparing broadcast…" : "Prepare broadcast"}
+                {broadcastBusy ? "Opening broadcast…" : "Broadcast"}
               </button>
             ) : null}
             <Link href={`/games/${game.id}/scoreboard`}>Public scoreboard</Link>
             <Link href={`/games/${game.id}/overlay`}>Overlay</Link>
-            <Link href="/games">Exit console</Link>
           </div>
         </header>
 

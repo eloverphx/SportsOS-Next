@@ -131,6 +131,7 @@ export default function GamesPage() {
 
   const canManage = userHasPermission(currentUser, PERMISSIONS.GAME_MANAGE);
   const canScore = userHasPermission(currentUser, PERMISSIONS.GAME_SCORE);
+  const canManageStreaming = userHasPermission(currentUser, PERMISSIONS.STREAM_MANAGE);
   const isSystemAdmin = currentUser?.role === "system_admin";
 
   const organizationSeasons = useMemo(
@@ -758,23 +759,32 @@ export default function GamesPage() {
               {game.notes && <p>{game.notes}</p>}
 
               <div className="cardActions">
+                {canScore && <Link href={`/games/${game.id}/control`}>Scorekeeper</Link>}
+
+                {canManageStreaming && (
+                  <Link className="secondary" href={`/broadcast/operations/${game.id}`}>
+                    Broadcast
+                  </Link>
+                )}
+
                 <Link
                   className="secondary"
                   href={`/games/${game.id}/scoreboard`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Open scoreboard
+                  Scoreboard
                 </Link>
 
                 {canScore && (
                   <button
+                    className="secondary"
                     onClick={() => {
                       setScoringError("");
                       setScoringGameId(game.id);
                     }}
                   >
-                    Score game
+                    Quick scoring
                   </button>
                 )}
 

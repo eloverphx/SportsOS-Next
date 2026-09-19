@@ -1,20 +1,21 @@
 import { createHash } from "node:crypto";
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn } from "node:child_process";
 import { createReadStream } from "node:fs";
-import { mkdir, readdir, rm, stat } from "node:fs/promises";
+import { readdir, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { config } from "@sportsos/config";
 import { pool } from "../infrastructure/database.js";
 import { minio } from "../infrastructure/minio.js";
+import { buildRecordingRemuxArgs, buildRecordingTranscodeArgs } from "./recordingCaptureFfmpeg.js";
 import {
-  buildRecordingCaptureArgs,
-  buildRecordingRemuxArgs,
-  buildRecordingTranscodeArgs,
-} from "./recordingCaptureFfmpeg.js";
+  isRecordingCaptureSupervisorConfigured,
+  listSupervisorRecordingCaptures,
+  startSupervisorRecordingCapture,
+  stopSupervisorRecordingCapture,
+} from "./recordingCaptureSupervisorClient.js";
 
 type CaptureEntry = {
-  child: ChildProcess;
   capturePath: string;
   stderrTail: string;
 };
@@ -41,8 +42,6 @@ export type RecordingCaptureFinalizeResult =
       recordingId: number | null;
       reason: string;
     };
-
-const captures = new Map<string, CaptureEntry>();
 
 function ffmpegPath(): string {
   return process.env.SPORTSOS_FFMPEG_PATH?.trim() || process.env.FFMPEG_PATH?.trim() || "ffmpeg";
@@ -270,17 +269,7 @@ async function markLatestRecordingFailed(gameId: string, reason: string): Promis
 }
 
 export async function startRecordingCapture(gameId: string): Promise<void> {
-  const current = captures.get(gameId);
-
-  if (current && current.child.exitCode === null) {
-    return;
-  }
-
   const sourceUrl = resolveSourceUrl(gameId);
-  const directory = captureDirectory();
-
-  await mkdir(directory, { recursive: true });
-
   const durableRecording = await latestDurableRecording(gameId);
 
   if (
@@ -294,75 +283,38 @@ export async function startRecordingCapture(gameId: string): Promise<void> {
   }
 
   const recordingId = Number(durableRecording.id);
-  const fileName = `recording-${recordingId}-game-${safeGameId(gameId)}-${Date.now()}.capture.mkv`;
-  const capturePath = path.join(directory, fileName);
 
-  const child = spawn(ffmpegPath(), buildRecordingCaptureArgs(sourceUrl, capturePath), {
-    shell: false,
-    stdio: ["ignore", "ignore", "pipe"],
-    env: process.env,
+  const capture = await startSupervisorRecordingCapture({
+    gameId,
+    recordingId,
+    sourceUrl,
   });
 
-  const entry: CaptureEntry = {
-    child,
-    capturePath,
-    stderrTail: "",
-  };
-
-  captures.set(gameId, entry);
-
-  child.stderr?.on("data", (chunk: Buffer) => {
-    entry.stderrTail = (entry.stderrTail + chunk.toString("utf8")).slice(-16_000);
-  });
-
-  await new Promise<void>((resolve, reject) => {
-    child.once("spawn", resolve);
-    child.once("error", reject);
-  });
+  if (!capture.running) {
+    throw new Error("Recording capture supervisor did not start FFmpeg.");
+  }
 
   console.info(
     JSON.stringify({
-      message: "Live recording capture started",
+      message: "Live recording capture started by supervisor",
       gameId,
-      capturePath,
+      recordingId,
+      capturePath: capture.capturePath,
     }),
   );
 }
 
 async function stopCaptureProcess(gameId: string): Promise<CaptureEntry | null> {
-  const entry = captures.get(gameId);
+  const stopped = await stopSupervisorRecordingCapture(gameId);
 
-  if (!entry) {
+  if (!stopped) {
     return null;
   }
 
-  if (entry.child.exitCode === null) {
-    entry.child.kill("SIGTERM");
-
-    await new Promise<void>((resolve) => {
-      let settled = false;
-
-      const finish = () => {
-        if (settled) return;
-        settled = true;
-        resolve();
-      };
-
-      entry.child.once("close", finish);
-
-      const timer = setTimeout(() => {
-        if (entry.child.exitCode === null) {
-          entry.child.kill("SIGKILL");
-        }
-        finish();
-      }, 10_000);
-
-      timer.unref();
-    });
-  }
-
-  captures.delete(gameId);
-  return entry;
+  return {
+    capturePath: stopped.capturePath,
+    stderrTail: stopped.stderrTail,
+  };
 }
 
 async function finalizeCaptureFile(capturePath: string): Promise<string> {
@@ -619,6 +571,35 @@ export async function recoverRecordingCapturesOnStartup(): Promise<RecordingCapt
   };
 
   const directory = captureDirectory();
+  const activeCapturePaths = new Set<string>();
+
+  if (isRecordingCaptureSupervisorConfigured()) {
+    try {
+      const sessions = await listSupervisorRecordingCaptures();
+
+      for (const session of sessions) {
+        if (session.running) {
+          activeCapturePaths.add(path.resolve(session.capturePath));
+        }
+      }
+    } catch (error) {
+      /*
+       * Fail safe: if a configured supervisor cannot be queried, do not
+       * touch capture files. One may still be actively written.
+       */
+      console.error(
+        JSON.stringify({
+          message:
+            "Skipping orphan recording recovery because capture supervisor status is unavailable",
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      );
+
+      summary.skipped += 1;
+      return summary;
+    }
+  }
+
   let names: string[];
 
   try {
@@ -643,6 +624,12 @@ export async function recoverRecordingCapturesOnStartup(): Promise<RecordingCapt
     const recordingId = Number(match[1]);
     const gameId = match[2] ?? "";
     const capturePath = path.join(directory, name);
+
+    if (activeCapturePaths.has(path.resolve(capturePath))) {
+      summary.skipped += 1;
+      continue;
+    }
+
     const recording = await durableRecordingById(recordingId, gameId);
 
     if (!recording) {

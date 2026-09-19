@@ -8,6 +8,10 @@ const runtime = readFileSync(
   path.resolve(__dirname, "../src/services/recordingCaptureRuntime.ts"),
   "utf8",
 );
+const supervisor = readFileSync(
+  path.resolve(__dirname, "../src/workers/recordingCaptureSupervisor.ts"),
+  "utf8",
+);
 const routes = readFileSync(path.resolve(__dirname, "../src/routes/goLiveSessions.ts"), "utf8");
 
 describe("M37.18 durable recording binding", () => {
@@ -21,10 +25,13 @@ describe("M37.18 durable recording binding", () => {
   });
 
   it("never creates the legacy unbound capture filename", () => {
-    expect(runtime).not.toContain("`game-${safeGameId(gameId)}-${Date.now()}.capture.mkv`");
-    expect(runtime).toContain(
-      "`recording-${recordingId}-game-${safeGameId(gameId)}-${Date.now()}.capture.mkv`",
+    expect(supervisor).not.toContain(
+      "`game-${safeGameId(input.gameId)}-${Date.now()}.capture.mkv`",
     );
+    expect(supervisor).toContain(
+      "`recording-${input.recordingId}-game-${safeGameId(input.gameId)}-`",
+    );
+    expect(supervisor).toContain("`${Date.now()}.capture.mkv`");
   });
 
   it("keeps broadcast availability independent from archive-capture start failure", () => {

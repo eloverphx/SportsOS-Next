@@ -259,8 +259,7 @@ export default function BroadcastOperationsPage() {
             <div>
               <h1 className="text-2xl font-bold">Broadcast Operations</h1>
               <p className="mt-1 text-sm text-slate-500">
-                Consolidated production view of coordinator, go-live, encoder, health, and retry
-                state.
+                Open a game to start, monitor, or stop its broadcast.
               </p>
             </div>
 
@@ -328,7 +327,7 @@ export default function BroadcastOperationsPage() {
                       href={`/broadcast/operations/${encodeURIComponent(item.gameId)}`}
                       className="rounded-lg border border-slate-700 px-3 py-2 text-xs"
                     >
-                      Open Focus Mode
+                      Open Game
                     </a>
                   </div>
                 ))
@@ -352,9 +351,18 @@ export default function BroadcastOperationsPage() {
                       </div>
                     </div>
 
-                    <span className="rounded border border-slate-700 px-3 py-1 text-xs font-semibold">
-                      {item.health.healthy ? "HEALTHY" : "ATTENTION"}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded border border-slate-700 px-3 py-1 text-xs font-semibold">
+                        {item.health.healthy ? "HEALTHY" : "ATTENTION"}
+                      </span>
+
+                      <a
+                        href={`/broadcast/operations/${encodeURIComponent(item.gameId)}`}
+                        className="rounded-lg border border-emerald-800 px-4 py-2 text-sm font-semibold"
+                      >
+                        Open Game
+                      </a>
+                    </div>
                   </div>
 
                   <div className="mt-4 grid gap-3 md:grid-cols-5">
@@ -391,46 +399,80 @@ export default function BroadcastOperationsPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 rounded border border-slate-800 p-3">
-                    <div className="text-xs font-semibold">Safe Operator Actions</div>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Actions are routed through the existing broadcast coordinator safety layer.
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Start requires PREPARE + healthy coordinator and a second operator
-                      confirmation.
-                    </p>
+                  <details className="mt-4 rounded border border-slate-800 p-3">
+                    <summary className="cursor-pointer text-xs font-semibold text-slate-400">
+                      Advanced controls
+                    </summary>
 
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        disabled={actionGameId === item.gameId}
-                        onClick={() => void runAction(item.gameId, "prepare")}
-                        className="rounded-lg border border-slate-700 px-3 py-2 text-xs disabled:opacity-50"
-                      >
-                        Prepare
-                      </button>
+                    <div className="mt-3">
+                      <div className="text-xs font-semibold">Operator Actions</div>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Actions are routed through the existing broadcast coordinator safety layer.
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Start requires PREPARE + healthy coordinator and a second operator
+                        confirmation.
+                      </p>
 
-                      <button
-                        type="button"
-                        disabled={actionGameId === item.gameId}
-                        onClick={() => void runAction(item.gameId, "reconcile")}
-                        className="rounded-lg border border-slate-700 px-3 py-2 text-xs disabled:opacity-50"
-                      >
-                        Reconcile
-                      </button>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={actionGameId === item.gameId}
+                          onClick={() => void runAction(item.gameId, "prepare")}
+                          className="rounded-lg border border-slate-700 px-3 py-2 text-xs disabled:opacity-50"
+                        >
+                          Prepare
+                        </button>
 
-                      <button
-                        type="button"
-                        disabled={actionGameId === item.gameId || item.retry.state !== "SCHEDULED"}
-                        onClick={() => void runAction(item.gameId, "retry/execute")}
-                        className="rounded-lg border border-slate-700 px-3 py-2 text-xs disabled:opacity-50"
-                      >
-                        Execute Retry
-                      </button>
+                        <button
+                          type="button"
+                          disabled={actionGameId === item.gameId}
+                          onClick={() => void runAction(item.gameId, "reconcile")}
+                          className="rounded-lg border border-slate-700 px-3 py-2 text-xs disabled:opacity-50"
+                        >
+                          Reconcile
+                        </button>
 
-                      {pendingStartGameId === item.gameId ? (
-                        <>
+                        <button
+                          type="button"
+                          disabled={
+                            actionGameId === item.gameId || item.retry.state !== "SCHEDULED"
+                          }
+                          onClick={() => void runAction(item.gameId, "retry/execute")}
+                          className="rounded-lg border border-slate-700 px-3 py-2 text-xs disabled:opacity-50"
+                        >
+                          Execute Retry
+                        </button>
+
+                        {pendingStartGameId === item.gameId ? (
+                          <>
+                            <button
+                              type="button"
+                              disabled={
+                                actionGameId === item.gameId ||
+                                !item.health.healthy ||
+                                item.snapshot.coordinator.intent !== "PREPARE"
+                              }
+                              onClick={async () => {
+                                await runAction(item.gameId, "start");
+
+                                setPendingStartGameId(null);
+                              }}
+                              className="rounded-lg border border-emerald-800 px-3 py-2 text-xs font-semibold text-emerald-300 disabled:opacity-50"
+                            >
+                              Confirm Start Broadcast
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={actionGameId === item.gameId}
+                              onClick={() => setPendingStartGameId(null)}
+                              className="rounded-lg border border-slate-800 px-3 py-2 text-xs disabled:opacity-50"
+                            >
+                              Cancel Start
+                            </button>
+                          </>
+                        ) : (
                           <button
                             type="button"
                             disabled={
@@ -438,50 +480,24 @@ export default function BroadcastOperationsPage() {
                               !item.health.healthy ||
                               item.snapshot.coordinator.intent !== "PREPARE"
                             }
-                            onClick={async () => {
-                              await runAction(item.gameId, "start");
-
-                              setPendingStartGameId(null);
-                            }}
-                            className="rounded-lg border border-emerald-800 px-3 py-2 text-xs font-semibold text-emerald-300 disabled:opacity-50"
+                            onClick={() => setPendingStartGameId(item.gameId)}
+                            className="rounded-lg border border-emerald-900/60 px-3 py-2 text-xs font-semibold disabled:opacity-50"
                           >
-                            Confirm Start Broadcast
+                            Start Broadcast
                           </button>
+                        )}
 
-                          <button
-                            type="button"
-                            disabled={actionGameId === item.gameId}
-                            onClick={() => setPendingStartGameId(null)}
-                            className="rounded-lg border border-slate-800 px-3 py-2 text-xs disabled:opacity-50"
-                          >
-                            Cancel Start
-                          </button>
-                        </>
-                      ) : (
                         <button
                           type="button"
-                          disabled={
-                            actionGameId === item.gameId ||
-                            !item.health.healthy ||
-                            item.snapshot.coordinator.intent !== "PREPARE"
-                          }
-                          onClick={() => setPendingStartGameId(item.gameId)}
-                          className="rounded-lg border border-emerald-900/60 px-3 py-2 text-xs font-semibold disabled:opacity-50"
+                          disabled={actionGameId === item.gameId}
+                          onClick={() => void runAction(item.gameId, "stop")}
+                          className="rounded-lg border border-slate-800 px-3 py-2 text-xs disabled:opacity-50"
                         >
-                          Start Broadcast
+                          Stop Broadcast
                         </button>
-                      )}
-
-                      <button
-                        type="button"
-                        disabled={actionGameId === item.gameId}
-                        onClick={() => void runAction(item.gameId, "stop")}
-                        className="rounded-lg border border-slate-800 px-3 py-2 text-xs disabled:opacity-50"
-                      >
-                        Stop Broadcast
-                      </button>
+                      </div>
                     </div>
-                  </div>
+                  </details>
 
                   <div className="mt-4 rounded border border-slate-800 p-3">
                     <div className="flex flex-wrap items-center justify-between gap-3">

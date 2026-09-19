@@ -8,13 +8,19 @@ const runtime = readFileSync(
   path.resolve(__dirname, "../src/services/recordingCaptureRuntime.ts"),
   "utf8",
 );
+const supervisor = readFileSync(
+  path.resolve(__dirname, "../src/workers/recordingCaptureSupervisor.ts"),
+  "utf8",
+);
 const app = readFileSync(path.resolve(__dirname, "../src/app.ts"), "utf8");
 
 describe("M37.15 API-restart recording recovery", () => {
   it("names durable captures with the exact recording id and requires a finalizable row", () => {
-    expect(runtime).toContain(
-      "`recording-${recordingId}-game-${safeGameId(gameId)}-${Date.now()}.capture.mkv`",
+    expect(supervisor).toContain(
+      "`recording-${input.recordingId}-game-${safeGameId(input.gameId)}-`",
     );
+    expect(supervisor).toContain("`${Date.now()}.capture.mkv`");
+
     expect(runtime).toContain("!durableRecording");
     expect(runtime).toContain("durableRecording.media_asset_id != null");
     expect(runtime).toContain('durableRecording.status !== "RECORDING"');

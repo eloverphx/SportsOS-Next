@@ -313,42 +313,111 @@ export default function BroadcastFocusPage() {
     [gameId, load],
   );
 
-  const startRecording = useCallback(async () => {
+  const startBroadcast = useCallback(async () => {
     setBusy(true);
+    setMessage("Starting broadcast…");
 
     try {
-      const response = await authenticatedRequest(
+      if (snapshot?.coordinator.intent !== "PREPARE") {
+        setMessage("Preparing broadcast…");
+
+        const prepareResponse = await authenticatedRequest(
+          `/broadcast-coordinator/${encodeURIComponent(gameId)}/prepare`,
+          {
+            method: "POST",
+          },
+        );
+
+        const prepareJson = await prepareResponse.json();
+
+        if (!prepareResponse.ok) {
+          throw new Error(prepareJson?.error ?? "Unable to prepare broadcast.");
+        }
+      }
+
+      setMessage("Starting broadcast…");
+
+      const startResponse = await authenticatedRequest(
+        `/broadcast-coordinator/${encodeURIComponent(gameId)}/start`,
+        {
+          method: "POST",
+        },
+      );
+
+      const startJson = await startResponse.json();
+
+      if (!startResponse.ok) {
+        throw new Error(startJson?.error ?? "Unable to start broadcast.");
+      }
+
+      setMessage("Broadcast connected. Waiting for stream health…");
+
+      const deadline = Date.now() + 45_000;
+      let readyToConfirm = false;
+
+      while (Date.now() < deadline) {
+        const healthResponse = await authenticatedRequest(
+          `/go-live-sessions/${encodeURIComponent(gameId)}/health-hold`,
+          {
+            cache: "no-store",
+          },
+        );
+
+        const healthJson = await healthResponse.json();
+
+        if (!healthResponse.ok) {
+          throw new Error(healthJson?.error ?? "Unable to verify broadcast stream health.");
+        }
+
+        if (healthJson?.data?.healthHold?.readyToConfirm === true) {
+          readyToConfirm = true;
+          break;
+        }
+
+        await new Promise((resolve) => window.setTimeout(resolve, 1_000));
+      }
+
+      if (!readyToConfirm) {
+        throw new Error(
+          "Broadcast started, but the stream did not become healthy within 45 seconds.",
+        );
+      }
+
+      setMessage("Stream is healthy. Starting recording…");
+
+      const confirmResponse = await authenticatedRequest(
         `/go-live-sessions/${encodeURIComponent(gameId)}/confirm-live`,
         {
           method: "POST",
         },
       );
 
-      const json = await response.json();
+      const confirmJson = await confirmResponse.json();
 
-      if (!response.ok) {
-        throw new Error(json?.error ?? "Unable to start live recording.");
+      if (!confirmResponse.ok) {
+        throw new Error(confirmJson?.error ?? "Unable to confirm the live broadcast.");
       }
 
-      const capture = json?.data?.recordingCapture;
+      const capture = confirmJson?.data?.recordingCapture;
 
       if (capture?.started === false) {
-        setMessage(
+        throw new Error(
           capture.error
-            ? `Broadcast is live, but recording capture failed: ${capture.error}`
-            : "Broadcast is live, but recording capture did not start.",
+            ? `Broadcast is LIVE, but recording failed to start: ${capture.error}`
+            : "Broadcast is LIVE, but recording failed to start.",
         );
-      } else {
-        setMessage("Broadcast confirmed LIVE and recording capture started.");
       }
 
+      setMessage("LIVE • Recording");
       await load();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to start live recording.");
+      setMessage(error instanceof Error ? error.message : "Unable to complete broadcast startup.");
+
+      await load().catch(() => undefined);
     } finally {
       setBusy(false);
     }
-  }, [gameId, load]);
+  }, [gameId, load, snapshot?.coordinator.intent]);
 
   const executeRecovery = useCallback(async () => {
     if (!recoveryOperator.trim()) {
@@ -543,74 +612,72 @@ export default function BroadcastFocusPage() {
                 <div className="text-sm font-semibold">Safe Operator Actions</div>
 
                 <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void runCoordinatorAction("prepare")}
-                    className="rounded-lg border border-slate-700 px-3 py-2 text-xs disabled:opacity-50"
-                  >
-                    Prepare
-                  </button>
+                  <div className="sm:col-span-2 lg:col-span-3">
+                    <details className="rounded-lg border border-slate-800 p-3">
+                      <summary className="cursor-pointer text-xs font-semibold text-slate-400">
+                        Advanced controls
+                      </summary>
 
-                  <button
-                    type="button"
-                    disabled={busy || !health?.healthy || snapshot.coordinator.intent !== "PREPARE"}
-                    onClick={() => void runCoordinatorAction("start")}
-                    className="w-full rounded-lg border border-emerald-800 px-3 py-3 text-sm font-semibold disabled:opacity-50"
-                  >
-                    Start Broadcast
-                  </button>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void runCoordinatorAction("prepare")}
+                          className="rounded-lg border border-slate-700 px-3 py-2 text-xs disabled:opacity-50"
+                        >
+                          Prepare
+                        </button>
 
-                  <button
-                    type="button"
-                    disabled={
-                      busy ||
-                      healthHold?.readyToConfirm !== true ||
-                      recording?.status === "RECORDING" ||
-                      snapshot.goLive.status === "LIVE"
-                    }
-                    onClick={() => void startRecording()}
-                    className="w-full rounded-lg border border-red-700 px-3 py-3 text-sm font-semibold disabled:opacity-50"
-                  >
-                    Start Recording
-                  </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void runCoordinatorAction("reconcile")}
+                          className="rounded-lg border border-slate-700 px-3 py-2 text-xs disabled:opacity-50"
+                        >
+                          Reconcile
+                        </button>
 
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void runCoordinatorAction("reconcile")}
-                    className="rounded-lg border border-slate-700 px-3 py-2 text-xs disabled:opacity-50"
-                  >
-                    Reconcile
-                  </button>
+                        <button
+                          type="button"
+                          disabled={busy || retry?.state !== "SCHEDULED"}
+                          onClick={() => void runCoordinatorAction("retry/execute")}
+                          className="rounded-lg border border-slate-700 px-3 py-2 text-xs disabled:opacity-50"
+                        >
+                          Execute Retry
+                        </button>
+                      </div>
+                    </details>
+                  </div>
 
-                  <button
-                    type="button"
-                    disabled={busy || retry?.state !== "SCHEDULED"}
-                    onClick={() => void runCoordinatorAction("retry/execute")}
-                    className="rounded-lg border border-slate-700 px-3 py-2 text-xs disabled:opacity-50"
-                  >
-                    Execute Retry
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void runCoordinatorAction("stop")}
-                    className="w-full rounded-lg border border-slate-800 px-3 py-3 text-sm font-semibold disabled:opacity-50"
-                  >
-                    Stop Broadcast & Finalize Recording
-                  </button>
+                  {recording?.status === "RECORDING" ||
+                  snapshot.goLive.status === "LIVE" ||
+                  snapshot.runtime.session.status === "LIVE" ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void runCoordinatorAction("stop")}
+                      className="w-full rounded-lg border border-red-800 px-4 py-4 text-base font-semibold disabled:opacity-50"
+                    >
+                      {busy ? "Stopping…" : "Stop Broadcast & Finalize Recording"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void startBroadcast()}
+                      className="w-full rounded-lg border border-emerald-800 px-4 py-4 text-base font-semibold disabled:opacity-50"
+                    >
+                      {busy ? "Starting…" : "Start Broadcast"}
+                    </button>
+                  )}
                 </div>
 
                 <div className="mt-4 rounded-lg border border-slate-800 p-3 text-xs text-slate-400">
                   {recording?.status === "RECORDING"
-                    ? "Recording is active. Stopping the broadcast will finalize it into the archive."
-                    : healthHold?.readyToConfirm
-                      ? "Publish health is confirmed. Recording can now be started."
-                      : snapshot.runtime.session.status === "LIVE"
-                        ? "Stream is connected. Waiting for the publish-health confirmation hold before recording can start."
-                        : "Start the broadcast first. Recording becomes available after the stream is healthy."}
+                    ? "LIVE and recording. Stopping the broadcast will finalize the recording into the archive."
+                    : snapshot.runtime.session.status === "LIVE"
+                      ? "Stream is connected. SportsOS is completing the health check and starting recording automatically."
+                      : "Start Broadcast handles stream startup, health confirmation, and recording automatically."}
                 </div>
 
                 {recording?.status === "READY" && (

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { clearAuthentication, getStoredToken } from "../lib/auth";
+import { ApiError } from "../lib/authenticated-api";
 import { refreshCurrentUser } from "../lib/session";
 
 interface AuthGateProps {
@@ -12,6 +13,8 @@ interface AuthGateProps {
 export function AuthGate({ children }: AuthGateProps) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [temporarilyUnavailable, setTemporarilyUnavailable] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -24,17 +27,48 @@ export function AuthGate({ children }: AuthGateProps) {
         return;
       }
 
-      try {
-        await refreshCurrentUser();
+      setTemporarilyUnavailable(false);
 
-        if (active) {
-          setReady(true);
-        }
-      } catch {
-        clearAuthentication();
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          await refreshCurrentUser();
 
-        if (active) {
-          router.replace("/login");
+          if (active) {
+            setReady(true);
+            setTemporarilyUnavailable(false);
+          }
+
+          return;
+        } catch (error) {
+          const confirmedAuthenticationFailure =
+            error instanceof ApiError &&
+            (error.status === 400 || error.status === 401 || error.status === 403);
+
+          if (confirmedAuthenticationFailure) {
+            clearAuthentication();
+
+            if (active) {
+              router.replace("/login");
+            }
+
+            return;
+          }
+
+          if (attempt < 2) {
+            await new Promise((resolve) => window.setTimeout(resolve, 1000 * (attempt + 1)));
+
+            if (!active) return;
+
+            continue;
+          }
+
+          /*
+           * Preserve the stored session on transient API/network failures.
+           * The operator can retry without being forced to sign in again.
+           */
+          if (active) {
+            setTemporarilyUnavailable(true);
+          }
         }
       }
     }
@@ -44,12 +78,29 @@ export function AuthGate({ children }: AuthGateProps) {
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [router, retryNonce]);
 
   if (!ready) {
     return (
       <main className="center">
-        <p>Loading SportsOS…</p>
+        {temporarilyUnavailable ? (
+          <div className="login">
+            <div className="brand large">SportsOS</div>
+            <h1>Connection interrupted</h1>
+            <p>Your session is still saved. SportsOS could not reach the API.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setTemporarilyUnavailable(false);
+                setRetryNonce((value) => value + 1);
+              }}
+            >
+              Retry connection
+            </button>
+          </div>
+        ) : (
+          <p>Reconnecting to SportsOS…</p>
+        )}
       </main>
     );
   }

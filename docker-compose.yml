@@ -67,6 +67,32 @@ services:
       timeout: 5s
       retries: 10
 
+  capture-supervisor:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: sportsos_capture_supervisor
+    restart: unless-stopped
+    command: ["node", "apps/api/dist/workers/recordingCaptureSupervisor.js"]
+    environment:
+      PORT: 4015
+      HOST: 0.0.0.0
+      SPORTSOS_DATA_DIR: /app/data
+      SPORTSOS_CAPTURE_SUPERVISOR_TOKEN: ${SPORTSOS_CAPTURE_SUPERVISOR_TOKEN:-}
+    volumes:
+      - /mnt/user/appdata/SportsOS-Next/data:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:4015/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   api:
     build:
       context: .
@@ -93,11 +119,14 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       SPORTSOS_DATA_DIR: /app/data
+      SPORTSOS_CAPTURE_SUPERVISOR_URL: http://capture-supervisor:4015
+      SPORTSOS_CAPTURE_SUPERVISOR_TOKEN: ${SPORTSOS_CAPTURE_SUPERVISOR_TOKEN:-}
     volumes:
       - /mnt/user/appdata/SportsOS-Next/data:/app/data
     ports:
       - "4001:4001"
     depends_on:
+      capture-supervisor: { condition: service_healthy }
       mysql: { condition: service_healthy }
       redis: { condition: service_healthy }
       mqtt: { condition: service_healthy }

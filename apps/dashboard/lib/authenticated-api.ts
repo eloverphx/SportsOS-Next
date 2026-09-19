@@ -1,6 +1,6 @@
 import { getStoredToken } from "./auth";
 import { getApiUrl } from "./api-url";
-import { refreshAuthentication } from "./session-refresh";
+import { refreshAuthentication, SessionRefreshError } from "./session-refresh";
 
 export class ApiError extends Error {
   public readonly status: number;
@@ -80,6 +80,10 @@ export async function authenticatedRequest(
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
+    }
+
+    if (error instanceof SessionRefreshError) {
+      throw new ApiError(error.message, error.status);
     }
 
     throw new ApiError(
