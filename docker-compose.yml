@@ -87,7 +87,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://localhost:4015/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+          "const t=process.env.SPORTSOS_CAPTURE_SUPERVISOR_TOKEN; fetch('http://localhost:4015/health',{headers:t?{Authorization:'Bearer '+t}:{}}).then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
         ]
       interval: 10s
       timeout: 5s
