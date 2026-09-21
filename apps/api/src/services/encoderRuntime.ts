@@ -78,7 +78,7 @@ export function getEncoderRecoverySnapshot(gameId: string): EncoderRecoverySnaps
   );
 }
 
-function resetEncoderRecovery(gameId: string): void {
+export function resetEncoderRecovery(gameId: string): void {
   recovery.set(gameId, {
     gameId,
     state: "IDLE",
@@ -392,6 +392,17 @@ export async function startEncoderRuntime(input: {
   });
 
   let stderrTail = "";
+  let recoveryScheduled = false;
+
+  const scheduleRecoveryOnce = (): void => {
+    if (entry.stopRequested || recoveryScheduled) {
+      return;
+    }
+
+    recoveryScheduled = true;
+
+    scheduleRecoveryOnce();
+  };
 
   child.stderr.on("data", (chunk: Buffer) => {
     const text = chunk.toString("utf8");
@@ -413,6 +424,8 @@ export async function startEncoderRuntime(input: {
     });
 
     markEncoderError(input.gameId, sanitizedMessage(error));
+
+    scheduleRecoveryOnce();
   });
 
   child.once("exit", (code, signal) => {
@@ -470,6 +483,8 @@ export function suppressEncoderRecovery(gameId: string): void {
 }
 
 export async function stopEncoderRuntime(gameId: string): Promise<void> {
+  suppressEncoderRecovery(gameId);
+
   const entry = runtimes.get(gameId);
 
   if (!entry) {

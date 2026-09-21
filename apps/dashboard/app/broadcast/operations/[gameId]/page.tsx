@@ -132,6 +132,8 @@ export default function BroadcastFocusPage() {
 
   const [busy, setBusy] = useState(false);
 
+  const [primaryAction, setPrimaryAction] = useState<"start" | "stop" | null>(null);
+
   const [message, setMessage] = useState<string | null>(null);
 
   const [incidentOperator, setIncidentOperator] = useState("");
@@ -248,6 +250,10 @@ export default function BroadcastFocusPage() {
 
   const runCoordinatorAction = useCallback(
     async (action: "prepare" | "reconcile" | "retry/execute" | "start" | "stop") => {
+      if (action === "stop") {
+        setPrimaryAction("stop");
+      }
+
       setBusy(true);
 
       try {
@@ -270,6 +276,10 @@ export default function BroadcastFocusPage() {
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "Coordinator action failed.");
       } finally {
+        if (action === "stop") {
+          setPrimaryAction(null);
+        }
+
         setBusy(false);
       }
     },
@@ -314,6 +324,7 @@ export default function BroadcastFocusPage() {
   );
 
   const startBroadcast = useCallback(async () => {
+    setPrimaryAction("start");
     setBusy(true);
     setMessage("Starting broadcast…");
 
@@ -415,6 +426,7 @@ export default function BroadcastFocusPage() {
 
       await load().catch(() => undefined);
     } finally {
+      setPrimaryAction(null);
       setBusy(false);
     }
   }, [gameId, load, snapshot?.coordinator.intent]);
@@ -649,16 +661,21 @@ export default function BroadcastFocusPage() {
                     </details>
                   </div>
 
-                  {recording?.status === "RECORDING" ||
-                  snapshot.goLive.status === "LIVE" ||
-                  snapshot.runtime.session.status === "LIVE" ? (
+                  {primaryAction === "stop" ||
+                  (primaryAction !== "start" &&
+                    (recording?.status === "RECORDING" ||
+                      snapshot.goLive.status === "STARTING" ||
+                      snapshot.goLive.status === "LIVE" ||
+                      snapshot.runtime.session.status === "LIVE")) ? (
                     <button
                       type="button"
                       disabled={busy}
                       onClick={() => void runCoordinatorAction("stop")}
                       className="w-full rounded-lg border border-red-800 px-4 py-4 text-base font-semibold disabled:opacity-50"
                     >
-                      {busy ? "Stopping…" : "Stop Broadcast & Finalize Recording"}
+                      {primaryAction === "stop"
+                        ? "Stopping…"
+                        : "Stop Broadcast & Finalize Recording"}
                     </button>
                   ) : (
                     <button
@@ -667,7 +684,7 @@ export default function BroadcastFocusPage() {
                       onClick={() => void startBroadcast()}
                       className="w-full rounded-lg border border-emerald-800 px-4 py-4 text-base font-semibold disabled:opacity-50"
                     >
-                      {busy ? "Starting…" : "Start Broadcast"}
+                      {primaryAction === "start" ? "Starting…" : "Start Broadcast"}
                     </button>
                   )}
                 </div>
@@ -675,19 +692,24 @@ export default function BroadcastFocusPage() {
                 <div className="mt-4 rounded-lg border border-slate-800 p-3 text-xs text-slate-400">
                   {recording?.status === "RECORDING"
                     ? "LIVE and recording. Stopping the broadcast will finalize the recording into the archive."
-                    : snapshot.runtime.session.status === "LIVE"
-                      ? "Stream is connected. SportsOS is completing the health check and starting recording automatically."
+                    : primaryAction === "start" ||
+                        snapshot.goLive.status === "STARTING" ||
+                        snapshot.runtime.session.status === "LIVE"
+                      ? "Stream startup is in progress. SportsOS is completing the health check and will start recording automatically."
                       : "Start Broadcast handles stream startup, health confirmation, and recording automatically."}
                 </div>
 
-                {recording?.status === "READY" && (
-                  <a
-                    href="/streaming"
-                    className="mt-3 inline-flex rounded-lg border border-slate-700 px-4 py-2 text-sm"
-                  >
-                    Open Recording Archive
-                  </a>
-                )}
+                {recording?.status === "READY" &&
+                  primaryAction !== "start" &&
+                  snapshot.goLive.status !== "STARTING" &&
+                  snapshot.goLive.status !== "LIVE" && (
+                    <a
+                      href="/streaming"
+                      className="mt-3 inline-flex rounded-lg border border-slate-700 px-4 py-2 text-sm"
+                    >
+                      Open Recording Archive
+                    </a>
+                  )}
               </section>
 
               {health && !health.healthy && (

@@ -17,6 +17,7 @@ import {
 
 import {
   encoderRuntimeSnapshot,
+  resetEncoderRecovery,
   startEncoderRuntime,
   stopEncoderRuntime,
 } from "./encoderRuntime.js";
@@ -167,7 +168,32 @@ export function getBroadcastCoordinatorSnapshot(gameId: string): BroadcastCoordi
   };
 }
 
+function resetExhaustedEncoderRecoveryForExplicitNewStart(gameId: string): void {
+  const coordinator = getBroadcastCoordinatorRecord(gameId);
+  const goLive = getGoLiveSession(gameId);
+  const runtime = encoderRuntimeSnapshot(gameId);
+
+  const inactivePriorBroadcast =
+    coordinator.intent === "IDLE" &&
+    ["IDLE", "COMPLETE", "ERROR"].includes(goLive.status) &&
+    !runtime.runtimeActive &&
+    (runtime.session.status === "STOPPED" || runtime.session.status === "ERROR");
+
+  if (inactivePriorBroadcast && runtime.recovery.state === "EXHAUSTED") {
+    resetEncoderRecovery(gameId);
+
+    recordBroadcastCoordinatorAudit({
+      gameId,
+      type: "RETRY_ATTEMPTED",
+      correlationId: coordinator.correlationId,
+      detail: "Previous exhausted encoder recovery budget reset by explicit new broadcast start.",
+    });
+  }
+}
+
 export function prepareBroadcastSession(gameId: string): BroadcastCoordinatorSnapshot {
+  resetExhaustedEncoderRecoveryForExplicitNewStart(gameId);
+
   const coordinator = getBroadcastCoordinatorRecord(gameId);
 
   recordBroadcastCoordinatorAudit({
@@ -199,6 +225,8 @@ export function prepareBroadcastSession(gameId: string): BroadcastCoordinatorSna
 export async function startCoordinatedBroadcast(
   gameId: string,
 ): Promise<BroadcastCoordinatorSnapshot> {
+  resetExhaustedEncoderRecoveryForExplicitNewStart(gameId);
+
   recordBroadcastCoordinatorAudit({
     gameId,
     type: "START_REQUESTED",

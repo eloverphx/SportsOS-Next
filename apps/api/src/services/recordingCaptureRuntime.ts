@@ -22,6 +22,7 @@ type CaptureEntry = {
 
 interface RecordingRow extends RowDataPacket {
   id: number | string;
+  game_id: number | string;
   organization_id: number | string;
   owner_user_id: number | string | null;
   started_at: Date | string | null;
@@ -209,7 +210,7 @@ async function latestDurableRecording(gameId: string): Promise<RecordingRow | nu
   }
 
   const [rows] = await pool.execute<RecordingRow[]>(
-    `SELECT id, organization_id, owner_user_id, started_at, media_asset_id, status
+    `SELECT id, game_id, organization_id, owner_user_id, started_at, media_asset_id, status
        FROM recordings
        WHERE game_id = ?
          AND source = 'LIVE'
@@ -230,7 +231,7 @@ async function durableRecordingById(
   }
 
   const [rows] = await pool.execute<RecordingRow[]>(
-    `SELECT id, organization_id, owner_user_id, started_at, media_asset_id, status
+    `SELECT id, game_id, organization_id, owner_user_id, started_at, media_asset_id, status
        FROM recordings
        WHERE id = ?
          AND game_id = ?
@@ -242,27 +243,32 @@ async function durableRecordingById(
   return rows[0] ?? null;
 }
 
-async function markLatestRecordingFailed(gameId: string, reason: string): Promise<void> {
-  if (!/^[1-9]\d*$/.test(gameId)) {
+async function markRecordingFailed(
+  recordingId: number,
+  gameId: string,
+  reason: string,
+): Promise<void> {
+  if (!/^[1-9]\d*$/.test(gameId) || !Number.isSafeInteger(recordingId) || recordingId <= 0) {
     return;
   }
 
   await pool.execute(
     `UPDATE recordings
        SET status = 'FAILED'
-       WHERE game_id = ?
+       WHERE id = ?
+         AND game_id = ?
          AND source = 'LIVE'
-         AND status = 'PROCESSING'
+         AND status IN ('RECORDING', 'PROCESSING')
          AND media_asset_id IS NULL
-       ORDER BY id DESC
        LIMIT 1`,
-    [Number(gameId)],
+    [recordingId, Number(gameId)],
   );
 
   console.error(
     JSON.stringify({
       message: "Live recording capture finalization failed",
       gameId,
+      recordingId,
       error: reason.slice(0, 1000),
     }),
   );
@@ -347,6 +353,7 @@ async function persistFinalizedRecording(input: {
   sizeBytes: number;
 }): Promise<{ mediaAssetId: number; objectKey: string }> {
   const recordingId = Number(input.recording.id);
+  const gameId = Number(input.recording.game_id);
   const organizationId = Number(input.recording.organization_id);
   const ownerUserId =
     input.recording.owner_user_id == null ? null : Number(input.recording.owner_user_id);
@@ -359,7 +366,7 @@ async function persistFinalizedRecording(input: {
         : new Date(input.recording.started_at);
 
   const year = capturedAt.getUTCFullYear();
-  const objectKey = `recordings/${year}/game-${recordingId}/recording-${recordingId}.mp4`;
+  const objectKey = `recordings/${year}/game-${gameId}/recording-${recordingId}.mp4`;
 
   await minio.putObject(
     config.storage.bucket,
@@ -377,7 +384,7 @@ async function persistFinalizedRecording(input: {
     await connection.beginTransaction();
 
     const [lockedRows] = await connection.execute<RecordingRow[]>(
-      `SELECT id, organization_id, owner_user_id, started_at, media_asset_id, status
+      `SELECT id, game_id, organization_id, owner_user_id, started_at, media_asset_id, status
          FROM recordings
          WHERE id = ?
          LIMIT 1
@@ -425,7 +432,7 @@ async function persistFinalizedRecording(input: {
         ownerUserId,
         config.storage.bucket,
         objectKey,
-        `game-${recordingId}-recording.mp4`,
+        `game-${gameId}-recording-${recordingId}.mp4`,
         input.sizeBytes,
         capturedAt,
         input.durationMs,
@@ -471,13 +478,20 @@ export async function stopAndFinalizeRecordingCapture(
 
   if (!recording) {
     if (entry) {
-      await rm(entry.capturePath, { force: true }).catch(() => undefined);
+      console.error(
+        JSON.stringify({
+          message: "Retaining unattributed live recording capture",
+          gameId,
+          capturePath: entry.capturePath,
+          error: "No durable LIVE recording exists for this game.",
+        }),
+      );
     }
 
     return {
       finalized: false,
       recordingId: null,
-      reason: "No durable LIVE recording exists for this game.",
+      reason: "No durable LIVE recording exists for this game. Capture retained for recovery.",
     };
   }
 
@@ -485,7 +499,7 @@ export async function stopAndFinalizeRecordingCapture(
 
   if (!entry) {
     const reason = "No recording capture runtime was available at normal stop.";
-    await markLatestRecordingFailed(gameId, reason);
+    await markRecordingFailed(recordingId, gameId, reason);
 
     return {
       finalized: false,
@@ -545,7 +559,18 @@ export async function stopAndFinalizeRecordingCapture(
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
 
-    await markLatestRecordingFailed(gameId, reason);
+    await markRecordingFailed(recordingId, gameId, reason);
+
+    console.error(
+      JSON.stringify({
+        message: "Live recording capture retained after finalization failure",
+        gameId,
+        recordingId,
+        capturePath: entry.capturePath,
+        outputPath,
+        error: reason.slice(0, 1000),
+      }),
+    );
 
     return {
       finalized: false,
