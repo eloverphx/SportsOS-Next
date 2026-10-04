@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 import UIKit
 
@@ -16,8 +17,17 @@ struct CameraScreen: View {
     @StateObject private var network =
         NetworkQualityMonitor()
 
+    @Environment(\.scenePhase)
+    private var scenePhase
+
     @State private var cameraRunState:
         CameraRunState = .idle
+
+    @State private var encoderNeedsInterruptionRecovery =
+        false
+
+    @State private var encoderRecoveryWaitActive =
+        false
 
     @State private var menuOpen = false
     @State private var showZoom = true
@@ -190,6 +200,90 @@ struct CameraScreen: View {
             camera.stopEncoder()
 
             camera.stop()
+        }
+        .onChange(
+            of: scenePhase
+        ) {
+            newPhase in
+
+            logScenePhase(
+                newPhase
+            )
+
+            if newPhase == .active {
+                scheduleEncoderRecoveryAfterInterruption()
+            }
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for:
+                    .AVCaptureSessionWasInterrupted,
+                object:
+                    camera.session
+            )
+        ) {
+            notification in
+
+            logCaptureInterruption(
+                notification
+            )
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for:
+                    .AVCaptureSessionInterruptionEnded,
+                object:
+                    camera.session
+            )
+        ) {
+            _ in
+
+            diagnosticLog(
+                "capture interruption ended" +
+                diagnosticStateSuffix
+            )
+
+            scheduleEncoderRecoveryAfterInterruption()
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for:
+                    .AVCaptureSessionRuntimeError,
+                object:
+                    camera.session
+            )
+        ) {
+            notification in
+
+            logCaptureRuntimeError(
+                notification
+            )
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for:
+                    AVAudioSession
+                        .interruptionNotification
+            )
+        ) {
+            notification in
+
+            logAudioInterruption(
+                notification
+            )
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for:
+                    AVAudioSession
+                        .routeChangeNotification
+            )
+        ) {
+            notification in
+
+            logAudioRouteChange(
+                notification
+            )
         }
         .animation(
             .easeInOut(
@@ -727,6 +821,330 @@ struct CameraScreen: View {
 
         case .ready:
             return "READY"
+        }
+    }
+
+    private var diagnosticStateSuffix:
+        String {
+
+        " | sessionRunning=" +
+        String(
+            camera.session.isRunning
+        ) +
+        " | encoderRunning=" +
+        String(
+            camera.encoderRunning
+        ) +
+        " | encodedFrames=" +
+        String(
+            camera.encodedFrameCount
+        )
+    }
+
+    private func diagnosticLog(
+        _ message: String
+    ) {
+        print(
+            "[SportsOSCamera][DIAG] " +
+            ISO8601DateFormatter()
+                .string(
+                    from: Date()
+                ) +
+            " " +
+            message
+        )
+    }
+
+    private func logScenePhase(
+        _ phase: ScenePhase
+    ) {
+        let name: String
+
+        switch phase {
+
+        case .active:
+            name = "active"
+
+        case .inactive:
+            name = "inactive"
+
+        case .background:
+            name = "background"
+
+        @unknown default:
+            name = "unknown"
+        }
+
+        diagnosticLog(
+            "scene phase -> " +
+            name +
+            diagnosticStateSuffix
+        )
+    }
+
+    private func logCaptureInterruption(
+        _ notification:
+            Notification
+    ) {
+        let raw =
+            (
+                notification.userInfo?[
+                    AVCaptureSessionInterruptionReasonKey
+                ] as? NSNumber
+            )?.intValue
+
+        let reasonName: String
+
+        if
+            let raw,
+            let reason =
+                AVCaptureSession
+                    .InterruptionReason(
+                        rawValue: raw
+                    )
+        {
+            switch reason {
+
+            case .videoDeviceNotAvailableInBackground:
+                reasonName =
+                    "videoDeviceNotAvailableInBackground"
+
+                if
+                    cameraRunState == .ready &&
+                    camera.encoderRunning
+                {
+                    encoderNeedsInterruptionRecovery =
+                        true
+                }
+
+            case .audioDeviceInUseByAnotherClient:
+                reasonName =
+                    "audioDeviceInUseByAnotherClient"
+
+            case .videoDeviceInUseByAnotherClient:
+                reasonName =
+                    "videoDeviceInUseByAnotherClient"
+
+            case .videoDeviceNotAvailableWithMultipleForegroundApps:
+                reasonName =
+                    "videoDeviceNotAvailableWithMultipleForegroundApps"
+
+            case .videoDeviceNotAvailableDueToSystemPressure:
+                reasonName =
+                    "videoDeviceNotAvailableDueToSystemPressure"
+
+            @unknown default:
+                reasonName = "unknown"
+            }
+
+        } else {
+            reasonName = "unknown"
+        }
+
+        diagnosticLog(
+            "capture interruption began" +
+            " | reason=" +
+            reasonName +
+            " | raw=" +
+            String(
+                raw ?? -1
+            ) +
+            diagnosticStateSuffix
+        )
+    }
+
+    private func logCaptureRuntimeError(
+        _ notification:
+            Notification
+    ) {
+        let error =
+            notification.userInfo?[
+                AVCaptureSessionErrorKey
+            ] as? NSError
+
+        diagnosticLog(
+            "capture runtime error" +
+            " | domain=" +
+            (
+                error?.domain
+                ?? "unknown"
+            ) +
+            " | code=" +
+            String(
+                error?.code
+                ?? -1
+            ) +
+            " | description=" +
+            (
+                error?.localizedDescription
+                ?? "unknown"
+            ) +
+            diagnosticStateSuffix
+        )
+    }
+
+    private func logAudioInterruption(
+        _ notification:
+            Notification
+    ) {
+        let rawType =
+            notification.userInfo?[
+                AVAudioSessionInterruptionTypeKey
+            ] as? UInt
+
+        let rawOptions =
+            notification.userInfo?[
+                AVAudioSessionInterruptionOptionKey
+            ] as? UInt
+
+        let interruptionType =
+            rawType.flatMap {
+                AVAudioSession
+                    .InterruptionType(
+                        rawValue: $0
+                    )
+            }
+
+        let typeName: String
+
+        switch interruptionType {
+
+        case .began:
+            typeName = "began"
+
+        case .ended:
+            typeName = "ended"
+
+        case nil:
+            typeName = "unknown"
+
+        @unknown default:
+            typeName = "unknown"
+        }
+
+        let shouldResume =
+            rawOptions.map {
+                AVAudioSession
+                    .InterruptionOptions(
+                        rawValue: $0
+                    )
+                    .contains(
+                        .shouldResume
+                    )
+            }
+            ?? false
+
+        diagnosticLog(
+            "audio interruption" +
+            " | type=" +
+            typeName +
+            " | shouldResume=" +
+            String(
+                shouldResume
+            ) +
+            diagnosticStateSuffix
+        )
+    }
+
+    private func logAudioRouteChange(
+        _ notification:
+            Notification
+    ) {
+        let raw =
+            notification.userInfo?[
+                AVAudioSessionRouteChangeReasonKey
+            ] as? UInt
+
+        let reason =
+            raw.flatMap {
+                AVAudioSession
+                    .RouteChangeReason(
+                        rawValue: $0
+                    )
+            }
+
+        diagnosticLog(
+            "audio route change" +
+            " | reason=" +
+            String(
+                describing: reason
+            ) +
+            " | raw=" +
+            String(
+                raw ?? 0
+            ) +
+            diagnosticStateSuffix
+        )
+    }
+
+    private func scheduleEncoderRecoveryAfterInterruption() {
+
+        guard
+            encoderNeedsInterruptionRecovery,
+            cameraRunState == .ready,
+            camera.encoderRunning,
+            !encoderRecoveryWaitActive
+        else {
+            return
+        }
+
+        encoderRecoveryWaitActive =
+            true
+
+        diagnosticLog(
+            "waiting for capture session before H264 recovery" +
+            diagnosticStateSuffix
+        )
+
+        Task { @MainActor in
+
+            defer {
+                encoderRecoveryWaitActive =
+                    false
+            }
+
+            for attempt in 1...20 {
+
+                guard
+                    encoderNeedsInterruptionRecovery,
+                    cameraRunState == .ready,
+                    camera.encoderRunning
+                else {
+                    return
+                }
+
+                if camera.session.isRunning {
+
+                    diagnosticLog(
+                        "restarting H264 encoder after background interruption" +
+                        " | attempt=" +
+                        String(attempt) +
+                        diagnosticStateSuffix
+                    )
+
+                    encoderNeedsInterruptionRecovery =
+                        false
+
+                    camera
+                        .restartEncoderAfterInterruption(
+                            profile:
+                                network
+                                    .recommendedProfile
+                        )
+
+                    return
+                }
+
+                try? await Task.sleep(
+                    nanoseconds:
+                        250_000_000
+                )
+            }
+
+            diagnosticLog(
+                "H264 recovery timed out waiting for capture session" +
+                diagnosticStateSuffix
+            )
         }
     }
 

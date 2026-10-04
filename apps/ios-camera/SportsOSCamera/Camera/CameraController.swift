@@ -326,6 +326,30 @@ final class CameraController: NSObject, ObservableObject {
         encoderRunning = true
     }
 
+    func restartEncoderAfterInterruption(
+        profile:
+            NetworkQualityMonitor.StreamProfile
+    ) {
+        guard encoderRunning else {
+            return
+        }
+
+        /*
+         AVCaptureSession itself resumes after foregrounding.
+         Recreate only the VideoToolbox compression session.
+
+         Keep frame/key counters intact so interruption
+         continuity remains visible during testing.
+        */
+        encoder.start(
+            width: activeVideoWidth,
+            height: activeVideoHeight,
+            fps: activeVideoFPS,
+            bitrateMbps:
+                profile.targetBitrateMbps
+        )
+    }
+
     func stopEncoder() {
         videoOutput.setSampleBufferDelegate(
             nil,
