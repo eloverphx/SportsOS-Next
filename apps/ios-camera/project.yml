@@ -1,0 +1,27 @@
+name: SportsOSCamera
+
+options:
+  bundleIdPrefix: online.crashthenet
+  deploymentTarget:
+    iOS: "17.0"
+
+targets:
+  SportsOSCamera:
+    type: application
+    platform: iOS
+    sources:
+      - SportsOSCamera
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: online.crashthenet.sportsoscamera
+        PRODUCT_NAME: SportsOS Camera
+        SWIFT_VERSION: 5.0
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ALWAYS_SEARCH_USER_PATHS: NO
+        INFOPLIST_KEY_UIRequiresFullScreen: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_NSCameraUsageDescription: SportsOS Camera uses the camera to produce live game video.
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: SportsOS Camera uses the microphone for game audio.
+        GENERATE_INFOPLIST_FILE: YES
