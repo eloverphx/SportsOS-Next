@@ -284,6 +284,9 @@ struct CameraScreen: View {
             logAudioRouteChange(
                 notification
             )
+
+            camera.refreshAudioInputs()
+            camera.refreshActiveAudioInput()
         }
         .animation(
             .easeInOut(

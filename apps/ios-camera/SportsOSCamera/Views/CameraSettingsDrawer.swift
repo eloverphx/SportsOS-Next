@@ -85,28 +85,76 @@ struct CameraSettingsDrawer: View {
 
                     Toggle("Mute Audio", isOn: $camera.muted)
 
-                    if !camera.availableAudioInputs.isEmpty {
-                        Picker(
-                            "Input",
-                            selection: Binding(
-                                get: {
-                                    camera.selectedAudioInputUID
-                                },
-                                set: { newValue in
-                                    guard let uid = newValue else {
-                                        return
-                                    }
+                    HStack {
+                        Text("Active Source")
 
-                                    camera.selectAudioInput(uid: uid)
-                                }
-                            )
+                        Spacer()
+
+                        Text(
+                            camera.activeAudioInputName
+                        )
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.trailing)
+                    }
+
+                    if !camera.availableAudioInputs.isEmpty {
+                        VStack(
+                            alignment: .leading,
+                            spacing: 8
                         ) {
+                            Text("MICROPHONE INPUT")
+                                .font(.caption.bold())
+                                .foregroundStyle(.secondary)
+
                             ForEach(
                                 camera.availableAudioInputs,
                                 id: \.uid
                             ) { input in
-                                Text(input.portName)
-                                    .tag(Optional(input.uid))
+
+                                let selected =
+                                    camera
+                                        .selectedAudioInputUID ==
+                                        input.uid
+
+                                Button {
+                                    camera.selectAudioInput(
+                                        uid: input.uid
+                                    )
+                                } label: {
+                                    HStack(spacing: 10) {
+                                        Image(
+                                            systemName:
+                                                selected
+                                                ? "checkmark.circle.fill"
+                                                : "circle"
+                                        )
+
+                                        Text(input.portName)
+                                            .lineLimit(1)
+
+                                        Spacer()
+
+                                        if selected {
+                                            Text("SELECTED")
+                                                .font(
+                                                    .caption2.bold()
+                                                )
+                                                .foregroundStyle(
+                                                    .secondary
+                                                )
+                                        }
+                                    }
+                                    .frame(
+                                        maxWidth: .infinity,
+                                        alignment: .leading
+                                    )
+                                    .padding(.vertical, 9)
+                                    .padding(.horizontal, 12)
+                                    .contentShape(
+                                        Rectangle()
+                                    )
+                                }
+                                .buttonStyle(.bordered)
                             }
                         }
                     }

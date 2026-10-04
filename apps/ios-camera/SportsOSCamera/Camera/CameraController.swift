@@ -42,6 +42,9 @@ final class CameraController: NSObject, ObservableObject {
 
     @Published var selectedAudioInputUID: String?
 
+    @Published private(set) var activeAudioInputName =
+        "Unknown"
+
     @Published private(set) var activeVideoWidth = 1920
     @Published private(set) var activeVideoHeight = 1080
     @Published private(set) var activeVideoFPS = 30
@@ -370,6 +373,27 @@ final class CameraController: NSObject, ObservableObject {
 
             guard let self else {
                 return
+            }
+
+            self.session.usesApplicationAudioSession = true
+
+            /*
+             SportsOS owns microphone routing.
+
+             AVCaptureSession's default automatic audio-session
+             configuration can choose the built-in microphone based
+             on camera position. Disable that behavior so an operator
+             selected AVAudioSession preferredInput can become the
+             actual capture route.
+            */
+            self.session
+                .automaticallyConfiguresApplicationAudioSession =
+                    false
+
+            if #available(iOS 26.0, *) {
+                self.session
+                    .configuresApplicationAudioSessionForBluetoothHighQualityRecording =
+                        true
             }
 
             self.session.beginConfiguration()
@@ -742,6 +766,40 @@ final class CameraController: NSObject, ObservableObject {
                     .first?
                     .uid
         }
+
+        refreshActiveAudioInput()
+    }
+
+    func refreshActiveAudioInput() {
+
+        let audioSession =
+            AVAudioSession
+                .sharedInstance()
+
+        if let input =
+            audioSession
+                .currentRoute
+                .inputs
+                .first
+        {
+            activeAudioInputName =
+                input.portName
+
+            return
+        }
+
+        if let preferred =
+            audioSession
+                .preferredInput
+        {
+            activeAudioInputName =
+                preferred.portName
+
+            return
+        }
+
+        activeAudioInputName =
+            "No Active Input"
     }
 
     func selectAudioInput(
@@ -760,9 +818,21 @@ final class CameraController: NSObject, ObservableObject {
             return
         }
 
-        do {
-            try AVAudioSession
+        let audioSession =
+            AVAudioSession
                 .sharedInstance()
+
+        do {
+            print(
+                "[SportsOSCamera][AUDIO] requesting input:",
+                input.portName,
+                "type:",
+                input.portType.rawValue,
+                "uid:",
+                input.uid
+            )
+
+            try audioSession
                 .setPreferredInput(
                     input
                 )
@@ -770,8 +840,29 @@ final class CameraController: NSObject, ObservableObject {
             selectedAudioInputUID =
                 uid
 
+            print(
+                "[SportsOSCamera][AUDIO] preferred input:",
+                audioSession
+                    .preferredInput?
+                    .portName
+                    ?? "nil"
+            )
+
+            print(
+                "[SportsOSCamera][AUDIO] active input immediately after request:",
+                audioSession
+                    .currentRoute
+                    .inputs
+                    .first?
+                    .portName
+                    ?? "nil"
+            )
+
         } catch {
-            return
+            print(
+                "[SportsOSCamera][AUDIO] setPreferredInput failed:",
+                error.localizedDescription
+            )
         }
     }
 
