@@ -1418,27 +1418,45 @@ struct CameraScreen: View {
                         .ISO8601Format()
                 )
 
-                camera.startEncoder(
-                    profile:
-                        network
-                            .recommendedProfile,
+                camera.connectIngest(
                     ingestSession:
                         ingestSession
                 )
 
                 /*
-                 The encoder starting is not enough to declare the
-                 camera READY.
-
-                 READY means SportsOS has actually established the
-                 server-issued SRT transport.
+                 Do not start the media pipeline until SportsOS has
+                 positively established the SRT transport.
                 */
                 for _ in 1...40 {
 
                     if camera.srtConnected {
 
                         diagnosticLog(
-                            "camera SRT transport ready" +
+                            "camera SRT transport connected" +
+                            diagnosticStateSuffix
+                        )
+
+                        camera.startEncoder(
+                            profile:
+                                network
+                                    .recommendedProfile
+                        )
+
+                        guard camera.encoderRunning else {
+                            diagnosticLog(
+                                "camera media pipeline failed to start"
+                            )
+
+                            camera.stopEncoder()
+
+                            cameraRunState =
+                                .idle
+
+                            return
+                        }
+
+                        diagnosticLog(
+                            "camera media pipeline ready" +
                             diagnosticStateSuffix
                         )
 

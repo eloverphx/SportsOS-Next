@@ -453,12 +453,56 @@ final class CameraController: NSObject, ObservableObject {
         }
     }
 
-    func startEncoder(
-        profile:
-            NetworkQualityMonitor.StreamProfile,
+    func connectIngest(
         ingestSession:
             CameraIngestSession
     ) {
+        /*
+         Establish transport first.
+
+         Do not start H264, AAC, or MPEG-TS until SRT
+         has positively reported CONNECTED.
+        */
+        srtConnected = false
+        srtLastError = nil
+
+        print(
+            "[SportsOSCamera][INGEST]",
+            "game=\(ingestSession.gameId)",
+            "host=\(ingestSession.host)",
+            "port=\(ingestSession.port)",
+            "expires=\(ingestSession.expiresAt)"
+        )
+
+        srtTransport.connect(
+            host:
+                ingestSession.host,
+            port:
+                ingestSession.port,
+            streamId:
+                ingestSession.streamId,
+            latencyMs:
+                ingestSession.latencyMs
+        )
+    }
+
+    func startEncoder(
+        profile:
+            NetworkQualityMonitor.StreamProfile
+    ) {
+        /*
+         This function is intentionally called only after
+         SRT has positively reported CONNECTED.
+        */
+        guard srtConnected else {
+            print(
+                "[SportsOSCamera][INGEST]",
+                "media start refused: SRT not connected"
+            )
+
+            return
+        }
+
         encodedFrameCount = 0
         keyFrameCount = 0
         encoderBitrateMbps = 0
@@ -477,28 +521,6 @@ final class CameraController: NSObject, ObservableObject {
         muxVideoFrameCount = 0
         muxAudioFrameCount = 0
         muxTestFileURL = nil
-
-        print(
-            "[SportsOSCamera][INGEST]",
-            "game=\(ingestSession.gameId)",
-            "host=\(ingestSession.host)",
-            "port=\(ingestSession.port)",
-            "expires=\(ingestSession.expiresAt)"
-        )
-
-        srtConnected = false
-        srtLastError = nil
-
-        srtTransport.connect(
-            host:
-                ingestSession.host,
-            port:
-                ingestSession.port,
-            streamId:
-                ingestSession.streamId,
-            latencyMs:
-                ingestSession.latencyMs
-        )
 
         muxer.start(
             durationSeconds:
@@ -519,8 +541,6 @@ final class CameraController: NSObject, ObservableObject {
         )
 
         encoder.start(
-
-
             width: activeVideoWidth,
             height: activeVideoHeight,
             fps: activeVideoFPS,
