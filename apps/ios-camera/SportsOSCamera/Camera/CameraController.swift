@@ -56,6 +56,11 @@ final class CameraController: NSObject, ObservableObject {
     @Published private(set) var encodedFrameCount: Int64 = 0
     @Published private(set) var keyFrameCount: Int64 = 0
 
+    @Published private(set) var publisherRunning = false
+    @Published private(set) var publishedFrameCount: Int64 = 0
+    @Published private(set) var publishedKeyFrameCount: Int64 = 0
+    @Published private(set) var publishedBytes: Int64 = 0
+
     private let sessionQueue = DispatchQueue(
         label: "online.crashthenet.sportsoscamera.capture"
     )
@@ -80,6 +85,14 @@ final class CameraController: NSObject, ObservableObject {
     private let encoder =
         H264Encoder()
 
+    /*
+     Debug publisher proves that encoded frames can cross
+     the transport boundary without making this camera LIVE.
+    */
+    private let publisher:
+        StreamPublisher =
+            DebugStreamPublisher()
+
     override init() {
         super.init()
 
@@ -95,6 +108,25 @@ final class CameraController: NSObject, ObservableObject {
 
         videoOutput.alwaysDiscardsLateVideoFrames = true
 
+
+        publisher.onMetrics = {
+            [weak self] metrics in
+
+            Task { @MainActor in
+                guard let self else {
+                    return
+                }
+
+                self.publishedFrameCount =
+                    metrics.frameCount
+
+                self.publishedKeyFrameCount =
+                    metrics.keyFrameCount
+
+                self.publishedBytes =
+                    metrics.totalBytes
+            }
+        }
 
         encoder.onMetrics = {
             [weak self] metrics in
@@ -128,6 +160,10 @@ final class CameraController: NSObject, ObservableObject {
                 if frame.isKeyFrame {
                     self.keyFrameCount += 1
                 }
+
+                self.publisher.publish(
+                    frame
+                )
             }
         }
     }
@@ -307,9 +343,12 @@ final class CameraController: NSObject, ObservableObject {
         encoderFPS = 0
         encodedBytes = 0
 
+        publishedFrameCount = 0
+        publishedKeyFrameCount = 0
+        publishedBytes = 0
 
-
-
+        publisher.start()
+        publisherRunning = true
 
         videoOutput.setSampleBufferDelegate(
             self,
@@ -360,8 +399,10 @@ final class CameraController: NSObject, ObservableObject {
         )
 
         encoder.stop()
+        publisher.stop()
 
         encoderRunning = false
+        publisherRunning = false
         encoderBitrateMbps = 0
         encoderFPS = 0
     }

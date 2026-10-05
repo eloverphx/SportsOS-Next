@@ -384,6 +384,16 @@ struct CameraScreen: View {
             .foregroundStyle(
                 .white.opacity(0.85)
             )
+
+            if camera.publisherRunning {
+                Text(
+                    "Publisher · \(camera.publishedFrameCount) frames · \(formattedPublisherBytes)"
+                )
+                .font(.caption2)
+                .foregroundStyle(
+                    .cyan
+                )
+            }
         }
         .padding(
             .horizontal,
@@ -401,6 +411,33 @@ struct CameraScreen: View {
                 cornerRadius: 8
             )
         )
+    }
+
+    private var formattedPublisherBytes:
+        String {
+
+        let bytes =
+            Double(
+                camera.publishedBytes
+            )
+
+        if bytes >= 1_000_000 {
+            return String(
+                format:
+                    "%.1f MB",
+                bytes / 1_000_000.0
+            )
+        }
+
+        if bytes >= 1_000 {
+            return String(
+                format:
+                    "%.1f KB",
+                bytes / 1_000.0
+            )
+        }
+
+        return "\(camera.publishedBytes) B"
     }
 
     private var statusPill:
