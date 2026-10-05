@@ -9,6 +9,7 @@ struct CameraScreen: View {
         case idle
         case connecting
         case ready
+        case ingestLost
     }
 
     @StateObject private var camera =
@@ -233,6 +234,34 @@ struct CameraScreen: View {
             camera.stopEncoder()
 
             camera.stop()
+        }
+        .onChange(
+            of: camera.srtConnected
+        ) {
+            connected in
+
+            /*
+             Initial connection handling is owned by
+             beginCameraConnection().
+
+             This observer handles only a transport that was already
+             READY and subsequently disappeared. Local capture remains
+             active; only remote ingest readiness is revoked.
+            */
+            if
+                !connected,
+                cameraRunState == .ready,
+                camera.encoderRunning
+            {
+                diagnosticLog(
+                    "camera SRT transport lost" +
+                    " | local capture continues" +
+                    diagnosticStateSuffix
+                )
+
+                cameraRunState =
+                    .ingestLost
+            }
         }
         .onChange(
             of: scenePhase
@@ -732,6 +761,9 @@ struct CameraScreen: View {
 
         case .ready:
             return .green
+
+        case .ingestLost:
+            return .orange
         }
     }
 
@@ -748,6 +780,9 @@ struct CameraScreen: View {
 
         case .ready:
             return "CAMERA READY"
+
+        case .ingestLost:
+            return "INGEST LOST"
         }
     }
 
@@ -879,8 +914,11 @@ struct CameraScreen: View {
                         .caption2.bold()
                     )
 
-                    if cameraRunState ==
-                        .ready
+                    if
+                        cameraRunState ==
+                            .ready ||
+                        cameraRunState ==
+                            .ingestLost
                     {
                         Text(
                             network
@@ -974,6 +1012,32 @@ struct CameraScreen: View {
         case .ready:
 
             EmptyView()
+
+        case .ingestLost:
+
+            Text(
+                "LOCAL CAPTURE CONTINUES"
+            )
+            .font(
+                .caption2.bold()
+            )
+            .foregroundStyle(
+                .orange
+            )
+            .padding(
+                .horizontal,
+                10
+            )
+            .padding(
+                .vertical,
+                8
+            )
+            .background(
+                .black.opacity(0.55)
+            )
+            .clipShape(
+                Capsule()
+            )
         }
     }
 
@@ -990,6 +1054,9 @@ struct CameraScreen: View {
 
         case .ready:
             return "READY"
+
+        case .ingestLost:
+            return "INGEST LOST"
         }
     }
 
@@ -1079,7 +1146,10 @@ struct CameraScreen: View {
                     "videoDeviceNotAvailableInBackground"
 
                 if
-                    cameraRunState == .ready &&
+                    (
+                        cameraRunState == .ready ||
+                        cameraRunState == .ingestLost
+                    ) &&
                     camera.encoderRunning
                 {
                     encoderNeedsInterruptionRecovery =
@@ -1250,7 +1320,10 @@ struct CameraScreen: View {
 
         guard
             encoderNeedsInterruptionRecovery,
-            cameraRunState == .ready,
+            (
+                cameraRunState == .ready ||
+                cameraRunState == .ingestLost
+            ),
             camera.encoderRunning,
             !encoderRecoveryWaitActive
         else {
@@ -1276,7 +1349,10 @@ struct CameraScreen: View {
 
                 guard
                     encoderNeedsInterruptionRecovery,
-                    cameraRunState == .ready,
+                    (
+                        cameraRunState == .ready ||
+                        cameraRunState == .ingestLost
+                    ),
                     camera.encoderRunning
                 else {
                     return

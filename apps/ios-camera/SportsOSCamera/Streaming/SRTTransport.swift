@@ -419,6 +419,18 @@ final class SRTTransport:
                             "unknown"
                     )
 
+                    /*
+                     The established ingest path is no longer usable.
+
+                     Preserve transport metrics, but transition the
+                     socket to disconnected immediately so CAMERA READY
+                     cannot remain true after a real send failure.
+                    */
+                    self.disconnectLocked(
+                        preserveMetrics:
+                            true
+                    )
+
                     self.emitMetrics()
                     return
                 }
@@ -434,6 +446,11 @@ final class SRTTransport:
                         "[SportsOSCamera][SRT]",
                         self.lastError ??
                             "short send"
+                    )
+
+                    self.disconnectLocked(
+                        preserveMetrics:
+                            true
                     )
 
                     self.emitMetrics()
