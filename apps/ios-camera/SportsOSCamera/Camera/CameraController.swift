@@ -56,6 +56,10 @@ final class CameraController: NSObject, ObservableObject {
     @Published private(set) var encodedFrameCount: Int64 = 0
     @Published private(set) var keyFrameCount: Int64 = 0
 
+    @Published private(set) var audioEncoderRunning = false
+    @Published private(set) var encodedAudioPacketCount: Int64 = 0
+    @Published private(set) var encodedAudioBytes: Int64 = 0
+
     @Published private(set) var publisherRunning = false
     @Published private(set) var publishedFrameCount: Int64 = 0
     @Published private(set) var publishedKeyFrameCount: Int64 = 0
@@ -85,6 +89,9 @@ final class CameraController: NSObject, ObservableObject {
     private let encoder =
         H264Encoder()
 
+    private let audioEncoder =
+        AACEncoder()
+
     /*
      Debug publisher proves that encoded frames can cross
      the transport boundary without making this camera LIVE.
@@ -108,6 +115,32 @@ final class CameraController: NSObject, ObservableObject {
 
         videoOutput.alwaysDiscardsLateVideoFrames = true
 
+
+        audioEncoder.onMetrics = {
+            [weak self] metrics in
+
+            Task { @MainActor in
+                guard let self else {
+                    return
+                }
+
+                self.encodedAudioPacketCount =
+                    metrics.packetCount
+
+                self.encodedAudioBytes =
+                    metrics.totalBytes
+            }
+        }
+
+        audioEncoder.onEncodedFrame = {
+            frame in
+
+            /*
+             Deliberately not published yet.
+             This checkpoint proves PCM -> AAC only.
+            */
+            _ = frame
+        }
 
         publisher.onMetrics = {
             [weak self] metrics in
@@ -347,6 +380,12 @@ final class CameraController: NSObject, ObservableObject {
         publishedKeyFrameCount = 0
         publishedBytes = 0
 
+        encodedAudioPacketCount = 0
+        encodedAudioBytes = 0
+
+        audioEncoder.start()
+        audioEncoderRunning = true
+
         publisher.start()
         publisherRunning = true
 
@@ -399,9 +438,11 @@ final class CameraController: NSObject, ObservableObject {
         )
 
         encoder.stop()
+        audioEncoder.stop()
         publisher.stop()
 
         encoderRunning = false
+        audioEncoderRunning = false
         publisherRunning = false
         encoderBitrateMbps = 0
         encoderFPS = 0
@@ -1064,6 +1105,15 @@ extension CameraController:
 
             guard let self else {
                 return
+            }
+
+            if self.audioEncoderRunning {
+                self.audioEncoder.encode(
+                    sampleBuffer:
+                        sampleBuffer,
+                    muted:
+                        self.muted
+                )
             }
 
             if self.muted {

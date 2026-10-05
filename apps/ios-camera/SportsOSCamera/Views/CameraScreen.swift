@@ -385,6 +385,16 @@ struct CameraScreen: View {
                 .white.opacity(0.85)
             )
 
+            if camera.audioEncoderRunning {
+                Text(
+                    "AAC · \(camera.encodedAudioPacketCount) packets · \(formattedAudioBytes)"
+                )
+                .font(.caption2)
+                .foregroundStyle(
+                    .orange
+                )
+            }
+
             if camera.publisherRunning {
                 Text(
                     "Publisher · \(camera.publishedFrameCount) frames · \(formattedPublisherBytes)"
@@ -411,6 +421,33 @@ struct CameraScreen: View {
                 cornerRadius: 8
             )
         )
+    }
+
+    private var formattedAudioBytes:
+        String {
+
+        let bytes =
+            Double(
+                camera.encodedAudioBytes
+            )
+
+        if bytes >= 1_000_000 {
+            return String(
+                format:
+                    "%.1f MB",
+                bytes / 1_000_000.0
+            )
+        }
+
+        if bytes >= 1_000 {
+            return String(
+                format:
+                    "%.1f KB",
+                bytes / 1_000.0
+            )
+        }
+
+        return "\(camera.encodedAudioBytes) B"
     }
 
     private var formattedPublisherBytes:
