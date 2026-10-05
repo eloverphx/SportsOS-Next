@@ -72,6 +72,9 @@ final class CameraController: NSObject, ObservableObject {
     @Published private(set) var publishedKeyFrameCount: Int64 = 0
     @Published private(set) var publishedBytes: Int64 = 0
 
+    @Published private(set) var srtConnected = false
+    @Published private(set) var srtLastError: String?
+
     private let sessionQueue = DispatchQueue(
         label: "online.crashthenet.sportsoscamera.capture"
     )
@@ -144,7 +147,7 @@ final class CameraController: NSObject, ObservableObject {
         }
 
         srtTransport.onMetrics = {
-            metrics in
+            [weak self] metrics in
 
             print(
                 "[SportsOSCamera][SRT]",
@@ -156,6 +159,18 @@ final class CameraController: NSObject, ObservableObject {
                 "bufferedBytes=\(metrics.bufferedBytes)",
                 "error=\(metrics.lastError ?? "none")"
             )
+
+            Task { @MainActor in
+                guard let self else {
+                    return
+                }
+
+                self.srtConnected =
+                    metrics.connected
+
+                self.srtLastError =
+                    metrics.lastError
+            }
         }
 
         muxer.onMetrics = {
@@ -470,6 +485,9 @@ final class CameraController: NSObject, ObservableObject {
             "port=\(ingestSession.port)",
             "expires=\(ingestSession.expiresAt)"
         )
+
+        srtConnected = false
+        srtLastError = nil
 
         srtTransport.connect(
             host:

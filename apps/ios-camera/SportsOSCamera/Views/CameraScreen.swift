@@ -1426,8 +1426,60 @@ struct CameraScreen: View {
                         ingestSession
                 )
 
+                /*
+                 The encoder starting is not enough to declare the
+                 camera READY.
+
+                 READY means SportsOS has actually established the
+                 server-issued SRT transport.
+                */
+                for _ in 1...40 {
+
+                    if camera.srtConnected {
+
+                        diagnosticLog(
+                            "camera SRT transport ready" +
+                            diagnosticStateSuffix
+                        )
+
+                        cameraRunState =
+                            .ready
+
+                        return
+                    }
+
+                    if
+                        let srtError =
+                            camera.srtLastError
+                    {
+                        diagnosticLog(
+                            "camera SRT connection failed" +
+                            " | " +
+                            srtError
+                        )
+
+                        camera.stopEncoder()
+
+                        cameraRunState =
+                            .idle
+
+                        return
+                    }
+
+                    try? await Task.sleep(
+                        nanoseconds:
+                            250_000_000
+                    )
+                }
+
+                diagnosticLog(
+                    "camera SRT connection timed out"
+                )
+
+                camera.stopEncoder()
+
                 cameraRunState =
-                    .ready
+                    .idle
 
             } catch {
                 diagnosticLog(
