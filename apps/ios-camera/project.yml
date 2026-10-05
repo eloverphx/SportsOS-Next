@@ -25,3 +25,12 @@ targets:
         INFOPLIST_KEY_NSCameraUsageDescription: SportsOS Camera uses the camera to produce live game video.
         INFOPLIST_KEY_NSMicrophoneUsageDescription: SportsOS Camera uses the microphone for game audio.
         GENERATE_INFOPLIST_FILE: YES
+        SWIFT_OBJC_BRIDGING_HEADER: SportsOSCamera/Support/SRTBridge.h
+        HEADER_SEARCH_PATHS:
+          - "$(PROJECT_DIR)/Vendor/SRT/include"
+        LIBRARY_SEARCH_PATHS:
+          - "$(PROJECT_DIR)/Vendor/SRT/lib"
+        OTHER_LDFLAGS:
+          - "-lsrt"
+          - "-lcrypto"
+          - "-lc++"

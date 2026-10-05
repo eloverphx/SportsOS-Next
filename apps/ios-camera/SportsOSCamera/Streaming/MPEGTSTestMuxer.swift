@@ -29,6 +29,15 @@ final class MPEGTSTestMuxer:
     var onMetrics:
         (@Sendable (MPEGTSTestMuxerMetrics) -> Void)?
 
+    /*
+     Emits the exact MPEG-TS bytes that were written
+     to the local validation file.
+
+     This does not alter mux generation.
+    */
+    var onOutputData:
+        (@Sendable (Data) -> Void)?
+
     private let queue =
         DispatchQueue(
             label:
@@ -1256,6 +1265,10 @@ final class MPEGTSTestMuxer:
         }
 
         fileHandle.write(
+            data
+        )
+
+        onOutputData?(
             data
         )
 

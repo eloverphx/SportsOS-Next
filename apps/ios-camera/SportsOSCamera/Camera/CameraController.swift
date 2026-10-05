@@ -103,6 +103,15 @@ final class CameraController: NSObject, ObservableObject {
         MPEGTSTestMuxer()
 
     /*
+     Test-only SRT transport.
+
+     Connecting this socket does NOT make
+     the SportsOS broadcast LIVE.
+    */
+    private let srtTransport =
+        SRTTransport()
+
+    /*
      Debug publisher proves that encoded frames can cross
      the transport boundary without making this camera LIVE.
     */
@@ -125,6 +134,29 @@ final class CameraController: NSObject, ObservableObject {
 
         videoOutput.alwaysDiscardsLateVideoFrames = true
 
+
+        muxer.onOutputData = {
+            [weak self] data in
+
+            self?.srtTransport.sendMPEGTS(
+                data
+            )
+        }
+
+        srtTransport.onMetrics = {
+            metrics in
+
+            print(
+                "[SportsOSCamera][SRT]",
+                "metrics",
+                "connected=\(metrics.connected)",
+                "sentBytes=\(metrics.sentBytes)",
+                "sendCalls=\(metrics.sendCalls)",
+                "droppedBytes=\(metrics.droppedBytes)",
+                "bufferedBytes=\(metrics.bufferedBytes)",
+                "error=\(metrics.lastError ?? "none")"
+            )
+        }
 
         muxer.onMetrics = {
             [weak self] metrics in
@@ -429,6 +461,13 @@ final class CameraController: NSObject, ObservableObject {
         muxAudioFrameCount = 0
         muxTestFileURL = nil
 
+        srtTransport.connect(
+            host:
+                "192.168.5.3",
+            port:
+                9000
+        )
+
         muxer.start(
             durationSeconds:
                 15
@@ -493,6 +532,7 @@ final class CameraController: NSObject, ObservableObject {
         encoder.stop()
         audioEncoder.stop()
         muxer.stop()
+        srtTransport.disconnect()
         publisher.stop()
 
         encoderRunning = false
