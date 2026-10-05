@@ -24,7 +24,9 @@ import {
   recoverGameClocksOnStartup,
   startClockExpirationService,
 } from "./modules/games/clock-expiration.js";
+
 import { registerNetworkTestRoutes } from "./routes/networkTest.js";
+import { registerCameraIngestSessionRoutes } from "./routes/cameraIngestSessions.js";
 import { startGameRuntimeSupervisor } from "./modules/games/runtime-supervisor.js";
 import { gameEngineTelemetryRoutes } from "./modules/games/telemetry-routes.js";
 import { simulationRoutes } from "./modules/simulation/routes.js";
@@ -207,7 +209,9 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     await app.register(registerEncoderSessionRoutes);
     await app.register(registerGoLiveSessionRoutes);
     await app.register(registerBroadcastSessionCoordinatorRoutes);
+
     await app.register(registerNetworkTestRoutes);
+    await app.register(registerCameraIngestSessionRoutes);
     await app.register(registerOperationsStatusRoutes);
   }
 
