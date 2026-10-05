@@ -75,6 +75,8 @@ final class CameraController: NSObject, ObservableObject {
     @Published private(set) var srtConnected = false
     @Published private(set) var srtLastError: String?
 
+    private var mediaShutdownInProgress = false
+
     private let sessionQueue = DispatchQueue(
         label: "online.crashthenet.sportsoscamera.capture"
     )
@@ -266,6 +268,17 @@ final class CameraController: NSObject, ObservableObject {
         encoder.onEncodedFrame = {
             [weak self] frame in
 
+            /*
+             Enqueue mux output immediately.
+
+             This guarantees every VideoToolbox frame emitted before
+             H264 stop completion has already entered the mux queue
+             before graceful mux finalization begins.
+            */
+            self?.muxer.appendVideo(
+                frame
+            )
+
             Task { @MainActor in
                 guard let self else {
                     return
@@ -278,10 +291,6 @@ final class CameraController: NSObject, ObservableObject {
                 }
 
                 self.publisher.publish(
-                    frame
-                )
-
-                self.muxer.appendVideo(
                     frame
                 )
             }
@@ -503,6 +512,8 @@ final class CameraController: NSObject, ObservableObject {
             return
         }
 
+        mediaShutdownInProgress = false
+
         encodedFrameCount = 0
         keyFrameCount = 0
         encoderBitrateMbps = 0
@@ -522,9 +533,13 @@ final class CameraController: NSObject, ObservableObject {
         muxAudioFrameCount = 0
         muxTestFileURL = nil
 
+        /*
+         CameraController owns the test lifetime so shutdown can be
+         ordered across encoder, muxer, and SRT transport.
+        */
         muxer.start(
             durationSeconds:
-                15
+                nil
         )
 
         muxRunning = true
@@ -549,6 +564,33 @@ final class CameraController: NSObject, ObservableObject {
         )
 
         encoderRunning = true
+
+        /*
+         M41 physical test harness.
+
+         Production streaming will replace this fixed duration with
+         operator-controlled session lifetime. For now, trigger the
+         entire ordered shutdown rather than letting the muxer stop
+         independently underneath the encoders.
+        */
+        Task {
+            [weak self] in
+
+            try? await Task.sleep(
+                nanoseconds:
+                    15_000_000_000
+            )
+
+            guard
+                !Task.isCancelled,
+                let self,
+                self.encoderRunning
+            else {
+                return
+            }
+
+            self.stopEncoder()
+        }
     }
 
     func restartEncoderAfterInterruption(
@@ -576,22 +618,81 @@ final class CameraController: NSObject, ObservableObject {
     }
 
     func stopEncoder() {
+        guard !mediaShutdownInProgress else {
+            print(
+                "[SportsOSCamera][SHUTDOWN]",
+                "shutdown already in progress"
+            )
+            return
+        }
+
+        mediaShutdownInProgress = true
+
+        /*
+         Stop admitting new video frames first.
+
+         H264 and AAC each drain their already-queued work. Only after
+         both encoders have finished do we finalize MPEG-TS. The muxer
+         queue therefore sees every encoded frame before its stop
+         marker. SRT is closed only after all mux output has entered
+         the transport queue.
+        */
         videoOutput.setSampleBufferDelegate(
             nil,
             queue: nil
         )
 
-        encoder.stop()
-        audioEncoder.stop()
-        muxer.stop()
-        srtTransport.disconnect()
-        publisher.stop()
-
         encoderRunning = false
         audioEncoderRunning = false
         publisherRunning = false
-        encoderBitrateMbps = 0
-        encoderFPS = 0
+
+        let encoderDrain =
+            DispatchGroup()
+
+        encoderDrain.enter()
+
+        encoder.stop {
+            encoderDrain.leave()
+        }
+
+        encoderDrain.enter()
+
+        audioEncoder.stop {
+            encoderDrain.leave()
+        }
+
+        publisher.stop()
+
+        encoderDrain.notify(
+            queue:
+                .global(
+                    qos:
+                        .userInitiated
+                )
+        ) {
+            [weak self] in
+
+            guard let self else {
+                return
+            }
+
+            self.muxer.stop {
+                self.srtTransport.disconnect {
+
+                    Task { @MainActor in
+                        self.encoderBitrateMbps = 0
+                        self.encoderFPS = 0
+
+                        self.mediaShutdownInProgress = false
+
+                        print(
+                            "[SportsOSCamera][SHUTDOWN]",
+                            "graceful media shutdown complete"
+                        )
+                    }
+                }
+            }
+        }
     }
 
     private func configureCaptureSession() {

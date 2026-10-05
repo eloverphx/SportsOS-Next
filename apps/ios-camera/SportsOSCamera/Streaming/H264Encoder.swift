@@ -173,9 +173,14 @@ final class H264Encoder: @unchecked Sendable {
         }
     }
 
-    func stop() {
-        queue.async { [weak self] in
+    func stop(
+        completion: (() -> Void)? = nil
+    ) {
+        queue.async {
+            [weak self] in
+
             self?.stopLocked()
+            completion?()
         }
     }
 

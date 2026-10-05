@@ -462,11 +462,14 @@ final class SRTTransport:
         }
     }
 
-    func disconnect() {
+    func disconnect(
+        completion: (() -> Void)? = nil
+    ) {
         queue.async {
             [weak self] in
 
             guard let self else {
+                completion?()
                 return
             }
 
@@ -560,12 +563,47 @@ final class SRTTransport:
                 )
             }
 
-            self.disconnectLocked(
-                preserveMetrics:
-                    true
+            /*
+             srt_send() returning successfully means the payload was
+             accepted by the local SRT socket. It does not guarantee
+             that the remote receiver has consumed the final packets.
+
+             Keep the connected socket alive briefly after the last
+             send so SRT can transmit and acknowledge the stream tail
+             before close.
+            */
+            let drainDelay:
+                DispatchTimeInterval =
+                    .milliseconds(
+                        750
+                    )
+
+            print(
+                "[SportsOSCamera][SRT]",
+                "draining before close",
+                "pending=\(self.pending.count)"
             )
 
-            self.emitMetrics()
+            self.queue.asyncAfter(
+                deadline:
+                    .now() +
+                    drainDelay
+            ) {
+                [weak self] in
+
+                guard let self else {
+                    completion?()
+                    return
+                }
+
+                self.disconnectLocked(
+                    preserveMetrics:
+                        true
+                )
+
+                self.emitMetrics()
+                completion?()
+            }
         }
     }
 

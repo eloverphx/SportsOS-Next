@@ -107,11 +107,14 @@ final class AACEncoder:
         }
     }
 
-    func stop() {
+    func stop(
+        completion: (() -> Void)? = nil
+    ) {
         queue.async {
             [weak self] in
 
             guard let self else {
+                completion?()
                 return
             }
 
@@ -128,6 +131,7 @@ final class AACEncoder:
             self.lastInputEndPTS = nil
 
             self.emitMetrics()
+            completion?()
         }
     }
 

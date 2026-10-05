@@ -91,7 +91,7 @@ final class MPEGTSTestMuxer:
 
     func start(
         durationSeconds:
-            TimeInterval = 15
+            TimeInterval? = 15
     ) {
         queue.async {
             [weak self] in
@@ -192,31 +192,35 @@ final class MPEGTSTestMuxer:
                 url.path
             )
 
-            self.queue.asyncAfter(
-                deadline:
-                    .now() +
-                    durationSeconds
-            ) {
-                [weak self] in
+            if let durationSeconds {
+                self.queue.asyncAfter(
+                    deadline:
+                        .now() +
+                        durationSeconds
+                ) {
+                    [weak self] in
 
-                guard
-                    let self,
-                    self.running,
-                    self.generation ==
-                        thisGeneration
-                else {
-                    return
+                    guard
+                        let self,
+                        self.running,
+                        self.generation ==
+                            thisGeneration
+                    else {
+                        return
+                    }
+
+                    self.stopLocked(
+                        emit:
+                            true
+                    )
                 }
-
-                self.stopLocked(
-                    emit:
-                        true
-                )
             }
         }
     }
 
-    func stop() {
+    func stop(
+        completion: (() -> Void)? = nil
+    ) {
         queue.async {
             [weak self] in
 
@@ -224,6 +228,8 @@ final class MPEGTSTestMuxer:
                 emit:
                     true
             )
+
+            completion?()
         }
     }
 
