@@ -79,6 +79,36 @@ struct CameraScreen: View {
                             )
                     }
 
+                    if
+                        !camera.muxRunning,
+                        let url =
+                            camera.muxTestFileURL
+                    {
+                        ShareLink(
+                            item:
+                                url
+                        ) {
+                            Label(
+                                "SHARE TS TEST",
+                                systemImage:
+                                    "square.and.arrow.up"
+                            )
+                            .font(
+                                .caption2.bold()
+                            )
+                        }
+                        .buttonStyle(
+                            .borderedProminent
+                        )
+                        .tint(
+                            .blue
+                        )
+                        .padding(
+                            .top,
+                            6
+                        )
+                    }
+
                     Spacer()
 
                     bottomControls
@@ -395,6 +425,18 @@ struct CameraScreen: View {
                 )
             }
 
+            Text(
+                muxStatusText
+            )
+            .font(.caption2)
+            .foregroundStyle(
+                camera.muxRunning
+                ? .yellow
+                : camera.muxTestFileURL != nil
+                    ? .green
+                    : .secondary
+            )
+
             if camera.publisherRunning {
                 Text(
                     "Publisher · \(camera.publishedFrameCount) frames · \(formattedPublisherBytes)"
@@ -421,6 +463,53 @@ struct CameraScreen: View {
                 cornerRadius: 8
             )
         )
+    }
+
+    private var muxStatusText:
+        String {
+
+        if camera.muxRunning {
+            return
+                "MPEG-TS TEST · \(camera.muxPacketCount) packets · V\(camera.muxVideoFrameCount) A\(camera.muxAudioFrameCount)"
+        }
+
+        if camera.muxTestFileURL != nil {
+            return
+                "MPEG-TS READY · \(formattedMuxBytes)"
+        }
+
+        return
+            "MPEG-TS WAITING"
+    }
+
+    private var formattedMuxBytes:
+        String {
+
+        let bytes =
+            Double(
+                camera.muxBytes
+            )
+
+        if bytes >= 1_000_000 {
+            return String(
+                format:
+                    "%.1f MB",
+                bytes /
+                    1_000_000.0
+            )
+        }
+
+        if bytes >= 1_000 {
+            return String(
+                format:
+                    "%.1f KB",
+                bytes /
+                    1_000.0
+            )
+        }
+
+        return
+            "\(camera.muxBytes) B"
     }
 
     private var formattedAudioBytes:

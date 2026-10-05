@@ -60,6 +60,13 @@ final class CameraController: NSObject, ObservableObject {
     @Published private(set) var encodedAudioPacketCount: Int64 = 0
     @Published private(set) var encodedAudioBytes: Int64 = 0
 
+    @Published private(set) var muxRunning = false
+    @Published private(set) var muxPacketCount: Int64 = 0
+    @Published private(set) var muxBytes: Int64 = 0
+    @Published private(set) var muxVideoFrameCount: Int64 = 0
+    @Published private(set) var muxAudioFrameCount: Int64 = 0
+    @Published private(set) var muxTestFileURL: URL?
+
     @Published private(set) var publisherRunning = false
     @Published private(set) var publishedFrameCount: Int64 = 0
     @Published private(set) var publishedKeyFrameCount: Int64 = 0
@@ -92,6 +99,9 @@ final class CameraController: NSObject, ObservableObject {
     private let audioEncoder =
         AACEncoder()
 
+    private let muxer =
+        MPEGTSTestMuxer()
+
     /*
      Debug publisher proves that encoded frames can cross
      the transport boundary without making this camera LIVE.
@@ -116,6 +126,34 @@ final class CameraController: NSObject, ObservableObject {
         videoOutput.alwaysDiscardsLateVideoFrames = true
 
 
+        muxer.onMetrics = {
+            [weak self] metrics in
+
+            Task { @MainActor in
+                guard let self else {
+                    return
+                }
+
+                self.muxRunning =
+                    metrics.running
+
+                self.muxPacketCount =
+                    metrics.packetCount
+
+                self.muxBytes =
+                    metrics.totalBytes
+
+                self.muxVideoFrameCount =
+                    metrics.videoFrames
+
+                self.muxAudioFrameCount =
+                    metrics.audioFrames
+
+                self.muxTestFileURL =
+                    metrics.outputURL
+            }
+        }
+
         audioEncoder.onMetrics = {
             [weak self] metrics in
 
@@ -133,13 +171,11 @@ final class CameraController: NSObject, ObservableObject {
         }
 
         audioEncoder.onEncodedFrame = {
-            frame in
+            [weak self] frame in
 
-            /*
-             Deliberately not published yet.
-             This checkpoint proves PCM -> AAC only.
-            */
-            _ = frame
+            self?.muxer.appendAudio(
+                frame
+            )
         }
 
         publisher.onMetrics = {
@@ -195,6 +231,10 @@ final class CameraController: NSObject, ObservableObject {
                 }
 
                 self.publisher.publish(
+                    frame
+                )
+
+                self.muxer.appendVideo(
                     frame
                 )
             }
@@ -383,6 +423,19 @@ final class CameraController: NSObject, ObservableObject {
         encodedAudioPacketCount = 0
         encodedAudioBytes = 0
 
+        muxPacketCount = 0
+        muxBytes = 0
+        muxVideoFrameCount = 0
+        muxAudioFrameCount = 0
+        muxTestFileURL = nil
+
+        muxer.start(
+            durationSeconds:
+                15
+        )
+
+        muxRunning = true
+
         audioEncoder.start()
         audioEncoderRunning = true
 
@@ -439,6 +492,7 @@ final class CameraController: NSObject, ObservableObject {
 
         encoder.stop()
         audioEncoder.stop()
+        muxer.stop()
         publisher.stop()
 
         encoderRunning = false
