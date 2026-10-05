@@ -440,7 +440,9 @@ final class CameraController: NSObject, ObservableObject {
 
     func startEncoder(
         profile:
-            NetworkQualityMonitor.StreamProfile
+            NetworkQualityMonitor.StreamProfile,
+        ingestSession:
+            CameraIngestSession
     ) {
         encodedFrameCount = 0
         keyFrameCount = 0
@@ -461,11 +463,23 @@ final class CameraController: NSObject, ObservableObject {
         muxAudioFrameCount = 0
         muxTestFileURL = nil
 
+        print(
+            "[SportsOSCamera][INGEST]",
+            "game=\(ingestSession.gameId)",
+            "host=\(ingestSession.host)",
+            "port=\(ingestSession.port)",
+            "expires=\(ingestSession.expiresAt)"
+        )
+
         srtTransport.connect(
             host:
-                "192.168.5.3",
+                ingestSession.host,
             port:
-                9000
+                ingestSession.port,
+            streamId:
+                ingestSession.streamId,
+            latencyMs:
+                ingestSession.latencyMs
         )
 
         muxer.start(

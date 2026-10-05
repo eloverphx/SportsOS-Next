@@ -63,7 +63,9 @@ final class SRTTransport:
 
     func connect(
         host: String,
-        port: UInt16
+        port: UInt16,
+        streamId: String,
+        latencyMs: Int
     ) {
         queue.async {
             [weak self] in
@@ -121,6 +123,91 @@ final class SRTTransport:
 
             self.socket =
                 socket
+
+            /*
+             Apply the server-issued session identity before connect.
+
+             The listener can use this opaque stream ID to associate
+             the caller with the intended SportsOS game/session.
+            */
+            let streamIdResult =
+                streamId.withCString {
+                    pointer in
+
+                    srt_setsockflag(
+                        socket,
+                        SRTO_STREAMID,
+                        pointer,
+                        Int32(
+                            streamId.utf8.count
+                        )
+                    )
+                }
+
+            guard streamIdResult == 0 else {
+                self.lastError =
+                    self.currentSRTError()
+
+                print(
+                    "[SportsOSCamera][SRT]",
+                    "stream ID configuration failed:",
+                    self.lastError ??
+                        "unknown"
+                )
+
+                self.disconnectLocked(
+                    preserveMetrics:
+                        true
+                )
+
+                self.emitMetrics()
+                return
+            }
+
+            var configuredLatency =
+                Int32(
+                    max(
+                        latencyMs,
+                        0
+                    )
+                )
+
+            let latencyResult =
+                withUnsafePointer(
+                    to:
+                        &configuredLatency
+                ) {
+                    pointer in
+
+                    srt_setsockflag(
+                        socket,
+                        SRTO_LATENCY,
+                        pointer,
+                        Int32(
+                            MemoryLayout<Int32>.size
+                        )
+                    )
+                }
+
+            guard latencyResult == 0 else {
+                self.lastError =
+                    self.currentSRTError()
+
+                print(
+                    "[SportsOSCamera][SRT]",
+                    "latency configuration failed:",
+                    self.lastError ??
+                        "unknown"
+                )
+
+                self.disconnectLocked(
+                    preserveMetrics:
+                        true
+                )
+
+                self.emitMetrics()
+                return
+            }
 
             var address =
                 sockaddr_in()

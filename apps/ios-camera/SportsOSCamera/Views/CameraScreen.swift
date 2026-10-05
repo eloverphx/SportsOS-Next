@@ -17,6 +17,9 @@ struct CameraScreen: View {
     @StateObject private var network =
         NetworkQualityMonitor()
 
+    private let ingestClient =
+        CameraIngestClient()
+
     @Environment(\.scenePhase)
     private var scenePhase
 
@@ -1342,14 +1345,100 @@ struct CameraScreen: View {
                 return
             }
 
-            camera.startEncoder(
-                profile:
-                    network
-                        .recommendedProfile
-            )
+            let environment =
+                ProcessInfo
+                    .processInfo
+                    .environment
 
-            cameraRunState =
-                .ready
+            guard
+                let gameId =
+                    environment[
+                        "SPORTSOS_CAMERA_GAME_ID"
+                    ]?
+                    .trimmingCharacters(
+                        in:
+                            .whitespacesAndNewlines
+                    ),
+                !gameId.isEmpty
+            else {
+                diagnosticLog(
+                    "camera ingest session unavailable | missing SPORTSOS_CAMERA_GAME_ID"
+                )
+
+                cameraRunState =
+                    .idle
+
+                return
+            }
+
+            guard
+                let accessToken =
+                    environment[
+                        "SPORTSOS_CAMERA_ACCESS_TOKEN"
+                    ]?
+                    .trimmingCharacters(
+                        in:
+                            .whitespacesAndNewlines
+                    ),
+                !accessToken.isEmpty
+            else {
+                diagnosticLog(
+                    "camera ingest session unavailable | missing SPORTSOS_CAMERA_ACCESS_TOKEN"
+                )
+
+                cameraRunState =
+                    .idle
+
+                return
+            }
+
+            do {
+                let ingestSession =
+                    try await ingestClient
+                        .requestSession(
+                            gameId:
+                                gameId,
+                            accessToken:
+                                accessToken
+                        )
+
+                diagnosticLog(
+                    "camera ingest session issued" +
+                    " | gameId=" +
+                    ingestSession.gameId +
+                    " | host=" +
+                    ingestSession.host +
+                    " | port=" +
+                    String(
+                        ingestSession.port
+                    ) +
+                    " | expires=" +
+                    ingestSession
+                        .expiresAt
+                        .ISO8601Format()
+                )
+
+                camera.startEncoder(
+                    profile:
+                        network
+                            .recommendedProfile,
+                    ingestSession:
+                        ingestSession
+                )
+
+                cameraRunState =
+                    .ready
+
+            } catch {
+                diagnosticLog(
+                    "camera ingest session request failed" +
+                    " | " +
+                    error.localizedDescription
+                )
+
+                cameraRunState =
+                    .idle
+            }
         }
     }
 }
