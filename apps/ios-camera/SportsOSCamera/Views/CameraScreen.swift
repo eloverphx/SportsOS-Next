@@ -39,6 +39,9 @@ struct CameraScreen: View {
     @State private var ingestReconnectActive =
         false
 
+    @State private var ingestReconnectTask:
+        Task<Void, Never>?
+
     @State private var menuOpen = false
     @State private var showZoom = true
     @State private var showScore = true
@@ -234,6 +237,9 @@ struct CameraScreen: View {
             }
         }
         .onDisappear {
+
+            ingestReconnectTask?.cancel()
+            ingestReconnectTask = nil
 
             ingestReconnectActive =
                 false
@@ -1456,11 +1462,17 @@ struct CameraScreen: View {
         ingestReconnectActive =
             true
 
-        Task { @MainActor in
+        ingestReconnectTask?.cancel()
+
+        ingestReconnectTask =
+            Task { @MainActor in
 
             defer {
                 ingestReconnectActive =
                     false
+
+                ingestReconnectTask =
+                    nil
             }
 
             let maximumAttempts =
@@ -1469,6 +1481,7 @@ struct CameraScreen: View {
             for attempt in 1...maximumAttempts {
 
                 guard
+                    !Task.isCancelled,
                     cameraRunState == .ingestLost,
                     camera.encoderRunning
                 else {
@@ -1488,13 +1501,18 @@ struct CameraScreen: View {
                 }
 
                 if attempt > 1 {
-                    try? await Task.sleep(
-                        nanoseconds:
-                            1_000_000_000
-                    )
+                    do {
+                        try await Task.sleep(
+                            nanoseconds:
+                                1_000_000_000
+                        )
+                    } catch {
+                        return
+                    }
                 }
 
                 guard
+                    !Task.isCancelled,
                     cameraRunState == .ingestLost,
                     camera.encoderRunning
                 else {
@@ -1520,6 +1538,7 @@ struct CameraScreen: View {
                 for _ in 1...20 {
 
                     guard
+                        !Task.isCancelled,
                         cameraRunState == .ingestLost,
                         camera.encoderRunning
                     else {
@@ -1548,10 +1567,14 @@ struct CameraScreen: View {
                         break
                     }
 
-                    try? await Task.sleep(
-                        nanoseconds:
-                            250_000_000
-                    )
+                    do {
+                        try await Task.sleep(
+                            nanoseconds:
+                                250_000_000
+                        )
+                    } catch {
+                        return
+                    }
                 }
             }
 
