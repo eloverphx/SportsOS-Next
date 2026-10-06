@@ -37,6 +37,25 @@ final class H264Encoder: @unchecked Sendable {
 
     private(set) var running = false
 
+    private var forceNextKeyFrame =
+        false
+
+    func forceKeyFrame() {
+        queue.async {
+            [weak self] in
+
+            guard
+                let self,
+                self.running
+            else {
+                return
+            }
+
+            self.forceNextKeyFrame =
+                true
+        }
+    }
+
     func start(
         width: Int,
         height: Int,
@@ -214,13 +233,35 @@ final class H264Encoder: @unchecked Sendable {
             var flags =
                 VTEncodeInfoFlags()
 
+            let frameProperties:
+                CFDictionary?
+
+            if self.forceNextKeyFrame {
+                frameProperties = [
+                    kVTEncodeFrameOptionKey_ForceKeyFrame:
+                        true
+                ] as CFDictionary
+
+                self.forceNextKeyFrame =
+                    false
+
+                print(
+                    "[SportsOSCamera][H264]",
+                    "forcing reconnect keyframe"
+                )
+            } else {
+                frameProperties =
+                    nil
+            }
+
             VTCompressionSessionEncodeFrame(
                 session,
                 imageBuffer: imageBuffer,
                 presentationTimeStamp:
                     presentationTime,
                 duration: .invalid,
-                frameProperties: nil,
+                frameProperties:
+                    frameProperties,
                 sourceFrameRefcon: nil,
                 infoFlagsOut: &flags
             )
@@ -229,6 +270,7 @@ final class H264Encoder: @unchecked Sendable {
 
     private func stopLocked() {
         running = false
+        forceNextKeyFrame = false
 
         if let session = compressionSession {
             VTCompressionSessionCompleteFrames(

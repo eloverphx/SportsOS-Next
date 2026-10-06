@@ -221,7 +221,10 @@ struct CameraSettingsDrawer: View {
                     }
                 }
 
-                if cameraRunState == .ready {
+                if
+                    cameraRunState == .ready ||
+                    cameraRunState == .ingestLost
+                {
                     Divider()
                         .padding(.top, 8)
 
@@ -243,7 +246,7 @@ struct CameraSettingsDrawer: View {
                 }
 
                 Text(
-                    "Ending the camera session will stop the active SportsOS stream. The camera preview remains available."
+                    "Ending the camera session stops camera capture and ingest. The camera preview remains available."
                 )
                 .font(.caption2)
                 .foregroundStyle(.secondary)

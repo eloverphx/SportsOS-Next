@@ -33,6 +33,12 @@ struct CameraScreen: View {
     @State private var encoderRecoveryWaitActive =
         false
 
+    @State private var activeIngestSession:
+        CameraIngestSession?
+
+    @State private var ingestReconnectActive =
+        false
+
     @State private var menuOpen = false
     @State private var showZoom = true
     @State private var showScore = true
@@ -229,6 +235,12 @@ struct CameraScreen: View {
         }
         .onDisappear {
 
+            ingestReconnectActive =
+                false
+
+            activeIngestSession =
+                nil
+
             network.stop()
 
             camera.stopEncoder()
@@ -261,6 +273,26 @@ struct CameraScreen: View {
 
                 cameraRunState =
                     .ingestLost
+
+                camera.prepareForIngestReconnect {
+
+                    Task { @MainActor in
+
+                        guard
+                            cameraRunState == .ingestLost,
+                            camera.encoderRunning
+                        else {
+                            return
+                        }
+
+                        diagnosticLog(
+                            "camera SRT reconnect mux barrier complete" +
+                            diagnosticStateSuffix
+                        )
+
+                        scheduleIngestReconnect()
+                    }
+                }
             }
         }
         .onChange(
@@ -782,7 +814,10 @@ struct CameraScreen: View {
             return "CAMERA READY"
 
         case .ingestLost:
-            return "INGEST LOST"
+            return
+                ingestReconnectActive
+                ? "RECONNECTING"
+                : "INGEST LOST"
         }
     }
 
@@ -1016,7 +1051,9 @@ struct CameraScreen: View {
         case .ingestLost:
 
             Text(
-                "LOCAL CAPTURE CONTINUES"
+                ingestReconnectActive
+                ? "RECONNECTING · LOCAL CAPTURE CONTINUES"
+                : "LOCAL CAPTURE CONTINUES"
             )
             .font(
                 .caption2.bold()
@@ -1056,7 +1093,10 @@ struct CameraScreen: View {
             return "READY"
 
         case .ingestLost:
-            return "INGEST LOST"
+            return
+                ingestReconnectActive
+                ? "RECONNECTING"
+                : "INGEST LOST"
         }
     }
 
@@ -1393,6 +1433,136 @@ struct CameraScreen: View {
         }
     }
 
+    private func scheduleIngestReconnect() {
+
+        guard
+            !ingestReconnectActive,
+            cameraRunState == .ingestLost,
+            camera.encoderRunning,
+            let ingestSession =
+                activeIngestSession
+        else {
+            return
+        }
+
+        /*
+         Transport recovery only.
+
+         Local capture remains active and we deliberately do not
+         accumulate remote MPEG-TS while disconnected.
+
+         Recovering SRT does not make the game LIVE.
+        */
+        ingestReconnectActive =
+            true
+
+        Task { @MainActor in
+
+            defer {
+                ingestReconnectActive =
+                    false
+            }
+
+            let maximumAttempts =
+                3
+
+            for attempt in 1...maximumAttempts {
+
+                guard
+                    cameraRunState == .ingestLost,
+                    camera.encoderRunning
+                else {
+                    return
+                }
+
+                guard
+                    Date() <
+                        ingestSession.expiresAt
+                else {
+                    diagnosticLog(
+                        "camera SRT reconnect stopped" +
+                        " | ingest session expired"
+                    )
+
+                    return
+                }
+
+                if attempt > 1 {
+                    try? await Task.sleep(
+                        nanoseconds:
+                            1_000_000_000
+                    )
+                }
+
+                guard
+                    cameraRunState == .ingestLost,
+                    camera.encoderRunning
+                else {
+                    return
+                }
+
+                diagnosticLog(
+                    "camera SRT reconnect attempt" +
+                    " | attempt=" +
+                    String(attempt) +
+                    "/" +
+                    String(maximumAttempts)
+                )
+
+                camera.connectIngest(
+                    ingestSession:
+                        ingestSession
+                )
+
+                /*
+                 Wait up to five seconds for this attempt.
+                */
+                for _ in 1...20 {
+
+                    guard
+                        cameraRunState == .ingestLost,
+                        camera.encoderRunning
+                    else {
+                        return
+                    }
+
+                    if camera.srtConnected {
+
+                        camera.completeIngestReconnect()
+
+                        diagnosticLog(
+                            "camera SRT transport recovered" +
+                            " | attempt=" +
+                            String(attempt) +
+                            " | clean keyframe requested" +
+                            diagnosticStateSuffix
+                        )
+
+                        cameraRunState =
+                            .ready
+
+                        return
+                    }
+
+                    if camera.srtLastError != nil {
+                        break
+                    }
+
+                    try? await Task.sleep(
+                        nanoseconds:
+                            250_000_000
+                    )
+                }
+            }
+
+            diagnosticLog(
+                "camera SRT reconnect attempts exhausted" +
+                " | local capture continues" +
+                diagnosticStateSuffix
+            )
+        }
+    }
+
     private func beginCameraConnection() {
 
         cameraRunState =
@@ -1493,6 +1663,9 @@ struct CameraScreen: View {
                         .expiresAt
                         .ISO8601Format()
                 )
+
+                activeIngestSession =
+                    ingestSession
 
                 camera.connectIngest(
                     ingestSession:

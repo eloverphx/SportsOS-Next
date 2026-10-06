@@ -417,8 +417,50 @@ final class AACEncoder:
             return false
         }
 
+        /*
+         The capture route may change the native microphone sample
+         rate. Bluetooth routes in particular can present rates such
+         as 24 kHz.
+
+         Do not blindly force 128 kbps when the Apple AAC encoder does
+         not support that bitrate for the active format.
+        */
+        let applicableBitRates =
+            converter.applicableEncodeBitRates
+
+        let selectedBitRate:
+            Int
+
+        if
+            let supported =
+                applicableBitRates?
+                    .compactMap({
+                        value -> Int? in
+
+                        let bitRate =
+                            value.intValue
+
+                        return
+                            bitRate <= targetBitrate
+                            ? bitRate
+                            : nil
+                    })
+                    .max()
+        {
+            selectedBitRate =
+                supported
+        } else {
+            /*
+             Conservative AAC fallback for narrow-rate mono capture.
+            */
+            selectedBitRate =
+                sampleRate <= 24_000
+                ? 64_000
+                : targetBitrate
+        }
+
         converter.bitRate =
-            targetBitrate
+            selectedBitRate
 
         self.inputFormat =
             input
@@ -447,7 +489,7 @@ final class AACEncoder:
             "configured",
             "\(Int(sampleRate)) Hz",
             "\(channels) ch",
-            "\(targetBitrate / 1000) kbps"
+            "\(selectedBitRate / 1000) kbps"
         )
 
         return true

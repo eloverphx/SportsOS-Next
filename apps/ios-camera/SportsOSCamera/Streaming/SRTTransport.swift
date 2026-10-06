@@ -336,12 +336,17 @@ final class SRTTransport:
             }
 
             guard self.connected else {
+                /*
+                 No remote backlog while disconnected.
+
+                 Local recording continues, but remote MPEG-TS bytes
+                 are deliberately discarded until SRT recovers.
+                */
                 self.droppedBytes +=
                     Int64(
                         data.count
                     )
 
-                self.emitMetrics()
                 return
             }
 

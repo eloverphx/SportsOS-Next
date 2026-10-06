@@ -77,6 +77,9 @@ final class CameraController: NSObject, ObservableObject {
 
     private var mediaShutdownInProgress = false
 
+    private var mediaSessionActive =
+        false
+
     private let sessionQueue = DispatchQueue(
         label: "online.crashthenet.sportsoscamera.capture"
     )
@@ -462,6 +465,46 @@ final class CameraController: NSObject, ObservableObject {
         }
     }
 
+    func prepareForIngestReconnect(
+        completion: @escaping () -> Void
+    ) {
+        guard mediaSessionActive else {
+            completion()
+            return
+        }
+
+        muxer
+            .suspendTransportOutputUntilKeyFrame {
+                completion()
+            }
+    }
+
+    func completeIngestReconnect() {
+        guard
+            mediaSessionActive,
+            encoderRunning,
+            srtConnected
+        else {
+            return
+        }
+
+        muxer
+            .armTransportRecoveryAtNextKeyFrame {
+                [weak self] in
+
+                guard let self else {
+                    return
+                }
+
+                print(
+                    "[SportsOSCamera][INGEST]",
+                    "mux recovery armed; requesting decoder-safe keyframe"
+                )
+
+                self.encoder.forceKeyFrame()
+            }
+    }
+
     func connectIngest(
         ingestSession:
             CameraIngestSession
@@ -513,6 +556,7 @@ final class CameraController: NSObject, ObservableObject {
         }
 
         mediaShutdownInProgress = false
+        mediaSessionActive = true
 
         encodedFrameCount = 0
         keyFrameCount = 0
@@ -565,32 +609,6 @@ final class CameraController: NSObject, ObservableObject {
 
         encoderRunning = true
 
-        /*
-         M41 physical test harness.
-
-         Production streaming will replace this fixed duration with
-         operator-controlled session lifetime. For now, trigger the
-         entire ordered shutdown rather than letting the muxer stop
-         independently underneath the encoders.
-        */
-        Task {
-            [weak self] in
-
-            try? await Task.sleep(
-                nanoseconds:
-                    15_000_000_000
-            )
-
-            guard
-                !Task.isCancelled,
-                let self,
-                self.encoderRunning
-            else {
-                return
-            }
-
-            self.stopEncoder()
-        }
     }
 
     func restartEncoderAfterInterruption(
@@ -618,6 +636,10 @@ final class CameraController: NSObject, ObservableObject {
     }
 
     func stopEncoder() {
+        guard mediaSessionActive else {
+            return
+        }
+
         guard !mediaShutdownInProgress else {
             print(
                 "[SportsOSCamera][SHUTDOWN]",
@@ -684,6 +706,7 @@ final class CameraController: NSObject, ObservableObject {
                         self.encoderFPS = 0
 
                         self.mediaShutdownInProgress = false
+                        self.mediaSessionActive = false
 
                         print(
                             "[SportsOSCamera][SHUTDOWN]",

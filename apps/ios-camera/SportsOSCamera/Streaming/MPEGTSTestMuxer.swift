@@ -86,6 +86,15 @@ final class MPEGTSTestMuxer:
     private var lastTablesPTS:
         Int64?
 
+    private var transportOutputEnabled =
+        true
+
+    private var transportRecoveryPending =
+        false
+
+    private var transportRecoveryArmed =
+        false
+
     private var lastMetricsAt =
         CFAbsoluteTimeGetCurrent()
 
@@ -116,6 +125,9 @@ final class MPEGTSTestMuxer:
             self.videoFrames = 0
             self.audioFrames = 0
             self.lastTablesPTS = nil
+            self.transportOutputEnabled = true
+            self.transportRecoveryPending = false
+            self.transportRecoveryArmed = false
 
             let directory =
                 FileManager
@@ -233,6 +245,81 @@ final class MPEGTSTestMuxer:
         }
     }
 
+    func suspendTransportOutputUntilKeyFrame(
+        completion: (() -> Void)? = nil
+    ) {
+        queue.async {
+            [weak self] in
+
+            guard
+                let self,
+                self.running
+            else {
+                completion?()
+                return
+            }
+
+            /*
+             This queue is also where appendVideo/appendAudio run.
+
+             Reaching this point therefore guarantees every mux packet
+             produced before the outage has already been handed to the
+             SRT transport queue.
+
+             Reconnect must not begin until this completion fires.
+            */
+            self.transportOutputEnabled =
+                false
+
+            self.transportRecoveryPending =
+                true
+
+            self.transportRecoveryArmed =
+                false
+
+            print(
+                "[SportsOSCamera][MPEGTS]",
+                "transport output suspended until SRT recovery + clean keyframe"
+            )
+
+            completion?()
+        }
+    }
+
+    func armTransportRecoveryAtNextKeyFrame(
+        completion: (() -> Void)? = nil
+    ) {
+        queue.async {
+            [weak self] in
+
+            guard
+                let self,
+                self.running,
+                self.transportRecoveryPending
+            else {
+                completion?()
+                return
+            }
+
+            /*
+             SRT is connected again.
+
+             Network output remains blocked until the next IDR reaches
+             this mux queue. CameraController will force that IDR only
+             after this queue operation completes.
+            */
+            self.transportRecoveryArmed =
+                true
+
+            print(
+                "[SportsOSCamera][MPEGTS]",
+                "transport recovery armed for next clean keyframe"
+            )
+
+            completion?()
+        }
+    }
+
     func appendVideo(
         _ frame:
             EncodedVideoFrame
@@ -252,6 +339,36 @@ final class MPEGTSTestMuxer:
                     frame
                         .presentationTimeStamp
                 )
+
+            if
+                self.transportRecoveryPending,
+                self.transportRecoveryArmed,
+                frame.isKeyFrame
+            {
+                /*
+                 The forced IDR already carries SPS/PPS.
+
+                 Re-enable network output before writeTables() so the
+                 new listener receives PAT + PMT immediately before
+                 the decoder-safe H264 keyframe.
+                */
+                self.transportOutputEnabled =
+                    true
+
+                self.transportRecoveryPending =
+                    false
+
+                self.transportRecoveryArmed =
+                    false
+
+                self.lastTablesPTS =
+                    nil
+
+                print(
+                    "[SportsOSCamera][MPEGTS]",
+                    "transport output resumed at clean keyframe"
+                )
+            }
 
             if self.shouldWriteTables(
                 at:
@@ -370,6 +487,15 @@ final class MPEGTSTestMuxer:
         }
 
         running = false
+
+        transportOutputEnabled =
+            true
+
+        transportRecoveryPending =
+            false
+
+        transportRecoveryArmed =
+            false
 
         if let fileHandle {
             fileHandle
@@ -1089,10 +1215,6 @@ final class MPEGTSTestMuxer:
             EncodedAudioFrame
     ) -> Data? {
         guard
-            Int(
-                frame.sampleRate
-            ) ==
-                48_000,
             frame.channelCount ==
                 1
         else {
@@ -1106,11 +1228,37 @@ final class MPEGTSTestMuxer:
             return nil
         }
 
+        let frequencyIndex:
+            Int
+
+        switch Int(
+            frame.sampleRate
+        ) {
+        case 48_000:
+            frequencyIndex =
+                3
+
+        case 24_000:
+            frequencyIndex =
+                6
+
+        default:
+            print(
+                "[SportsOSCamera][MPEGTS]",
+                "unsupported AAC sample rate",
+                "\(frame.sampleRate) Hz"
+            )
+
+            return nil
+        }
+
+        /*
+         MPEG-4 Audio Object Type 2 (AAC LC).
+
+         ADTS stores object type minus one, so AAC LC uses profile=1.
+        */
         let profile =
             1
-
-        let frequencyIndex =
-            3
 
         let channelConfiguration =
             Int(
@@ -1274,9 +1422,11 @@ final class MPEGTSTestMuxer:
             data
         )
 
-        onOutputData?(
-            data
-        )
+        if transportOutputEnabled {
+            onOutputData?(
+                data
+            )
+        }
 
         let packets =
             data.count /
